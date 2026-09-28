@@ -43,14 +43,17 @@ Keys:
 The collective is the one control that does not spring back, and it is the one
 that flies the machine: the aircraft starts parked on the pad, so hold W until
 the rotor lifts it.  A crashed aircraft is still flown where it is - the model
-does not stop - until R puts it back in the air.
+does not stop - until R puts it back in the air.  W may be tapped as well as
+held: the frame loop takes its keys from the events, so a press and release
+that both happen inside one frame still turn the ratchet.
 
 The window's caption is this sandbox's instrument panel, and it carries all
 four control positions: the collective in per cent, the longitudinal and
 lateral cyclic and the pedals in inches of travel.  They are there because the
 aircraft cannot always show a key on its own - on the pad the skids hold it
 level and still, so the cyclic and the pedals move it by nothing at all until
-it is off the ground.
+it is off the ground.  The caption also says when the window does not have the
+keyboard, which is the one failure that looks exactly like a dead key.
 
 pygame and PyOpenGL are this file's only third party imports: everything under it
 is standard library only, and numpy is not imported at all.
@@ -613,11 +616,12 @@ VIEWS = (VIEW_CHASE, VIEW_PAD)
 def pilot_keys(keys):
     """The keys held this frame, as :meth:`PilotInput.step`'s own keywords.
 
-    *keys* is anything indexable by a key constant: ``pygame.key.get_pressed()``
-    in the frame loop, and a plain dict in the check at the bottom of this file.
-    pygame 2 indexes that sequence by *scancode*, so the keys below are read as
-    the KSCAN_* constants - the physical key positions - which also means that a
-    keyboard whose layout moves the letters does not move the controls.
+    *keys* is anything indexable by a key constant: the frame loop's own record
+    of the keys the events left down, and a plain dict in the check at the
+    bottom of this file.  pygame 2 indexes ``pygame.key.get_pressed()`` by
+    *scancode*, so the keys below are read as the KSCAN_* constants - the
+    physical key positions - which also means that a keyboard whose layout
+    moves the letters does not move the controls.
     """
     return {
         "collective": _held(keys, pygame.KSCAN_W)
@@ -636,6 +640,37 @@ def _held(keys, key):
         return 1.0 if keys[key] else 0.0
     except (IndexError, KeyError, TypeError):
         return 0.0
+
+
+#: The eight keys the aircraft is flown from, by scancode: the keys
+#: :func:`pilot_keys` reads, and so the keys a frame's own event handling has to
+#: keep track of.
+FLIGHT_SCANCODES = (pygame.KSCAN_W, pygame.KSCAN_S,
+                    pygame.KSCAN_UP, pygame.KSCAN_DOWN,
+                    pygame.KSCAN_LEFT, pygame.KSCAN_RIGHT,
+                    pygame.KSCAN_A, pygame.KSCAN_D)
+
+
+def frame_keys(pressed, tapped):
+    """One frame's keys: what is held, plus what was tapped inside the frame.
+
+    *pressed* is any mapping of scancode to truth - the frame loop's own record
+    of the keys the events left down, and a plain dict in the check - and
+    *tapped* is the scancodes that went down at some point in the frame.  A tap
+    shorter than a frame is pressed and released between two samples of the
+    keyboard, and the collective is a ratchet: a tap thrown away is travel
+    thrown away, so a tapped flight key counts as held for the frame it
+    happened in.
+
+    The result holds the flight keys only, in the 1.0 and 0.0 that
+    :func:`pilot_keys` reads; the command keys are the event loop's own.
+    """
+    keys = dict((scancode, _held(pressed, scancode))
+                for scancode in FLIGHT_SCANCODES)
+    for scancode in tapped:
+        if scancode in FLIGHT_SCANCODES:
+            keys[scancode] = 1.0
+    return keys
 
 
 def camera_eye_target_up(sim, camera, view):
@@ -666,8 +701,8 @@ def fly_frame(sim, camera, frame_dt, keys, view=VIEW_CHASE):
     return sim
 
 
-def window_title(sim, view):
-    """The window's caption: what a HUD would show, and the view in use.
+def window_title(sim, view, focused=True):
+    """The window's caption: what a HUD would show, the view, the keyboard.
 
     The four control positions are on it in the model's own units - the
     collective in per cent of its travel, the two cyclic sticks and the
@@ -676,11 +711,20 @@ def window_title(sim, view):
     looking like a key that does nothing: on the pad the skids hold the
     aircraft level and still, so the cyclic and the pedals move it by nothing
     at all until it is off the ground.
+
+    *focused* is :func:`pygame.key.get_focused`, and while it is false the
+    window is not being sent keys at all: all eight then move nothing, which
+    is the one case no control position can tell from a dead key.  Saying so
+    is cheaper than answering it, and it names the cure - a click.  It goes
+    next to the aircraft's name, at the front of the caption, because a title
+    bar is as long as the window and the end of the line can be cut off.
     """
     telemetry = sim.telemetry()
-    return ("HeliSim - UH-1H | alt %6.1f m %+6.0f fpm | %5.1f kt | coll %3.0f %%"
-            " | cyc %+6.2f/%+6.2f in | ped %+5.2f in%s%s%s | %s view"
-            % (telemetry.alt_agl, telemetry.height_rate_fpm,
+    return ("HeliSim - UH-1H%s | alt %6.1f m %+6.0f fpm | %5.1f kt"
+            " | coll %3.0f %% | cyc %+6.2f/%+6.2f in | ped %+5.2f in%s%s%s"
+            " | %s view"
+            % ("" if focused else " | no keyboard: click the window",
+               telemetry.alt_agl, telemetry.height_rate_fpm,
                telemetry.airspeed_kt, 100.0 * telemetry.collective_fraction,
                telemetry.long_stick_in, telemetry.lat_stick_in,
                telemetry.pedal_in,
@@ -729,7 +773,16 @@ def main():
 
     clock = pygame.time.Clock()
     running = True
+    # The keys of every frame, straight from the events rather than sampled from
+    # pygame.key.get_pressed(): which are down, and which went down inside the
+    # frame and were let go again before it ended.  A press shorter than a frame
+    # is the one a ratchet must not lose, and the event queue never misses one.
+    keyboard = {}
+    keyboard_was = pygame.key.get_focused()
+    if not keyboard_was:
+        print("  no keyboard: click the window, or the keys go nowhere")
     while running:
+        tapped = set()
         for event in pygame.event.get():
             if event.type == QUIT:
                 running = False
@@ -754,19 +807,33 @@ def main():
                     view = VIEWS[(VIEWS.index(view) + 1) % len(VIEWS)]
                     camera.reset()
                     print("  view: %s" % (view,))
+                else:
+                    keyboard[event.scancode] = True
+                    tapped.add(event.scancode)
+            elif event.type == KEYUP:
+                keyboard[event.scancode] = False
 
         # The frame's own time, whatever it turned out to be: the physics inside
         # Simulation.step is always 1/60 s steps, so a dragged window is a longer
         # frame rather than a faster aircraft.
         frame_dt = clock.tick(60) / 1000.0
-        fly_frame(sim, camera, frame_dt, pygame.key.get_pressed(), view)
+        focused = pygame.key.get_focused()
+        if focused != keyboard_was:
+            if not focused:
+                # A key held when the window loses the keyboard never gets its
+                # KEYUP, so let go of all of them rather than fly with them.
+                keyboard.clear()
+            print("  keyboard: %s" % ("the window has it" if focused
+                                      else "click the window, it has not"))
+            keyboard_was = focused
+        fly_frame(sim, camera, frame_dt, frame_keys(keyboard, tapped), view)
         draw_scene(sim, camera, view)
         pygame.display.flip()
 
         # The window's caption is the HUD, and it is cheap enough to set a few
         # times a second rather than on every frame.
         if sim.frames % 15 == 0:
-            pygame.display.set_caption(window_title(sim, view))
+            pygame.display.set_caption(window_title(sim, view, focused))
         if sim.frames % 60 == 0:
             print("  " + str(sim.telemetry()))
 
@@ -802,6 +869,22 @@ def _self_check():
     assert pilot_keys({pygame.KSCAN_LEFT: True})["lat_stick"] == -1.0
     assert pilot_keys({pygame.KSCAN_D: True})["pedal"] == 1.0     # nose right
     assert pilot_keys({pygame.KSCAN_A: True})["pedal"] == -1.0
+
+    # A frame's keys: the eight keys of the four axes, the ones the events leave
+    # down, and a tap that was over before the frame's state could be sampled.
+    # Both are the same shape to pilot_keys - scancodes to 1.0 and 0.0 - and a
+    # tap has to count for its frame, or the collective ratchet loses it.
+    assert len(FLIGHT_SCANCODES) == 8
+    for scancode in FLIGHT_SCANCODES:
+        assert pilot_keys(frame_keys({}, {scancode})) != pilot_keys({})
+    assert pilot_keys(frame_keys({}, {pygame.KSCAN_W}))["collective"] == 1.0
+    assert pilot_keys(frame_keys({pygame.KSCAN_S: True},
+                                 {pygame.KSCAN_W}))["collective"] == 0.0
+    assert pilot_keys(frame_keys({}, set())) == pilot_keys({})
+    # R is a command key, not a flight key: tapping one flies nothing.
+    assert pilot_keys(frame_keys({}, {pygame.KSCAN_R})) == pilot_keys({})
+    assert pilot_keys(frame_keys({pygame.KSCAN_RIGHT: True},
+                                 {pygame.KSCAN_W}))["lat_stick"] == 1.0
 
     # A fresh sandbox starts the way main() leaves it: parked on the pad, the
     # collective at its down stop, level, with the trim the run began with
@@ -911,6 +994,14 @@ def _self_check():
     assert "UH-1H" in window_title(sim, VIEW_CHASE)
     assert "CRASHED" not in window_title(sim, VIEW_CHASE)
     assert VIEW_CHASE in window_title(sim, VIEW_CHASE)
+    # A window without the keyboard is not a window with four dead keys: the
+    # caption says which it is, and it is the only place that can.
+    assert "no keyboard" not in window_title(sim, VIEW_CHASE)
+    assert "no keyboard" in window_title(sim, VIEW_CHASE, focused=False)
+    assert "no keyboard" in window_title(sim, VIEW_PAD, focused=False)
+    # And it is at the front, where a title bar cannot cut it off.
+    assert window_title(sim, VIEW_CHASE, focused=False).startswith(
+        "HeliSim - UH-1H | no keyboard")
     assert len(load_scenery(DEFAULT_SCENERY_FILE)) > 0
 
     # The caption carries the four control positions, and they are read off the
@@ -938,6 +1029,33 @@ def _self_check():
     assert ("| coll %3.0f %% | cyc %+6.2f/%+6.2f in | ped %+5.2f in"
             % (100.0 * pad.collective_fraction, pad.long_stick_in,
                pad.lat_stick_in, pad.pedal_in)) in window_title(sim, VIEW_CHASE)
+
+    # A tap is a frame of travel rather than nothing: the frame loop's own
+    # frame_keys reads a key that went down and up inside one frame, and the
+    # ratchet turns by that frame's 0.55 a second.  Without it a tapped W would
+    # leave the collective exactly where it was, which is what a dead key looks
+    # like - and it is the whole difference between tapping W and holding it.
+    sim.on_the_pad()
+    assert sim.pilot.collective_axis == 0.0
+    fly_frame(sim, camera, SIM_TIME_STEP_S, frame_keys({}, {pygame.KSCAN_W}))
+    assert abs(sim.pilot.collective_axis - 0.55 * SIM_TIME_STEP_S) < 1e-9
+    assert sim.telemetry().collective_fraction > 0.0
+    # The frame after the tap, with the key gone again, leaves it there: it is
+    # travel from a press, not a switch that was left on.
+    fly_frame(sim, camera, SIM_TIME_STEP_S, frame_keys({}, set()))
+    assert abs(sim.pilot.collective_axis - 0.55 * SIM_TIME_STEP_S) < 1e-9
+    # Twenty more taps is a fifth of the collective, and the caption says so in
+    # whole per cent - the same telemetry the check has been reading.
+    for _ in range(20):
+        fly_frame(sim, camera, SIM_TIME_STEP_S,
+                  frame_keys({}, {pygame.KSCAN_W}))
+    ratcheted = sim.telemetry()
+    assert ratcheted.collective_fraction > 0.15
+    assert ratcheted.collective_in > 1.5
+    assert ("| coll %3.0f %% | cyc %+6.2f/%+6.2f in | ped %+5.2f in"
+            % (100.0 * ratcheted.collective_fraction, ratcheted.long_stick_in,
+               ratcheted.lat_stick_in, ratcheted.pedal_in)
+            ) in window_title(sim, VIEW_CHASE)
 
 
 if __name__ == "__main__":

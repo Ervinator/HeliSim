@@ -25,6 +25,24 @@ These are choices, not oversights: each is stated where it lives.
 
 ## Done
 
+* 2026-09-28 - **a tapped key is a frame of travel, and a window with no
+  keyboard says so.**  The frame loop sampled `pygame.key.get_pressed()` once
+  per frame, so a `W` pressed and released inside one frame was travel thrown
+  out of a ratchet: the second way a live key looks dead.  The loop now keeps
+  its own record from the `KEYDOWN` and `KEYUP` events - `frame_keys`, beside
+  `pilot_keys`, over the eight `FLIGHT_SCANCODES` the four axes are flown
+  from - counts a key that went down inside the frame as held for it, and
+  clears the record when the window loses the keyboard, because a key held
+  then never gets its `KEYUP`.  The caption adds `no keyboard: click the
+  window` whenever `pygame.key.get_focused()` is false, which is the one
+  failure no control position can show - all four sit at zero - and the
+  console says the same once on each focus change.  Verified: the check
+  asserts that a scanned frame's keys are the eight of the four axes, that one
+  frame of a tapped `W` is exactly `0.55 * 1/60` of collective travel and stays
+  there when the key is gone, that twenty one taps is over 1.5 in of collective
+  on the caption, and that the focus flag appears only when the window has no
+  keyboard; `main.py --check` and all six module self tests pass.
+
 * 2026-09-28 - **the caption carries all four control positions.**  A key the
   aircraft cannot show looked like a key that did nothing: the caption had the
   collective on it and nothing else, and on the pad the skids hold the aircraft

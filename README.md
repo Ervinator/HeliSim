@@ -50,16 +50,23 @@ which starts parked on the pad, and the keys fly it:
 | `C` | camera: behind the aircraft, or fixed on the pad |
 | `Esc` | quit |
 
-Hold `W` until the rotor lifts it off the skids.  The keyboard goes in through
-`simulation.PilotInput`, so the cyclic and the pedals spring back to centre when
-they are released, the collective does not, and the aircraft is drawn with one
-`glMultMatrixf` of `Simulation.render_matrix` with a `ChaseCamera` for a view.
-The window's caption is the HUD: altitude, vertical speed, airspeed, the
-collective in per cent and the longitudinal and lateral cyclic and the pedal
-positions in inches, and the trim, on the ground and crashed flags.  The control
-positions are there because the aircraft cannot always show a key by itself: on
-the pad the skids hold it level and still, so the cyclic and the pedals move
-nothing until it is off the ground.
+Hold `W` until the rotor lifts it off the skids, and tapping it works as well:
+the frame loop takes its keys from the events rather than sampling the keyboard
+once a frame, so a press and release inside one frame still turns the ratchet.
+The keyboard goes in through `simulation.PilotInput`, so the cyclic and the
+pedals spring back to centre when they are released, the collective does not,
+and the aircraft is drawn with one `glMultMatrixf` of
+`Simulation.render_matrix` with a `ChaseCamera` for a view.  The window's
+caption is the HUD: altitude, vertical speed, airspeed, the collective in per
+cent and the longitudinal and lateral cyclic and the pedal positions in inches,
+the trim, on the ground and crashed flags, and - at the front of the line, where
+a title bar cannot cut it off - a `no keyboard` flag while the window is not
+being sent keys at all.  The control positions are there because
+the aircraft cannot always show a key by itself: on the pad the skids hold it
+level and still, so the cyclic and the pedals move nothing until it is off the
+ground.  A window with no keyboard is the one failure that looks exactly the
+same from the controls alone - all four sit at zero - which is why the caption
+names it and the cure.
 
 The world is kilometres across because the aircraft is: a 16 km ground plane,
 10 m grid lines within 400 m of the aircraft and 250 m lines out to 8 km, and fog
