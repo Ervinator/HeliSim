@@ -1,0 +1,7722 @@
+03 
+
+03 
+
+C3 
+
+
+tD 
+
+
+USAAMRDL  TECHNICAL  REPORT  71-34 
+
+THREE-AXIS  FLUIDIC  STABILITY  AUGMENTATION 
+SYSTEM  FLIGHT  TEST  REPORT 
+
+
+Mirk  E.  Eksu 
+linq  Ofru 
+IimM  Sitmski 
+
+Siptiabr  IS71  > 
+
+EUSTIS  DIRECTORATE 
+
+U.  S.  ARMY  AIR  MOBILITY  RESEARCH  AND  DEVELOPMENT  LABORATORY 
+
+FORT  EUSTIS,  VIRGINIA 
+
+CONTRACT  DAAJ02-70-C-0017 
+HONEYWELL,  INC. 
+
+MINNEAPOLIS,  MINNESOTA 
+
+
+Approved  for  public  release; 
+distribution  unlimited. 
+
+
+Roproducod  by 
+
+NATIONAL  TECHNICAL 
+INFORMATION  SERVICE 
+
+Sprtngfiold,  Va  22151 
+
+
+DISCLAIMERS 
+
+
+The  findings  in  this  report  are  not  to  be  construed  as  an  official  Depart¬ 
+ment  of  the  Army  position  unless  so  designated  by  other  authorized 
+documents. 
+
+When  Government  drawings,  specifications,  or  other  data  are  used  for 
+any  purpose  other  than  in  connection  with  a  definitely  related  Government 
+procurement  operation,  the  United  States  Government  thereby  incurs  no 
+responsibility  nor  any  obligation  whatsoever;  and  the  fact  that  the 
+Government  may  have  formulaied,  furnished,  or  in  any  way  supplied  the 
+said  drawings,  specifications,  or  other  data  is  not  to  be  regarded  by 
+implication  or  otherwise  as  in  any  manner  licensing  the  holder  or  any 
+other  person  or  corporation,  or  conveying  any  rights  or  permission,  to 
+manufacture,  use,  or  sell  any  patented  invention  that  may  in  any  way  be 
+related  thereto. 
+
+
+DISPOSITION  INSTRUCTIONS 
+
+
+Destroy  this  report  when  no  longer  needed.  Do  not  return  it  to  the 
+originator. 
+
+
+Unclassified 
+
+S*curit^Cl***ific*tlon 
+
+
+DOCUMENT  CONTROL  DATA  -  R  &  D 
+
+
+i  ORi  Gin  a  tins  ac  ti  vi  tv  (Corpotmtm  author) 
+
+1*.  REPORT  IICURITY  CLASSIFICATION 
+
+Honeywell  Inc. 
+
+Unclassified 
+
+2600  Ridgway  Parkway  N.  E. 
+
+Minneapolis,  Minnesota 
+
+1  REPORT  TITLE 
+
+
+THREE-AXIS  FLUIDIC  STABILITY  AUGMENTATION  SYSTEM 
+FLIGHT  TEST  REPORT 
+
+
+4.  OIIC  RIF  T|  V  K  NOTH  (Typm  ot  r#porf  and  Jnduiir*  dmtmm) 
+
+Flight  Test  Report  -  1  January  1970  through  17December  1970 
+
+»  AUTMORI»l  (klrml  nmmm  ,  mlddl*  Initial,  Imml  n«M) 
+
+Mark  E.  Ebsen,  Harvey  D.  Ogren  and  Donald  H.  Sotanski 
+
+
+•  REPORT  DATE 
+
+7m.  TOTAL  NO.  OF  RAGES 
+
+76.  NO.  OF  REFS  f 
+
+September  1971 
+
+17? 
+
+0  ■  j 
+
+Ml.  CONTRACT  OR  GRANT  NO. 
+
+M.  ORIGINATOR'S  REPORT  NUSTGERtS) 
+
+DAAJ02-70-C-0017 
+
+*.  HHJJICT  NO. 
+
+USAAMRDL  Technical  Report  71-34 
+
+Task  1F162204AA4404 
+
+_ 
+
+C. 
+
+•b.  OTHER  REPORT  no(S)  (Any  othmr  numbmrm  0imt  atay  bm 
+tfila  report) 
+
+4 
+
+Honeywell  GAPD  21476-FR 
+
+10.  OISTNIGUTION  STATEMENT 
+
+Approved  for  public  release;  distribution 
+
+unlimited. 
+
+l».  SUPPLEMENT ARY  NOTE* 
+
+IS.  SPONSORING  MILITARY  ACTIVITY 
+
+U.S.  Army  Air  Mobility  Research  and 
+
+Development  Laboratory,  Eustis  Direc- 
+
+i*  »»ir«»CT 
+
+torate,  Fort  Eustis,  Virginia 
+
+This  report  covers  the  flight  test  of  a  three-axis  hydrofluidic  stability 
+augmentation  system  for  a  UH-l-type  helicopter.  The  design  goal  was 
+to  improve  the  performance  of  the  aircraft,  without  stabilizer  bar,  in 
+the  speed  range  of  60  to  120  kn. 
+
+The  system  was  installed  in  a  UH-1C  helicopter.  The  helicopter's 
+hydraulic  power  supply  wa3  used  to  power  the  FSAS  controllers  and 
+servoactuators.  The  motions  of  the  helicopter  were  measured  by  re¬ 
+cording  instruments  installed  in  the  vehicle.  The  performance  of  the 
+helicopter  was  determined  by  comparing  the  recordings  of  the  measur¬ 
+ing  instruments  with  the  size  and  type  of  helicopter  command.  This 
+type  data  was  obtained  with  the  helicopter  in  following  four  conditions: 
+
+1)  stabilizer  bar  attached  FSAS  off  with  spool  valve  servoactuators, 
+
+2)  stabilizer  bar  off,  FSAS  off  with  spool  valve  servoactuators, 
+
+3)  stabilizer  bar  off,  FSAS  on,  with  spool  valve  servoactuator,  and 
+
+4)  stabilizer  bar  off,  FSAS  on,  with  vortex  valve  servoactuators. 
+
+
+The  system  improved  the  performance  of  the  UH-1C  helicopter  in  all 
+three  axes  by  increasing  the  damping,  increasing  the  phugoid  mode 
+period,  and  producing  a  constant  vehicle  rate  proportional  to  cyclic 
+stick  input. 
+
+
+Unclassified 
+
+Security  Classification 
+
+
+rom  i  a  "to  do  ■«?*.  < 
+
+UU  I  Mv  (•  1  <  to  roa  »a*iv  u««. 
+
+
+J AN  *4.  WHICH  II 
+
+
+Unclassified 
+
+
+5  ssm 1 1  mss 
+
+
+-~i  7>v  '*  rf*i' 
+
+
+DEPARTMENT  OF  THE  ARMY 
+U.  S.  ARMY  AIR  MOBILITY  RI8IARCH  A  OBVILORMKNT  LABORATORY 
+■  USTIS  OIRICTORATK 
+PORT  BUSTIB,  VIRGINIA  23004 
+
+
+This  report  has  been  reviewed  by  the  Eustia 
+Directorate,  U.  S.  Army  Air  Mobility  Reaearch 
+and  Development  Laboratory  and  ia  considered 
+to  be  technically  sound.  The  purpose  of  the 
+program  was  to  install  the  three-axis  hydro¬ 
+fluidic  stability  augmentation  system  in  a 
+UH-1  helicopter  and  conduct  a  flight  test 
+evaluation  of  the  system.  The  report  is  pub¬ 
+lished  for  the  exchange  of  information  and 
+appropriate  application.  The  technical 
+monitor  for  this  contract  was  Mr  George  W. 
+Foadick,  Aeromechanics  Division. 
+
+
+Task  1F162204AA4404 
+Contract  DAAJ02-70-C-0017 
+USAAMRDL  Technical  Report  71-34 
+September  1971 
+
+
+THREE -AXIS  FLUIDIC  STABILITY  AUGMENTATION 
+SYSTEM  FLIGHT  TEST  REPORT 
+
+
+Honeywell  Document  21476-FR 
+
+
+by 
+
+Mark  E.  Ebsen 
+Harvey  Ogren 
+Donald  Sotanski 
+
+
+Prepared  by 
+Honeywell  Inc . 
+
+Government  and  Aeronautical  Products  Division 
+Minneapolis,  Minnesota 
+
+
+for 
+
+EUSTIS  DIRECTORATE 
+U.  S.  ARMY  AIR  MOBILITY  RESEARCH 
+AND  DEVELOPMENT  LABORATORY 
+FORT  EUSTIS,  VIRGINIA 
+
+
+|  Approved  for  public  release;  distribution  unlimited.  [ 
+
+
+ABSTRACT 
+
+
+This  report  covers  the  flight  test  of  a  three -axis  hydrofluidic  stability 
+augmentation  system  for  a  UH -1-type  helicopter.  The  design  goal  was 
+to  improve  the  performance  of  the  aircraft,  without  stabilizer  bar,  in 
+the  speed  range  of  60  to  120  kn. 
+
+The  system  was  installed  in  a  UH-1C  helicopter.  The  helicopter' s 
+hydraulic  power  supply  ^as  used  to  power  the  FSAS  controllers  and 
+servoactuators.  The  motions  of  the  helicopter  were  measured  by  re¬ 
+cording  instruments  installed  in  the  vehicle.  The  performance  of  the 
+helicopter  was  determined  by  comparing  the  recordings  of  the  measur¬ 
+ing  instruments  with  the  size  and  type  of  helicopter  command.  This 
+type  data  was  obtained  with  the  helicopter  in  following  four  conditions: 
+
+1)  stabilizer  bar  attached  FSAS  off  with  spool  valve  servoactuators, 
+
+2)  stabilizer  bar  off,  FSAS  off  with  spool  valve  servoactuators, 
+
+3)  stabilizer  bar  off,  FSAS  on,  with  spool  valve  servoactuator,  and 
+
+4)  stabilizer  bar  off,  FSAS  on,  with  vortex  valve  servoactuators. 
+
+The  system  improved  the  performance  of  the  UH-1C  helicopter  in  all 
+three  axes  by  increasing  the  damping,  increasing  the  phugoid  mode 
+period ,  and  producing  a  constant  vehicle  rate  proportional  to  cyclic 
+stick  input. 
+
+
+FOREWORD 
+
+
+This  document  is  the  final  report  on  a  flight  test  program  authorized 
+by  the  Eustis  Directorate,  U.S.  Army  Air  Mobility  Research  and 
+Development  Laboratory  under  Coniract  DAAJ02-70-C-0017.  The 
+technical  monitor  of  this  program  was  Mr.  G.  W.  Fosdick. 
+
+This  program  is  part  of  the  U.S.  Army' s  continuing  effort  to  develop 
+stability  augmentation  systems  for  helicopters.  The  object  was  to 
+flight  test  a  UH-l-type  helicopter  with  a  hydrofluidic  stability  augmen¬ 
+tation  system.  The  work  presented  started  1  January  1970  and  was 
+completed  17  December  1970. 
+
+
+v 
+
+
+£ 
+
+A  A 
+
+is 
+
+4T  ] 
+
+1  ■  1  1 
+
+TABLE  OF  CONTENTS 
+
+
+Page 
+
+
+ABSTRACT .  iii 
+
+FOREWORD .  v 
+
+LIST  OF  ILLUSTRATIONS .  x 
+
+LIST  OF  TABLES .  xv 
+
+LIST  OF  SYMBOLS .  xvi 
+
+LIST  OF  DEFINITIONS .  xviii 
+
+SECTION  I  INTRODUCTION .  1 
+
+SECTION  II  SUMMARY .  2 
+
+System  Design  and  Installation .  2 
+
+System  Design .  2 
+
+Installation .  2 
+
+Modification  and  Problems  During  Flight  Test .  .  3 
+
+Servoactuators .  3 
+
+Performance  Changes . 
+
+Vortex  Valve  Servoactuators .  3 
+
+Data  Reduction .  4 
+
+UH-1C/FSAS  Flight  Test  Results .  4 
+
+Yaw  FSAS  Performance .  4 
+
+Roll  FSAS  Performance .  4 
+
+Pitch  FSAS  Performance .  5 
+
+Stabilized  Flight,  Autorotations,  and  Turns  .  6 
+
+Conclusions .  6 
+
+SECTION  III  SYSTEM  DESIGN  AND  INSTALLATION .  7 
+
+System  Design .  7 
+
+FSAS  Design  Goals .  7 
+
+Computer  Simulation  Development .  7 
+
+Closed-Loop  Hardware  Evaluation .  8 
+
+Installation .  & 
+
+Mechanical  Installation .  9 
+
+Hydraulic  Installation . 18 
+
+Electrical  Installation . 18 
+
+SECTION  IV  MODIFICATION  AND  PROBLEMS  DURING 
+
+FLIGHT  TEST . 33 
+
+Force  on  Servoactuator  Due  to  Flexible  Hoses  .  .  33 
+
+Pressure  Surges  on  Spool  Valve  Servoactuators  .  33 
+
+
+vu 
+
+
+TABLE  OF  CONTENTS  (CONTINUED) 
+
+Page 
+
+FSAS  Performance  Changes  With  Spool  Valve 
+
+Servoactuators .  35 
+
+Yaw-Axis  FSAS .  37 
+
+Roll- Axis  FSAS .  38 
+
+Pitch-Axis  FSAS .  39 
+
+Null  Offsets .  45 
+
+Flight  Test  Using  Vortex  Valve  Servoactuators.  .  45 
+
+Pressure  Surge  Problems .  45 
+
+Vortex  Valve  Servoactuator  Performance  .  .  46 
+
+UH-1C  Helicopter  Characteristics .  17 
+
+Data  Reduction .  48 
+
+SECTION  V  UH-  1C/FSAS  FLIGHT  TEST  RESULTS .  49 
+
+Test  Procedure .  49 
+
+Yaw  FSAS  Performance .  49 
+
+Pedal  Step  Inputs  -  Yaw  FSAS  With  Spool 
+
+Valve  Servoactuator .  50 
+
+Pedal  Step  Inputs  -  Yaw  FSAS  With  Vortex 
+
+Valve  Servoactuator .  52 
+
+Pedal  Pulse  Inputs  -  Yaw  FSAS  With  Spool 
+
+Valve  Servoactuator .  52 
+
+Pedal  Pulse  Inputs  -  Yaw  FSAS  With  Vortex 
+
+Valve  Servoactuator .  52 
+
+Roll  FSAS  Performance .  54 
+
+Roll  FSAS  With  Spool  Valve  Servoactuator  .  .  54 
+
+Roll  FSAS  With  Vortex  Valve  Servoacturaor  .  56 
+
+Roll  FSAS  Pilot  Comments .  56 
+
+Pitch  FSAS  Performance .  56 
+
+Cyclic  Step  Inputs  -  Pitch  FSAS  With  Spool 
+
+Valve  Servoactuator .  57 
+
+Cyclic  Step  Inputs  -  Pitch  FSAS  With  Vortex 
+
+Valve  Servoactuator .  59 
+
+Cyclic  Pulse  Input  -  Pitch  FSAS  With  Spool 
+
+Valve  Servoactuator .  59 
+
+FSAS-Stabilized  Flight .  60 
+
+Autorotation  Entries .  61 
+
+Turn  Maneuvers .  61 
+
+SECTION  VI  CONCLUSIONS .  63 
+
+
+APPENDIXES 
+
+I.  Pilot  Flight  Test  Reports  of  Three-Axis 
+
+Hydrofluidic  Stability  Augmentation  System .  .  65 
+
+II.  Test  Data  . 78 
+
+
+viii 
+
+
+TABLE  OF  CONTENTS  (CONCLUDED) 
+
+
+APPENDIXES  (CONTINUED) 
+
+
+Page 
+
+
+III.  Mechanical  Problem  Areas  Encountered  During 
+Installation,  Ground  Test,  and  Flight  Test  of 
+
+the  Three-Axis  Hydrofluidic  SAS  .  130 
+
+IV.  Control  Tubes  Test  Report .  133 
+
+V.  Calibration  Curves  of  Various  Transducers  .  136 
+
+VI.  Flight  Test  Plan  for  a  Three -Axis  Hydro - 
+
+fluidic  Stability  Augmentation  System  ....  148 
+
+DISTRIBUTION .  154 
+
+
+ix 
+
+
+f 
+
+LIST  OF  ILLUSTRATIONS 
+
+Figure  Page 
+
+1  Servoactuator  Installation  Schematic . 10 
+
+2  Fuselage  Station  66  Looking  Forward  After 
+
+Modification.  .  .  .  , . 11 
+
+3  Fuselage  Station  52  Looking  Forward  After 
+
+Modification . 11 
+
+4  Roll-  and  Pitch- Axis  Spool  Valve  Servoactuators 
+
+Installation . 13 
+
+5  Roll-  and  Pitch- Axis  Spool  Valve  Servoactuators 
+
+From  Right  Side  of  Aircraft . 13 
+
+6  Roll-  and  Pitch-Axis  Spool  Valve  Servoactuators 
+
+From  Left  Side  of  Aircraft . 14 
+
+7  Roll-  And  Pitch- Axis  Spool  Valve  Servoactuators 
+
+From  Right  Front  Side  of  Aircraft . 14 
+
+8  Left  Pitch  -Roll  Bellcrank  Installation 
+
+(Fuselage  Station  123) . 15 
+
+9  Right  Pitch-Roll  Bellcrank  Installation 
+
+(Fuselage  Station  123) . 15 
+
+10  Yaw- Axis  Spool  Valve  Servoactuator  Installation  ...  16 
+
+11  Yaw-Axis  Spool  Valve  Servoactuator  Installation 
+
+From  Rear  of  Crew  Compartment . 16 
+
+12  Yaw  Bellcrank  With  Stops  (Fuselage  Station  161.  61)  .  17 
+
+13  Pilot  Control  Input  Fixtures . 17 
+
+14  UH-1  With  Stabilizer  Bar. . *'.19 
+
+15  UH-1  Without  Stabilizer  Bar . 19 
+
+16  Spool  Valve  Servoactuator  Hydraulic  Circuit  Diagram  20 
+
+17  FSAS  Ready  for  Installation  in  Aircraft . 21 
+
+18  FSAS  Installation  From  Right  Side  of  Aircraft . 21 
+
+19  Vortex  Valve  Servoactuator  Hydraulic  Circuit 
+
+Diagram . 22 
+
+20  Full  View  of  Vortex  Valve  Servoactuators 
+
+Installation . 23 
+
+21  Top  View  of  Vortex  Valve  Servoactuators  Installation .  23 
+
+22  Roll-  and  Pitch- Axis  Vortex  Valve  Servoactuators 
+
+Installation . 24 
+
+
+x 
+
+
+LIST  OF  ILLUSTRATIONS  (CONTINUED) 
+
+
+Figure  Page 
+
+23  Yaw-Axis  Vortex  Valve  Servoactuator  Installation  .  .  24 
+
+24  Inverters  Mounted  in  Aft  Compartment . 26 
+
+25  Instrumentation  Viewed  From  Left  Side  Of  Aircraft  .  26 
+
+26  Instrumentation  Viewed  From  Right  Side  of  Aircraft .  27 
+
+27  Spool  Valve  Servoactuator . 28 
+
+28  Vortex  Valve  Servoactuator . 28 
+
+29  Pilot  Control  Position  Potentiometers  Under  Pilot's 
+
+Seat . 30 
+
+30  FSAS  Operation  Electrical  Circuit  Diagram . 31 
+
+31  Pilot's  Console . 32 
+
+32  Schematic  of  Spool  Valve  Servoactuator  -- 
+
+Input  Portion . 34 
+
+33  Analytic  Block  Diagram  for  UH-1B  Yaw- Axis  SAS  .  .  36 
+
+34  Analytic  Block  Diagram  for  UH-1B  Roll-Axis  S  \S  .  .  36 
+
+35  Analytic  Block  Diagram  for  UH-1B  Pitch- Axis  SAS  .  37 
+
+36  Roll-Axis  Controller  Schematic . 40 
+
+37  Frequency  Response  of  Roll- Axis  Controller  After 
+
+Gain  Increase . 40 
+
+38  Schematic  of  Pitch-Axis  Controller  Before 
+
+Modification . 42 
+
+39  Schematic  of  Pitch- Axis  Controller  After 
+
+Modification . 42 
+
+40  Frequency  Response  of  Pitch- Axis  Controller 
+
+Before  Modification . 43 
+
+41  Frequency  Response  of  Pitch- Axis  Controller 
+
+After  Modification . 43 
+
+42  Frequency  Response  of  Pitch- Axis  Controller 
+
+After  Gain  Reduction . 44 
+
+43  Schematic  of  Vortex  Valve  Servoactuator  -- 
+
+Input  Portion . 46 
+
+44  Yaw  Step  -  Right  (Hover,  3000  ft) . 79 
+
+45  Yaw  Step  -  Right  (60  kn,  3000  ft) . 80 
+
+46  Yaw  Step  -  Right  (60  kn,  10,000  ft) . 81 
+
+xi 
+
+
+LIST  OF  ILLUSTRATIONS  (CONTINUED) 
+
+Figure  Page 
+
+47  Yaw  Step  -  Right  (90  kn,  3000  ft) . 82 
+
+48  Yaw  Step  -  Right  (120  kn,  3000  ft) . 83 
+
+49  Yaw  Step  -  Left  (Hover,  3000  ft) . 84 
+
+50  Yaw  Step  -  Left  (60  kn,  3000  ft) . 85 
+
+51  Yaw  Step  -  Left  (60  kn,  10,000  ft) . 86 
+
+52  Yaw  Step  -  Left  (90  kn,  3000  ft) . 87 
+
+53  Yaw  Step  -  Left  (120  kn,  3000  ft) . 88 
+
+54  Yaw  Pulse  -  Right  (Hover,  3000  ft) . 89 
+
+55  Yaw  Pulse  -  Right  (60  kn,  3000  ft) . 90 
+
+56  Yaw  Pulse  -  Right  (60  kn,  10,000  ft) . 91 
+
+57  Yaw  Pulse  -  Right  (90  kn,  3000  ft) . 92 
+
+58  Yaw  Pulse  -  Right  (120  kn,  3000  ft) . 93 
+
+59  Yaw  Pulse  -  Left  (Hover,  3000  ft) . 94 
+
+60  Yaw  Pulse  -  Left  (60  kn,  3000  ft) . 95 
+
+61  Yaw  Pulse  -  Left  (60  kn,  10,  000  ft) . 96 
+
+62  Yaw  Pulse  -  Left  (90  kn,  3000  ft) . 97 
+
+63  Yaw  Pulse  -  Left  (120  kn,  3000  ft) . 98 
+
+64  Roll  Step  -  Right  (Hover,  3000  ft) . 99 
+
+65  Roll  Step  -  Right  (60  kn,  3000  ft) . 100 
+
+66  Roll  Step  -  Right  (60  kn,  10,000  ft) . 101 
+
+67  Roll  Step  -  Right  (90  kn,  3000  ft) . 102 
+
+68  Roll  Step  -  Right  (120  kn,  3000  ft) . 103 
+
+69  Roll  Step  -  Left  (Hover,  3000  ft) . 104 
+
+70  Roll  Step  -  Left  (60  kn,  3000  ft) . 105 
+
+71  Roll  Step  -  Left  (60  kn,  10,  000  ft) . 106 
+
+72  Roll  Step  -  Left  (90  kn,  3000  ft) . 107 
+
+73  Roll  Step  -  Left  (120  kn,  3000  ft) . 108 
+
+74  Pitch  Step  -  Down  (Hover,  3000  ft) . 109 
+
+75  Pitch  Step  -  Down  (60  kn,  3000  ft) . 110 
+
+76  Pitch  Step  -  Down  (60  kn,  10,000  ft) . Ill 
+
+
+LIST  OF  ILLUSTRATIONS  (CONTINUED 
+Figure  Page 
+
+77  Pitch  Step  -  Down  (90  kn,  3000  ft) .  112 
+
+78  Pitch  Step  -  Down  (120  kn,  3000  ft) .  113 
+
+79  Pitch  Step  -  Up  (Hover,  3000  ft) .  114 
+
+80  Pitch  Step  -  Up  (60  kn,  3000  ft) .  115 
+
+81  Pitch  Step  -  Up  (60  kn,  10,000  ft) .  116 
+
+82  Pitch  Step  -  Up  (90  kn,  3000  ft) .  117 
+
+83  Pitch  Step  -  Up  (120  kn,  3000  ft) .  118 
+
+84  Pitch  Pulse  -  Down  (Hover,  3000  ft) .  119 
+
+85  Pitch  Pulse  -  Down  (60  kn,  3000  ft) .  120 
+
+86  Pitch  Pulse  -  Down  (60  kn,  10,000  ft) .  121 
+
+87  Pitch  Pulse  -  Down  (90  kn,  3000  ft) .  122 
+
+88  Pitch  Pulse  -  Down  (120  kn,  3000  ft) .  123 
+
+89  Pitch  Pulse  -  Up  (Hover,  3000  ft) .  124 
+
+90  Pitch  Pulse  -  Up  (60  kn,  3000  ft) .  125 
+
+91  Pitch  Pulse  -  Up  (60  kn,  10,000  ft) .  126 
+
+92  Pitch  Pulse  -  Up  (90  kn,  3000  ft) .  127 
+
+93  Pitch  Pulse  -  Up  (120  kn,  3000  ft) .  128 
+
+94  Autorotation  -  60  kn,  3000  ft .  129 
+
+95  Linkage  Load  Fixture .  134 
+
+96  Gyro  Output  Versus  Input  Turning  Rate  for  GG79- 
+
+Type  Rate  Gyro  Used  as  a  Roll  Rate  Gyro . 137 
+
+97  Gyro  Output  Versus  Input  Turning  Rate  for  GG79- 
+
+Type  Rate  Gyro  Used  as  a  Yaw  Rate  Gyro .  138 
+
+98  Gyro  Output  Versus  Input  Turning  Rate  for  GG79- 
+
+Type  Rate  Gyro  Used  as  a  Pitch  Rate  Gyro . 139 
+
+99  Pitch  Output  Voltage  Versus  Pitch  Input  Angle  for 
+JG7044A  Cageable  Vertical  Gyro  Used  on  Three- 
+
+Axis  FSAS  Program . 140 
+
+100  Roll  Output  Voltage  Versus  Roll  Input  Angle  for 
+JG7044A  Cageable  Vertical  Gyro  Used  on  Three- 
+
+Axis  FSAS  Program .  141 
+
+101  Yaw  Output  Voltage  Versus  Input  Angle  for  Heading 
+
+Gyro  Used  on  Three-Axis  FSAS  Program . 142 
+
+xiii 
+
+
+LIST  OF  ILLUSTRATIONS  (CONCLUDED) 
+
+
+Figure 
+
+Page 
+
+102 
+
+Output  Voltage  Versus  Input  G-Level  for  Downer 
+Model  4310  Linear  Accelerometer  Used  on  Three- 
+Axis  FSAS  Program . 
+
+143 
+
+103 
+
+Cyclic  Stick  (Pitch)  Position  Calibration  —  Output 
+Voltage  Versus  Pitch  Stick  Position . 
+
+144 
+
+104 
+
+Cyclic  Stick  (Roll)  Ponition  Calibration  --  Output 
+Voltage  Versus  Roll  Stick  Position . 
+
+145 
+
+105 
+
+Collective  Stick  Position  --  Output  Voltage  Versus 
+Collective  Stick  Position . 
+
+146 
+
+106 
+
+Tail  Rotor  Pedal  Position  Calibration  —  Output 
+Voltage  Versus  Tail  Rotor  Pedal  Position . 
+
+147 
+
+xiv 
+
+
+LIST  OF  TABLES 
+
+
+Table  Page 
+
+I  UH-1C/FSAS  Flight  Test  Envelope .  5 
+
+II  Final  FSAS  Controller  -  Servoactuator  Performance  .  44 
+
+III  Yaw  FSAS/UH-1C  Performance  -  Step  Inputs  ....  51 
+
+IV  Yaw  FSAS/UH-1C  Performance  -  Pulse  Inputs  ....  53 
+
+V  Roll  FSAS/UH-1C  Performance  -  Step  Inputs  ....  55 
+
+VI  Pitch  FSAS/UH- 1C  Performance  -  Step  Inputs  ....  58 
+
+VII  UH- 1C  Qualitative  Damping  Evaluation  Without  .  ...  71 
+
+Stabilizer  Bar . 
+
+VIII  Deformation  of  Linkage  Assemblies  With  Load  ....  135 
+
+IX  Quantitative  Evaluation  of  FSAS  For  UH-1C 
+
+Helicopter . 151 
+
+
+xv 
+
+
+LIST  OF  SYMBOLS 
+
+
+db 
+
+
+e 
+
+
+S 
+
+T 
+
+T 
+
+K 
+
+K 
+
+
+HP 
+
+lag 
+
+if 
+
+
+6 
+
+6 
+
+6 
+
+6 
+
+
+if, 
+
+
+m 
+
+
+aug 
+
+
+if 
+
+
+if 
+
+
+decibel  -  20  log  (output/input) 
+constant  =  2.71828 
+LaPlace  operator 
+high-pass  time  constant,  sec 
+lag  time  constant,  sec 
+
+tail  rotor  angle/aircraft  yaw-axis  turning  rate, 
+deg/ deg/sec 
+
+augmented  servoactuator,  command/mechanical 
+tail  rotor  command,  in.  /in. 
+
+mechanical  tail  rotor  command  from  pilot' s  pedals,  deg 
+
+yaw -axis  augmented  servoactuator  command  from 
+pilot' s  pedals,  deg 
+
+yaw -axis  servoactuator  displacement,  deg 
+
+total  tail  rotor  deflection,  deg 
+aircraft  yaw -axis  turning  rate,  deg/ sec 
+
+
+t//  yaw  attitude,  deg 
+
+roll  blade  angle /aircraft  roll-axis  turning  rate, 
+deg/deg/ sec 
+
+Gq  mechanical  roll  cyclic  command  from  pilot' s  stick,  deg 
+
+m 
+
+5^  roll -axis  servoactuator  displacement,  deg 
+
+s 
+
+6^  total  blade  deflection  (roll),  deg 
+
+
+Note:  These  items  are  in  inches  in  Appendix  II. 
+
+
+xvi 
+
+
+LIST  OF  SYMBOLS  (CONCLUDED) 
+
+
+0  aircraft  roll-axis  turning  rate,  deg/ sec 
+
+0  roll  attitude,  deg 
+
+K _  pitch  blade  angle/ aircraft  pitch-axis  turning 
+
+rate,  deg/deg/sec 
+
+*  mechanical  pitch  cyclic  command  from  pilot’ s  stick,  deg 
+
+am 
+
+6q  pitch-axis  servoactuator  displacement,  deg 
+
+s 
+
+6  total  blade  deflection  (pitch),  deg 
+
+6  aircraft  pitch-axis  turning  rate,  deg/ sec 
+
+6  pitch  attitude,  deg 
+
+C  damping  ratio 
+
+t  transport  delay,  sec 
+
+u  natural  frequency,  rad/ sec 
+
+
+Note:  These  items  are  in  inches  in  Appendix  II. 
+
+
+xvii 
+
+
+LIST  OF  DEFINITIONS 
+
+
+Definitions  for  the  abbreviations  used  in  this  report  are  as  follows: 
+
+
+•  SV  Servo,  W/O  Stab  -  UH-1C  helicopter  without 
+mechanical  stabilizer  bar;  FSAS  engaged  in  pitch,  roll, 
+and  yaw  axes  coupled  to  spool  valve  servoactuators. 
+
+•  VV  Servo,  W/O  Stab  -  UH-1C  helicopter  without 
+mechanical  stabilizer  bar;  FSAS  engaged  in  pitch, 
+roll,  and  yaw  axes  coupled  to  vortex  valve  servo- 
+actuators. 
+
+•  W/O  Stab  -  UH-1C  helicopter  without  mechanical  sta¬ 
+bilizer  bar;  FSAS  disengaged. 
+
+•  With  Stab  -  UH.-1C  helicopter  with  mechanical  stabi¬ 
+lizer  bar;  FSAS  disengaged. 
+
+•  RS  -  Right  step 
+
+•  LS  -  Left  step 
+
+•  RP  -  Right  pulse 
+
+•  LP  -  Left  pulse 
+
+
+•  US  -  Up  step 
+
+•  DS  -  Down  step 
+
+
+Control  Sensitivity: 
+
+
+a) 
+
+b) 
+
+
+Helicopter's  steady-state  roll  rate  attained 
+for  a  roll  cyclic  step  input,  deg/ sec/in. 
+
+
+^peak^®0 
+
+
+Helicopter's  peak  roll  rate  attained  for  a 
+roll  cyclic  step  input,  deg/ sec/in. 
+
+
+•  Response  Time,  tQfW  : 
+
+yUyo 
+
+a)  Time  required  for  helicopter  to  achieve  90  percent 
+peak  rate  for  a  step  input  command,  when  helicopter's 
+response  is  predominantly  a  peak  rate  response. 
+
+b)  Time  required  for  helicopter  to  achieve  90  percent  . 
+of  steady- state  rate  for  a  step  input  command. 
+
+c)  When  helicopter's  response  is  predominantly  over¬ 
+shoot  less  than  approximately  30  percent. 
+
+
+xviii 
+
+
+LIST  OF  DEFINITIONS  (CONCLUDED) 
+
+
+Control  Power, 
+
+
+0/ 5  -  Helicopter's  roll  attitude  achieved 
+
+9  after  1  sec  for  a  roll  cyclic  step 
+input,  deg/in. 
+
+
+LVDT  -  Linear  variable  displacement  transducer 
+
+
+SECTION  I 
+INTRODUCTION 
+
+
+This  report  presents  results  of  flight  testing  a  three -axis  fluidic 
+stability  augmentation  system  (FSAS)  using  a  UH-1C  helicopter  as  the 
+test  vehicle.  The  primary  objective  of  the  flight  test  program  was  to 
+demonstrate  the  feasibility  of  using  hydrofluidic  sensors  and  shaping 
+networks  in  flight  control  system  applications. 
+
+The  FSAS,  developed  under  Contracts  DAAJ02-68-C-0039  and  DAAJ02- 
+69-C-0036,  was  designed  to  optimize  the  damping  versus  control  re¬ 
+sponse  of  the  UH-1B  without  mechanical  stabilizer  bar  for  the  high¬ 
+speed,  fire-support  mission.  The  FSAS  was  developed  from  the  view¬ 
+point  of  increasing  vehicle  damping  and  augmenting  the  free  vehicle' s 
+short-term  response  characteristics  to  provide  a  rate  response  pro¬ 
+portional  to  control  stick  inputs. 
+
+FSAS  performance  was  evaluated  analytically  and  comparatively.  The 
+analytic  evaluation  consisted  of  measuring  the  short-period  damping 
+and  control  sensitivity  of  (1)  the  FSAS -augmented  helicopter  without 
+mechanical  stabilizer  bar,  and  (2)  the  unaugmented  helicopter  with 
+and  without  mechanical  stabilizer  bar. 
+
+The  comparative  evaluation  consisted  of  qualitatively  comparing  flight 
+recordings  for  (1)  the  FSAS -augmented  helicopter,  (2)  the  unaugmented 
+helicopter  without  mechanical  stabilizer  bar,  and  (3)  the  unaugmented 
+helicopter  with  mechanical  stabilizer  bar.  Attempts  were  made  to 
+correlate  pilot  comments  (see  Appendix  I)  with  the  specific  tests. 
+
+FSAS  flight  test  results  were  recorded  (see  Appendix  II)  for  the 
+stability  augmentation  system  coupled  to  spool  valve  servoactuators 
+and  fluidic  vortex  valve  servoactuators . 
+
+
+1 
+
+
+I 
+
+
+SECTION  II 
+SUMMARY 
+
+
+•  I 
+
+SYSTEM  DESIGN  AND  INSTALLATION 
+
+
+System  Design 
+
+A  previous  study  phase  contract,  DAAJ02-68-C-0039,  mathematically 
+defined  a  hydrofluidic  stability  augmentation  system  for  a  UH-1B  heli¬ 
+copter  during  the  high-speed,  gun-firing  mission.  A  set  of  design  goals 
+was  established  which  stated  that  the  FSAS  must  be  simple,  provide  a 
+stable  gun  platform,  and  augment  the  vehicle  in  a  manner  similar  to 
+the  mechanical  stabilizer  bar.  Using  six-degree-of -freedom  equations 
+of  motion,  an  FSAS  was  designed  under  Contract  DAAJ02-69-C-0036, 
+fabricated,  and  closed-loop  simulation  tests  were  conducted.  An  ana¬ 
+log  computer  was  used  to  simulate  the  vehicle  and  was  connected 
+through  a  servo-driven  oscillating  table  to  the  controller.  To  close 
+the  loop  the  output  of  the  servoactuator  was  then  routed  back  to  the 
+computer.  Simulated  flight  conditions  from  hover  to  130  kn  were  run. 
+Results  of  the  closed-loop  tests  showed  that  the  FSAS  was  nearly  equiv¬ 
+alent  to  that  defined  during  the  study  phase  analysis. 
+
+Installation 
+
+
+Mechanical  Installation 
+
+
+The  servoactuators  were  located  below  the  floor  in  series  with 
+the  control  tubes  of  the  vehicle.  It  was  necessary  to  enlarge  the 
+control  tube  bulkhead  openings  to  permit  installation  of  the  servo - 
+actuators.  Also,  the  copilot  throttle  control  and  the  heater  ducts 
+were  removed  for  ease  of  installation. 
+
+New  control  tubes,  used  in  conjunction  with  the  servoactuators, 
+replaced  the  standard  control  tubes.  The  control  tubes  had 
+swaged  ends  with  included  angles  of  30  deg  instead  of  the 
+specified  10  deg,  so  strength  tests  in  compression  and  tension 
+were  successfully  conducted. 
+
+To  control  the  pilot' s  control  input  steps  and  pulses,  adjustable 
+stops  were  installed  on  the  copilot' s  stick  and  pedals.  These 
+stops  were  fabricated  with  shear  pins  so  if  a  25-lb  force  on  the 
+stick  or  a  50-lb  force  on  the  pedals  was  applied,  the  pihs  would 
+break  away,  returning  unlimited  control  of  the  vehicle  to  the 
+pilot. 
+
+The  mechanical  stabilizer  bar  was  removed  and  replaced  with 
+fixed  brackets  that  connected  the  control  tubes  directly  to  the 
+main  rotor  blades. 
+
+
+2 
+
+
+Hydraulic  Installation 
+
+
+The  FSAS  was  connected  to  the  No.  2  boost  hydraulic  system 
+during  the  spool  valve  servoactuator  flight  test.  During  the 
+flight  test  of  the  vortex  valve  servoactuators,  the  controllers 
+were  connected  to  the  No.  2  boost  hydraulic  system,  while  the 
+servoactuators  were  connected  to  the  No.  1  boost  hydraulic 
+system.  This  was  necessary  because  of  the  increased  flow  re¬ 
+quirements  of  the  vortex  valve  servoactuators. 
+
+Electrical  Installation 
+
+Instrumentation  was  installed  in  the  vehicle  to  record  linear 
+acceleration,  rate  of  turn,  angular  displacement,  pilot  input, 
+servoactuator  motion,  and  controller  output  for  all  three  axes. 
+Time,  controller  supply  pressure,  controller  flow,  collective 
+position,  and  an  event  marker  were  also  recorded. 
+
+It  was  possible  to  control  the  FSAS  r  nd  recorders  from  the  pilot 
+console.  Each  axis  could  be  energized  in  any  combination  with 
+the  other  two  axes. 
+
+
+MODIFICATION  AND  PROBLEMS  DURING  FLIGHT  TEST 
+Servoactuators 
+
+
+The  first  checkout  flight  of  the  FSAS  revealed  a  pull  on  the  stick  which 
+caused  a  left  roll.  This  was  traced  to  the  hoses  supplying  the  roll-axis 
+servoactuactor.  The  problem  was  corrected  by  rerouting  two  of  the 
+hoses. 
+
+Performance  Changes 
+
+The  FSAS  was  changed  during  the  flight  test  because  a  UH-1C  heli¬ 
+copter  was  used  rather  than  a  UH-1B,  the  vehicle  originally  studied. 
+Also,  the  servoactuators  and  vortex  rate  sensors  had  different  char¬ 
+acteristics  from  those  analyzed  during  the  study  phase.  These  changes 
+did  not  affect  yaw-axis  performance,  but  roll-axis  controller  gain  had 
+to  be  increased  50  percent,  the  pitch-axis  shaping  network  was  changed 
+to  a  lag-lead,  and  pitch-axis  controller  gain  was  reduced  33  percent. 
+
+Vortex  Valve  Servoactuators 
+
+The  vortex  valve  servoactuators  did  not  perform  as  well  as  the  spool 
+valve  servoactuators.  For  example,  they  did  not  move  for  low- 
+frequency,  low-amplitude  signals.  Subsequent  tests  showed  that  they 
+would  move  0.050  in.  when  a  20-lb  load  was  applied,  while  the  spool 
+valve  servoactuators  moved  only  0.002  in.  A  static  friction  level  of 
+20  lb  in  the  control  linkages  would  cause  the  friction  effects  that  were 
+observed. 
+
+
+3 
+
+
+Data  Reduction 
+
+
+Two  factors  made  it  extremely  difficult  to  accurately  and  consistently 
+determine  quantitative  aircraft  performance.  One  was  the  weather, 
+which  was  poor  and  required  that  flights  be  made  on  windy,  gusty  days. 
+The  other  was  the  brackets  that  controlled  the  size  of  the  pilot' s  inputs 
+during  steps  and  pulses.  These  brackets  were  required  to  break  if  too 
+high  a  force  was  applied,  resulting  in  a  bracket  with  insufficient  stiff¬ 
+ness.  They  would  bend,  especially  during  the  pulse -type  inputs;  also, 
+the  aircraft  had  a  tendency  not  to  return  to  the  original  trim  condition 
+after  the  input  was  removed. 
+
+
+UH-1C/FSAS  FLIGHT  TEST  RESULTS 
+
+Flight  testing  was  conducted  to  obtain  both  qualitative  and  quantitative 
+data  with  the  aircraft  in  various  configurations  and  at  a  number  of 
+speeds  and  altitudes.  Table  I  lists  these  conditions  and  those  at  which 
+data  were  recorded. 
+
+Yaw  FSAS  Performance 
+
+
+The  FSAS  virtually  eliminated  the  undamped  yaw  rate  response,  thus 
+making  the  vehicle  easier  to  control,  and  the  control  sensitivity  of 
+the  vehicle  was  not  changed  significantly  by  the  FSAS.  The  project 
+pilot  could  not  detect  any  difference  in  the  handling  characteristics 
+in  response  to  step  inputs  with  the  FSAS  engaged  or  disengaged.  The 
+damping  was  increased  from  0. 15  to  0.  7  with  the  FSAS  engaged. 
+
+The  vortex  valve  servoactuator  portion  of  the  flight  test  program  was 
+conducted  after  completing  the  flight  test  with  the  spool  valve  servo - 
+actuators.  Yaw  rate  response  with  the  vortex  valve  servoactuator 
+system  was  under -damped  and  jerky,  which  was  caused  by  the  low 
+pressure  gain  in  the  servoactuators.  The  servoactuators  could  not 
+overcome  the  static  friction  in  the  control  linkage  until  a  large  input 
+signal  was  applied.  The  damping  ratio  with  the  vortex  valve  servo¬ 
+actuator  system  ranged  from  0.3  to  0.  7. 
+
+Roll  FSAS  Performance 
+
+
+The  FSAS  greatly  improved  the  roll  characteristics  of  the  aircraft 
+without  stabilizer  bar  by  holding  the  roll  rate  constant  for  a  given 
+roll  cyclic  command.  Large  rate  overshoots  were  eliminated  which 
+allowed  pilots  to  more  precisely  and  easily  control  the  aircraft. 
+Control  sensitivity  and  power  with  the  FSAS  engaged  were  approxi¬ 
+mately  the  same  as  those  with  the  stabilizer  bar. 
+
+
+4 
+
+
+TABLE  I.  UH-1C/FSAS  FLIGHT  TEST  ENVELOPE 
+
+
+Flight  Condition 
+
+
+UH-1C,  Without  Mechanical  UH-1C,  Without  Mechanical 
+Stabilizer  Bar,  With  Spool  Stabilizer  Bar,  With  Vortex 
+Valve  Servoactuatora  Valve  Servoactuatora 
+
+
+UH-1C  Flight  Teat  Configuration 
+
+
+UH-  1C,  Without  UH-  1C  With 
+bilizer  Bar,  With  Vortex  Mechanical  Stabi-  Mechanical 
+Valve  Servoactuatora  lizer  Bar  Stabilizer  Bar 
+
+
+Response  to  Pulse  and 
+
+Step  Inputs :* 
+
+Hover,  3000  ft 
+
+X 
+
+X 
+
+X 
+
+X 
+
+6C  kn,  3000  ft 
+
+X 
+
+X 
+
+X 
+
+- 
+
+90  kn,  3000  ft 
+
+X 
+
+X 
+
+X 
+
+X 
+
+120  kn,  3000  ft 
+
+X 
+
+X 
+
+X 
+
+- 
+
+60  kn,  10,000  ft 
+
+X 
+
+X 
+
+X 
+
+- 
+
+Five-Minute  Stabilized 
+
+Flight:** 
+
+Hover  in  ground  effect 
+
+X 
+
+X 
+
+X 
+
+- 
+
+60  kn.  3000  ft 
+
+X 
+
+X 
+
+X 
+
+- 
+
+Engage/ Disengage  Tran¬ 
+sient  Climbing,  Left  and 
+
+Right  Turns: 
+
+60  kn 
+
+X 
+
+X 
+
+- 
+
+- 
+
+90  kn 
+
+X 
+
+X 
+
+- 
+
+- 
+
+120  kn 
+
+X 
+
+X 
+
+- 
+
+- 
+
+Autorotation  Entries: 
+
+60  kn 
+
+X 
+
+X 
+
+- 
+
+- 
+
+90  kn 
+
+X 
+
+X 
+
+- 
+
+- 
+
+120  kn 
+
+X 
+
+X 
+
+- 
+
+- 
+
+Qualitative  Evaluation: 
+
+Two  Government  pilots 
+
+X 
+
+X 
+
+X 
+
+- 
+
+One  contractor  pilot 
+
+X 
+
+X 
+
+X 
+
+X 
+
+Two  airframe  manu¬ 
+facturer  pilots 
+
+- 
+
+X 
+
+X 
+
+- 
+
+♦Pitch,  roll,  and  yaw  pulses  and  steps  in  each  direction.  PuIpjs 
+range  in  magnitude  from  0. 25  to  1 . 0  in. 
+
+and  steps 
+
+••For  thrie  teats.  project  pilot  shall  minimise  all  induced  Inputs. 
+
+The  pilots  commented,  in  particular,  about  the  constant  roll  rate 
+proportional -to -cyclic  stick  position  control  provided  by  the  FSAS. 
+
+It  was  easier  to  maneuver  the  vehicle  with  this  kind  of  response,  as 
+opposed  to  the  response  provided  by  the  stabilizer  bar. 
+
+Pitch  FSAS  Performance 
+
+The  FSAS  reduced  the  control  sensitivities  to  more  controllable  levels, 
+while  still  providing  adequate  control  power.  The  FSAS  at  hover  pro¬ 
+vided  nearly  a  constant  rate  response -to-cyclic  input,  making  the  ve¬ 
+hicle  easier  to  hover.  The  phugoid  characteristics  were  significantly 
+improved,  along  with  an  increase  in  damping  ratio  to  approximately 
+0.6. 
+
+
+5 
+
+
+Stabilized  Flight,  Autorotations,  and  Turns 
+
+
+Pilot  inputs  were  reduced  with  the  FSAS  engaged  during  stabilized 
+flight  and  autorotations.  The  FSAS  reduced  yaw  excursion  during  auto¬ 
+rotations  when  the  throttle  was  cut.  During  turns  it  was  easier  to  con¬ 
+trol  to  a  given  turning  rate  with  the  FSAS  engaged. 
+
+
+CONCLUSIONS 
+
+
+The  following  conclusions  arc  presented: 
+
+•  The  FSAS  decoupled  external  cross -coupling  disturbances. 
+
+•  Pilots  could  fly  with  more  precision. 
+
+•  Turn  coordination  was  not  affected. 
+
+•  The  phugoid  mode  was  stabilized. 
+
+•  The  UH-1C  can  be  flown  faster  without  the 
+stabilizer  bar  and  with  the  FSAS. 
+
+•  The  aircraft  with  FSAS  still  meets  required 
+handling  characteristics  of  MIL-H-8501A. 
+
+•  Oil  temperature  did  not  adversely  affect  FSAS 
+performance  over  the  operating  range  encountered. 
+
+•  The  FSAS  stabilized  the  UH-1C  in  a  manner  comparable 
+to  or  better  than  the  mechanical  stabilizer  bar. 
+
+•  Gain  scheduling  to  improve  FSAS  performance  over  the 
+complete  flight  envelope  should  be  analyzed. 
+
+•  Angular  measuring  sensors,  synchronizers,  and  auto¬ 
+matic  trim  functions  should  be  developed. 
+
+•  A  rotor/pylon  stabilization  system  for  the  UH-1  series 
+vehicle  using  hydrofluidics  should  be  explored. 
+
+•  Further  development  of  temperature  compensation 
+techniques  should  be  pursued. 
+
+In  general,  the  flight  test  program  results  demonstrated  that  hydro¬ 
+fluidic  technology  can  adequately  mechanize  the  damping  functions 
+required  by  single -rotor  helicopters. 
+
+
+6 
+
+
+SECTION  in 
+
+SYSTEM  DESIGN  AND  INSTALLATION 
+
+
+This  section  reviews  system  design  efforts  and  tasks  that  lead  to  the 
+hardware  development  of  th<  flight -test  FSAS  and  installation  of  the 
+FSAS  in  the  test  vehicle-  Areas  covered  are  system  design  goals, 
+computer  simulation  development,  closed-loop  hardware  plus  compu¬ 
+ter  simulation  evaluation,  and  mechanical,  hydraulic,  and  electrical 
+installation  of  the  instrumentation,  servoactuators,  and  controllers. 
+
+
+SYSTEM  DESIGN 
+
+
+FSAS  Design  Goals 
+
+The  computer  simulation  analysis  program  of  the  study  phase  mathe¬ 
+matically  defined  system  block  diagrams  for  a  simple  stability  augmen 
+tation  system  to  augment  the  roll,  pitch,  and  yaw  axes  of  the  UH-1B 
+helicopter  using  hydraulic  fluidics  as  the  control  medium.  The  perfor¬ 
+mance  requirements  specified  were  that  the  fluidic  stability  augmen¬ 
+tation  system  (FSAS)  must  improve  vehicle  damping  and  handling  quali¬ 
+ties  of  the  UH-1B  helicopter  during  the  high-speed,  gun-firing  mission. 
+With  these  general  system  requirements  in  mind,  a  set  of  detailed  de¬ 
+sign  goals  was  generated  that  permitted  FSAS  performance  to  be 
+evaluated. 
+
+The  detailed  design  goals  used  as  guidelines  during  development  of 
+the  FSAS  control  system  are  presented  in  USAAMRDL  Technical  Report 
+71-30.  These  design  goals  were  generated  to  be  in  agreement  with 
+helicopter  flying  and  ground  handling -quality  requirements  detailed 
+in  Military  Specification  MIL-H-8501A. 
+
+Those  design  goals  needed  to  establish  FSAS  performance  are  included 
+in  the  performance  and  evaluation  summaries  of  Section  V. 
+
+The  primary  analysis  goals  were  that  the  resulting  FSAS  must  be  a 
+simple  system  and  it  must  provide  a  more  stable  gun-firing  platform 
+for  the  high-speed  UH-1B  gun-firing  mission.  Second,  the  system 
+should  augment  the  vehicle  in  pitch  and  roll  comparable  to  the  manner 
+presently  accomplished  by  the  mechanical  stabilizer  bar. 
+
+Computer  Simulation  Development 
+
+Six-degree -of -freedom,  linear  perturbation  equations  of  motion  mathe¬ 
+matically  representing  the  UH-1B  helicopter  were  used  to  analytically 
+define  the  FSAS.  The  complete  math  model,  including  equations  of 
+motion,  aerodynamic  data,  and  computer  simulation  diagrams  of  the 
+UH-1B  helicopter  and  FSAS,  are  presented  in  Appendix  I  of  USAAMRDL 
+
+
+7 
+
+
+Technical  Report  71-30.  Time  histories  showing  UH-1B  response 
+characteristics  with  and  without  the  FSAS  engaged  are  also  presented. 
+
+Although  the  UH-1B  was  used  as  the  analytical  model,  the  UH-1C 
+was  selected  as  the  test  vehicle.  A  qualitative  comparison  of  the  heli¬ 
+copter  responses  for  the  UH-1B  (USAAMRDL  Technical  Report  71-30) 
+with  those  recorded  for  the  UH-1C  (this  report),  leads  to  the  following 
+conclusions: 
+
+•  At  hover,  the  pitch  and  roll  axes  of  the  UH-1C  helicopter 
+have  predominantly  a  rate  response  proportional  to  stick 
+input,  while  the  simulated  UH-1B  was  predominantly  an 
+attitude  response  proportional  to  control  stick  input. 
+
+•  The  yaw  axis  of  the  UH-1C  is  much  more  underdamped 
+than  that  of  the  simulated  UH-1B  (0.15  as  opposed  to 
+0.35). 
+
+•  The  roll-axis  spiral  divergence  mode  is  more  pronounced 
+and  occurs  much  sooner  on  the  UH-1C. 
+
+With  the  exception  of  the  above  three  items,  the  gross  aerodynamic 
+characteristics  of  the  UH-1B  and  UH-1C  are  similar. 
+
+Closed-Loop  Hardware  Evaluation 
+
+Performance  of  the  three -axis  FSAS  was  investigated  by  evaluating 
+system  transient  response  behavior  in  closed-loop  tests.  The  closed- 
+loop  test  setup  checked  the  pitch  and  roll-yaw  axes  separately.  Analog 
+computer  simulations  represented  the  uncoupled  pitch  and  roll-yaw 
+equations  of  motion  of  the  UH-1B  helicopter  at  representative  forward 
+speeds  ranging  from  hover  to  130  kn.  A  servo-driven  oscillating  table 
+was  used  to  provide  appropriate  motion  inputs  to  the  FSAS  rate  sensors. 
+The  three-axis  FSAS  was  mounted  on  the  oscillating  table  and  used  to 
+drive  servoactuators  similar  to  those  provided  on  the  UH-1B  helicop¬ 
+ter.  Thus,  the  closed-loop  tests  were  functionally  equivalent  to  those 
+anticipated  during  flight  testing  except  for  any  nonlinear  characteris¬ 
+tic  present  in  the  primary  control  system  of  the  UH-1B  helicopter. 
+
+For  complete  details  concerning  test  setup  and  test  results,  refer  to 
+USAAMRDL  Technical  Report  71-30.  Highlights  of  the  closed-loop 
+test  results  are  presented  in  the  following  paragraph. 
+
+The  closed-loop  simulation  results  obtained  on  the  three-axis  FSAS 
+indicate  that  nominal  transient  response  performance  at  the  design  oil 
+temperature  (120°F)  is  nearly  equivalent  to  that  indicated  in  the  study 
+phase  analysis  studies.  However,  the  closed-loop  simulation  tests 
+pointed  out  two  problem  areas:  (1)  high  oil  temperatures  (185°F) 
+produce  undesirably  high  system  noise  levels;  (2)  low  oil  tempera¬ 
+tures  (60°F)  result  in  almost  no  system  noise  but  also  reduce  damp¬ 
+ing  of  the  short -period  and  dutch  roll  modes  at  high  speeds  to  nearly 
+that  of  the  free  aircraft. 
+
+
+8 
+
+
+During  the  UH-1C/FSAS  flight  test  program,  servoactuator  travel  and 
+oil  temperature  were  monitored.  The  oil  temperature  stayed  between 
+100°F  and  150°F.  There  was  no  evidence  of  noise  in  either  the  roll- 
+or  pitch-axis  servoactuators.  The  yaw-axis  servoactuator  did  have  a 
+small  amount  of  pedal  motion  caused  by  the  controller,  but  it  did  not 
+at  any  time  become  objectionable  to  the  pilot  or  to  overall  yaw -axis 
+performance.  The  cause  of  this  pedal  motion  is  the  pilot  input  device 
+and  the  lack  of  friction  in  the  linkage  between  the  pedal  and  the  servo¬ 
+actuator.  When  the  pedal  moves  forward,  the  action  of  the  pilot  input 
+device  causes  the  servoactuator  to  retract,  which  pulls  the  pedal  rear¬ 
+ward,  and  when  the  pedal  moves  rearward,  the  servoactuator  extends, 
+pushing  the  pedal  forward.  This  closed-loop  connection  causes  the 
+pedal  to  oscillate,  but  does  not  become  excessive  because  of  a  lag  net¬ 
+work  in  the  pedal  input  circuit.  If  the  pedals  were  kept  from  moving  by 
+the  pilot  or  by  increasing  friction,  the  motion  could  be  stopped. 
+
+
+INSTALLATION 
+
+
+Mechanical  Installation 
+
+
+Servoactuator  and  Linkages 
+
+Figure  1  is  a  schematic  of  the  servoactuator  installation,  showing 
+the  approximate  location  of  the  three  servoactuators.  During  in¬ 
+stallation  it  became  necessary  to  cut  a  larger  hole  in  the  bulkhead 
+at  station  66  so  that  roll  and  pitch  servoactuators  could  be  installed. 
+Figure  2  shows  the  hole  in  this  bulkhead  with  the  stiffeners  and 
+doubler  that  were  added.  To  provide  enough  clearance  for  the  roll- 
+axis  servoactuator,  it  was  necessary  to  remove  the  throttle  linkage 
+that  connects  the  copilot' s  throttle  to  the  pilot' s  throttle  linkage . 
+This  is  discussed  further  in  Appendix  III.  To  install  the  yaw-axis 
+servoactuator,  the  control  rod  hole  in  the  bulkhead  at  station  52 
+was  enlarged  and  a  stiffener  and  doubler  were  added,  which  is 
+shown  in  Figure  3.  The  pitch  jackshaft  that  connects  the  pilot 
+and  copilot  controls  was  modified.  The  original  installation  used 
+a  swivel-type  bearing  in  the  arm  assembly.  The  arm  assembly 
+was  replaced  with  a  newly  fabricated  part  using  a  fixed  bearing. 
+This  prevents  the  servoactuator,  which  connects  through  a  control 
+tube  that  attaches  to  the  arm  assembly,  from  rotating  and  possibly 
+hitting  the  roll  servoactuator  or  bulkhead. 
+
+It  was  necessary  to  fabricate  and  test  new  control  tubes  for  all 
+three  axes.  The  report  covering  the  strength  testing  of  these 
+assemblies  is  given  in  Appendix  IV.  It  was  necessary  to  test  the 
+strength  of  these  control  tubes  because  the  half -angle  taper  on  the 
+tube  was  15  deg  instead  of  the  specified  5  deg.  To  provide  in¬ 
+creased  safety,  the  tube  wall  thicknesses  were  increased.  Tubes 
+
+
+9 
+
+
+Figure  2.  Fuselage  Station  66  Looking  Forward  After  Modification. 
+
+
+Figure  3.  Fuselage  Station  52  Looking  Forward  After  Modification. 
+
+
+11 
+
+
+with  the  larger  angle  were  purchased  because  the  vendor  would 
+have  had  to  acquire  special  fixturing  to  fabricate  tubes  with  the 
+smaller  angle,  and  an  unnecessary  delay  in  the  program  would 
+have  resulted. 
+
+Figures  4,  5,  6,  and  7  show  the  installation  of  the  roll-  and 
+pitch-axis  servoactuators  beneath  the  floor  of  the  vehicle.  The 
+servoactuator  support  brackets  had  adjustable  stops  installed 
+to  limit  the  total  travel  of  the  idler  arms.  The  support  brack¬ 
+ets  for  the  bellcranks  located  at  station  123  also  had  adjustable 
+stops  installed  to  limit  travel  of  the  control  tubes  aft  of  the  roll- 
+pitch  mixing  linkage.  These  are  shown  in  Figures  8  and  9. 
+Figures  10  and  11  show  the  yaw-axis  servoactuator  installed 
+below  the  floor  under  the  pilot' s  seat.  The  support  bracket 
+and  bellcrank  at  station  161.61  are  shown  in  Figure  12. 
+
+During  installation,  it  was  necessary  to  remove  the  heater  ducts 
+in  the  area  of  the  servoactuators  to  make  installation  easier. 
+Appendix  III  presents  a  method  of  installation  resulting  in  reten¬ 
+tion  of  the  heater  ducting  for  any  future  permanent  installation. 
+
+Pilot  Input  Fixtures 
+
+Breakaway  fixtures  were  installed  on  the  copilot  side  of  the  air¬ 
+craft  to  control  the  motion  of  the  cyclic  stick  and  rudder  pedals 
+during  the  data  flights.  These  fixtures  are  shown  in  Figure  13. 
+The  arm  extending  from  the  instrument  panel  was  held  with  rivets 
+that  would  shear  when  a  load  of  25  lb  was  applied  to  the  movable 
+rod.  The  same  type  device  was  used  on  the  rudder  pedals,  except 
+50  lb  could  be  applied  before  shearing.  This  was  required  as  a 
+safety  precaution  in  case  the  adjustment  fixture  could  not  be  re¬ 
+moved  from  around  the  stick  or  pedals  when  the  pilot  needed  to 
+make  a  quick  correction  to  the  aircraft.  This  capability  was 
+utilized  three  times  during  the  flight  test. 
+
+The  "fingers"  around  the  stick  could  be  adjusted  during  flight  to 
+restrict  pilot  control  inputs  to  a  predetermined  safe  amount.  This 
+also  provided  repeatability  of  fixed  step  and  pulse -type  pilot  con¬ 
+trol  inputs. 
+
+The  pedal  fixture  was  eventually  changed  slightly  from  that  shown 
+in  Figure  13.  Instead  of  the  fixture  being  placed  on  top  of  the 
+pedai,  it  was  held  up  under  the  pedal  so  that  if  it  was  released  in 
+any  way  it  would  fall  away  from  the  pedal.  Also,  the  bracket  that 
+held  the  rod  with  the  adjustable  fingers  was  bent  90  deg  down  so 
+the  rod  pivot  line  was  parallel  with  the  pedal  foot  rest. 
+
+
+12 
+
+
+Figure  4.  Roll-  and  Pitch-Axis  Spool  Valve  Servoactuators  Installation. 
+
+
+Figure  5.  Roll-  and  Pitch- Axis  Spool  Valve  Servoactuators  From 
+Right  Side  of  Aircraft. 
+
+
+I 
+
+
+Figure  6.  Roll-  and  Pitch- Axis  Spool  Valve  Servoactuators  From 
+Left  Side  of  Aircraft. 
+
+
+Figure  7.  Roll-  and  Pitch- Axis  Spool  Valve  Servoactuators  From 
+Right  Front  Side  of  Aircraft. 
+
+
+STOPS 
+
+
+ROD  TO  MIXING  LINKAGE 
+
+
+Figure  8.  Left  Pitch- Roll  Bellcrank  Installation 
+(Fuselage  Station  123). 
+
+
+i 
+
+
+Figure  9.  Right  Pitch- Roll  Bellcrank  Installation 
+(Fuselage  Station  123). 
+
+
+15 
+
+
+Figure  10.  Yaw-Axis  Spool  Valve  Servoactuator  Installation 
+
+
+Figure  11.  Yaw-Axis  Spool  Valve  Servoactuator  From  Rear 
+of  Crew  Compartment. 
+
+
+16 
+
+
+CQ 
+
+<D 
+
+U 
+
+3 
+
+•*-» 
+
+.2 
+
+3 
+
+a 
+
+c 
+
+
+o 
+
+u 
+
+-4-1 
+
+c 
+
+o 
+
+U 
+
+
+0, 
+
+
+CO 
+
+rH 
+
+<D 
+
+u 
+
+3 
+
+ttf) 
+
+•rH 
+
+
+CD  ^ 
+
+a  ^ 
+
+O  co 
+-*-> 
+
+x:  to 
+
+
+3 
+
+o 
+
+
+c/2 
+
+
+^  0> 
+■—I  iao 
+a)  ctf 
+CQ 
+
+”  (D 
+
+>  CQ 
+
+
+rt 
+
+
+CM 
+
+
+<u 
+
+3 
+
+3 
+
+tU3 
+
+•rH 
+
+&H 
+
+
+Stabilizer  Bar 
+
+
+Flight  was  conducted  with  four  aircraft  configurations:  normal 
+aircraft  with  stabilizer  bar  on;  free  aircraft  with  stabilizer 
+bar  off;  FSAS  engaged  with  spool  valve  servoactuators  (stabilizer 
+bar  off);  and  FSAS  engaged  with  vortex  valve  servoactuators 
+(stabilizer  bar  off).  Figure  14  shows  the  aircraft  in  its  normal 
+configuration  with  the  stabilizer  bar  in  place.  Figure  15  shows 
+the  aircraft  with  the  stabilizer  bar  removed  and  fixed  brackets 
+connecting  the  control  arm  and  rotor  mast  added. 
+
+Hydraulic  Installation 
+
+During  the  first  series  of  flight  tests  using  the  spool  valve  servoactua¬ 
+tors,  the  complete  fluidic  installation  was  accomplished  using  only  the 
+No.  2  aircraft  hydraulic  power  supply.  This  was  done  for  safety  rea¬ 
+sons,  which  left  the  No.  1  hydraulic  power  supply  unchanged  from  the 
+normal  aircraft  configuration.  The  system  was  connected  as  shown 
+schematically  in  Figure  16.  The  hardware  installation  is  shown  in 
+Figures  17  (bench)  and  18  (in  aircraft).  The  lines  connecting  the 
+controllers  to  the  servoactuators  passed  through  the  aircraft  floor 
+using  bulkhead  fittings.  From  the  bulkhead  fittings,  flexible  lines 
+were  run  to  the  servoactuators. 
+
+The  second  portion  of  the  flight  test  program  was  to  evaluate  the  vortex 
+valve  servoactuators.  It  was  necessary  at  this  time  to  use  the  No.  1 
+and  the  No.  2  aircraft  hydraulic  power  supplies,  as  the  No.  2  aircraft 
+hydraulic  power  supply  could  not  supply  enough  flow  for  both  the  FSAS 
+and  vortex  valve  servoactuators  connected  in  parallel.  The  vortex 
+valve  servoactuators  used  a  steady-state  flow  of  approximately  0.  45 
+gpm  each,  while  the  FSAS  used  2.3  gpm.  Previous  plans  to  operate 
+the  servoactuators  and  FSAS  in  series  to  conserve  flow  were  dis¬ 
+carded  to  expedite  the  program.  Since  the  first  phase  of  the  flight 
+test  program  had  shown  that  the  FSAS  was  a  reliable  system,  it  was 
+considered  safe  to  connect  into  both  hydraulic  power  supplies.  Figure 
+19  shows  the  schematic  of  the  vortex  valve  hydraulic  circuit.  The  qnly 
+difference  between  the  spool  valve  and  vortex  valve  servoactuator  cir¬ 
+cuits  is  in  the  servoactuator  portion  of  the  system.  The  fact  that  the 
+FSAS  circuit  was  not  changed  also  ensured  that  the  operating  conditions 
+of  the  FSAS  would  be  unchanged  and  that  a  more  valid  comparison  of 
+the  two  types  of  servoactuators  could  be  made.  Figures  20  through  23 
+show  the  vortex  valve  servoactuators  installed  in  the  aircraft. 
+
+Electrical  Installation 
+
+
+Two  inverters  were  installed  in  the  aft  storage  compartment  to  provide 
+115 -volt,  400-Hz  power  for  the  instrumentation  equipment,  including  a 
+24-channel  visicorder,  which  was  used  to  record  the  following  param¬ 
+eters: 
+
+
+18 
+
+
+I 
+
+
+Figure  14.  UH-1  With  Stabilizer  Bar. 
+
+
+Figure  15.  UH-1  Without  Stabilizer  Bar. 
+
+
+19 
+
+
+PRESSURE 
+
+TRANSDUCER 
+
+
+r 
+
+
+SUPPLY 
+
+
+NO.  1 
+SOLENOID 
+
+
+NO.  2 
+
+ARMAMENT 
+
+AIRCRAFT 
+
+SOLENOID 
+
+hydraulic 
+
+BOOST 
+
+Figure  16.  Spool  Valve  Servoactuator  Hydraulic 
+Circuit  Diagram 
+
+
+20 
+
+
+SUPPLY  PRESSURE 
+TRANSDUCER 
+
+
+YAW-AXIS 
+
+CONTROLLER 
+
+TRANSDUCER 
+
+
+RELIEF 
+
+VALVE 
+
+
+FLOW  CONTROL 
+VALVE 
+
+
+Figure  17.  FSAS  Ready  for  Installation  in  Aircraft. 
+
+
+Figure  19.  Vortex  Valve  Servoactuator  Hydraulic 
+Circuit  Diagram. 
+
+
+22 
+
+
+Figure  20.  Full  View  of  Vortex  Valve  Servoactuators  Installation. 
+
+
+Figure  21.  Top  View  of  Vortex  Valve  Servoactuators  Installation. 
+
+
+23 
+
+
+Figure  22.  Roll-  and  Pitch-Axis  Vortex  Valve  Servo- 
+actuators  Installation. 
+
+
+Figure  23.  Yaw-Axis  Vortex  Valve  Servoactuator 
+Installation. 
+
+
+24 
+
+
+Yaw  attitude 
+
+Yaw-axis  servoactuator  motion 
+Pedal  position 
+Yaw-axis  controller  output 
+Yaw  rate 
+
+Lateral  acceleration 
+Pitch  attitude 
+
+Pitch- axis  servoactuator  motion 
+
+Pitch  cyclic  position 
+Pitch- axis  controller  output 
+Pitch  rate 
+
+Vertical  acceleration 
+Roll  attitude 
+
+Roll-axis  servoactuator  motion 
+Roll  cyclic  position 
+Roll  axis  controller  output 
+Roll  rate 
+
+Collective  position 
+Controller  supply  pressure 
+Controller  flow 
+Longitudinal  acceleration 
+Timing  marker 
+Event  marker 
+
+Figure  24  shows  the  inverters  installed  in  the  aircraft. 
+
+Yaw  attitude  was  measured  by  a  heading  gyro  mounted  in  the  instrument 
+panel.  Roll  and  pitch  attitudes  were  measured  by  a  vertical  gyro.  The 
+accelerations  in  all  three  axes  were  measured  using  a  package  contain¬ 
+ing  three  accelerometers.  Three  electronic  rate  gyros  measured  air¬ 
+craft  turning  rates.  These  instruments  are  shown  in  Figures  25  and 
+26.  (These  photos  were  taken  during  installation  with  the  pilot's  and 
+copilot's  seats  removed.  ) 
+
+Transducers  were  incorporated  in  the  servoactuators  to  measure  actua¬ 
+tor  piston  motion;  the  spool  valve  servoactuators  used  linear  variable 
+displacement  transducers  (LVDTs),  and  the  vortex  valve  servoactuators 
+used  potentiometers.  The  LVDTs  were  located  within  the  servo¬ 
+actuator  housing,  while  the  vortex  valve  servoactuator  potentiometers 
+were  mounted  on  the  side.  These  can  be  seen  in  Figures  27  and  28. 
+
+
+25 
+
+
+\  v 
+
+Wm  * 
+
+n  Jz ' 
+
+.1 
+
+H  i  ■’ 
+
+Figure  24.  Inverters  Mounted  in  Aft  Compartment 
+
+
+PRESSURE  TRANSDUCER 
+DEMODULATORS 
+
+
+Figure  25.  Instrumentation  Viewed  From  Left  Side  of  Aircraft. 
+
+
+26 
+
+
+Figure  26.  Instrumentation  Viewed  From  Right  Side  of  Aircraft. 
+
+i 
+
+
+27 
+
+
+Figure  2  8.  Vortex  Valve  Servoactuator. 
+
+
+28 
+
+
+Pilot  control  input  motions  were  measured  by  potentiometers  located 
+under  the  aircraft  floor  and  connected  to  the  stick  and  pedal  control 
+linkage.  The  pedal  position  and  pitch  cyclic  position  potentiometer  can 
+be  seen  in  Figure  29. 
+
+Pressure  transducers  used  to  measure  controller  fluidic  signals  and 
+supply  pressure  can  be  seen  in  Figure  17.  Also  shown  in  Figure  17  is 
+the  turbine  flowmeter  used  to  measure  the  total  flow  used  by  the  FSAS 
+controllers. 
+
+uolenoid  valves  were  used  in  the  power  circuit  to  provide  the  capability 
+of  shutting  off  portions  of  the  system,  or  the  complete  system,  in  case  of 
+a  catastrophic  failure  such  as  a  line  rupturing.  The  electrical  schematic 
+of  this  engage  and  disengage  provision  is  shown  in  Figure  30.  (Refer  also 
+to  Figures  16  and  19.)  With  this  circuit  it  was  possible  to  engage  or  dis¬ 
+engage  any  servoactuator  independently  of  the  others,  to  actuate  the  dis¬ 
+engage  provisions  of  the  servoactuators  from  the  pilot  seat,  copilot  seat, 
+or  control  panel  locations,  and  to  shut  off  the  complete  system.  An  addi¬ 
+tional  solenoid  was  added  when  the  vortex  valve  servoactuators  were  in¬ 
+stalled  so  that  the  power  supply  could  be  shut  off  at  the  discharge  of  the 
+No.  2  aircraft  hydraulic  power  supply.  Figure  31  shows  the  layout  of  the 
+switches  located  on  the  pilot  console. 
+
+
+In  addition  to  the  24-channel  recorder  that  provided  a  record  of  all  in¬ 
+strumentation  outputs  when  the  aircraft  was  in  flight,  an  8-channel, 
+hot-pen  recorder  was  installed  to  record  selected  parameters,  includ¬ 
+ing  aircraft  turning  rates,  pilot  control  inputs,  and  roll  and  pitch  atti¬ 
+tudes.  These  recordings  were  used  to  evaluate  FSAS  performance  at 
+the  various  flight  conditions. 
+
+
+The  control  of  the  electrical  supply  for  the  instrumentation  equipment, 
+the  recorder  on-off  switches,  the  8-channel  recorder  speed  control, 
+and  the  vertical  gyro  cage-uncaging  switch  were  all  located  on  the  pilot 
+console  shown  in  Figure  31. 
+
+
+29 
+
+
+Figure  29.  Pilot  Control  Position  Potentiometers  Under 
+Pilot's  Seat. 
+
+
+'H-vniitiis*-  Xwtmm** 
+
+
+!«0  CAM  V  '  #j 
+
+
+Figure  31.  Pilot's  Console. 
+
+
+32 
+
+
+SECTION  IV 
+
+MODIFICATION  AND  PROBLEMS 
+DURING  FLIGHT  TEST 
+
+
+This  section  discusses  changes  and  modifications  made  after  flight  test¬ 
+ing  had  started. 
+
+
+FORCE  ON  SER VQACTUATOR  DUE  TO  FLEXIBLE  HOSES 
+
+During  the  first  checkout  flight,  after  all  flight  test  equipment  had  been 
+installed,  a  residual  force  on  the  stick  was  encountered  that  resulted  in 
+an  aircraft  roll  to  the  left.  The  force  was  traced  to  five  flexible  hoses 
+connected  to  the  roll  servoactuator  and  routed  from  the  servoactuator 
+toward  the  rear  of  the  aircraft.  It  was  possible  to  reroute  two  of  the 
+flexible  lines  forward  to  balance  the  load  on  the  servoactuator.  This 
+reduced  the  force  to  a  satisfactory  level. 
+
+
+PRESSURE  SURGES  ON  SPOOL  VALVE  SERVOACTUATORS 
+
+
+Initial  test  flights  were  made  with  the  stabilizer  bar  on  to  obtain  basic 
+aircraft  data  for  this  configuration.  Some  preliminary  checks  of  the 
+FSAS  were  also  made.  It  was  noted  that  during  preflight  checkout  of 
+the  aircraft,  electrical  power  was  interrupted  twice.  Because  of  the 
+solenoid  valves  in  the  circuit,  rather  large  pressure  surges  were  being 
+imposed  on  the  servoactuator  force  capsules.  (It  had  been  assumed  that 
+pressure  on  the  FSAS  would  be  increased  gradually  by  being  connected  to 
+the  hydraulic  pump  while  the  engine  was  started  and  run  up.  )  These 
+pressure  surges  on  the  servoactuators  caused  the  yaw  and  roll  servo- 
+actuators  to  fail.  The  failures  were  traced  to  the  feedback  pin  (see 
+Figure  32).  During  the  pressure  surge,  the  servoactuator  would  move 
+in  such  a  way  that  the  feedback  pin  would  move  out  of  the  null  adjust 
+screw  seat.  Most  of  the  time  it  would  slide  back  into  position,  up  the 
+sloped  wall  of  the  seat,  and  function  satisfactorily.  Examination  of  the 
+pin  and  seat  showed  that  the  pin  had  gouged  the  seat  quite  badly  and  failed 
+to  reseat.  The  seat  and  pin  were  cleaned  with  grinding  compound  after 
+which  the  servoactuators  functioned  properly.  To  eliminate  the  re¬ 
+occurrence  of  the  pressure  surges  during  startup  of  the  aircraft  and 
+preflight  checkout,  a  manual-operated  valve  was  added  to  the  FSAS 
+supply  line  just  downstream  of  the  flow  control  valve  shown  in  Figure  17. 
+This  valve  was  opened  only  after  the  aircraft  was  ready  for  flight. 
+
+
+33 
+
+
+NOTE:  INPUT  SIGNAL  AND  REFERENCE 
+SIGNAL  PORTS  CONNECT  TO  THE 
+CONTROLLER 
+
+
+Figure  32.  Schematic  of  Spool  Valve  Servoactuator  -- 
+Input  Portion. 
+
+
+FSAS  PERFORMANCE  CHANGES  WITH  SPOOL 
+VALVE  SERVOACTUATORS 
+
+
+Analytic  block  diagrams  of  the  yaw,  roll,  and  pitch  axes  of  the  FSAS  are 
+shown  in  Figures  33,  34,  and  35.  Each  axis  consisted  of  a  hydraulic 
+fluid  vortex  rate  sensor  with  the  fluid  output  amplified,  shaped,  and  then 
+fed  directly  to  the  series  servoactuators.  The  feedback  signals  were 
+high-passed  to  eliminate  damper  opposition  to  pilot  input  commands,  and 
+also  to  minimize  the  effects  of  any  component  drift.  Pedal  position  input 
+was  incorporated  in  the  yaw-axis  SAS,  as  shown  in  Figure  33,  to  eli¬ 
+minate  the  decrease  in  vehicle  response  to  pedal  inputs  caused  by  the 
+yaw  damper.  Series  servoactuator  authority  was  set  at  20  percent. 
+
+The  FSAS  briefly  described  above  was  designed  to  augment  the  stability 
+of  the  UH-1B  helicopter.  In  addition,  trie  FSAS  was  designed  with  the 
+following  sensor  and  servoactuator  characteristics  : 
+
+•  A  servoactuator  with  a  fluid  interface  having  a  natural  fre¬ 
+quency  (90-deg  phase  lag  point  on  amplitude  response)  of 
+10  Hz  and  a  damping  ratio  of  0.  7  was  initially  .specified. 
+
+•  System  dynamics  capable  of  generating  gain  and  phase  shift 
+characteristics  were  assumed  to  be  accounted  for  in  a 
+double-lagged  sensor  transport  delay  as  follows: 
+
+
+T(S)  =  e~  tS  - - - 
+
+(0.  05S+  1) 
+
+
+During  the  FSAS  program,  the  test  vehicle  was  changed  from  a  UH-1B 
+to  a  UH-1C,  and  the  dynamic  characteristics  of  the  sensor  and  servo¬ 
+actuator  components  of  the  flight- tested  FSAS  were  as  follows: 
+
+•  The  series  servoactuator  had  a  natural  frequency  (90-deg 
+phase  lag  point)  of  5.  5  Hz  and  a  damping  ratio  of  0.  32. 
+
+The  actual  servoactuator  transfer  function  was: 
+
+
+T(S) 
+
+
+_ _ (34.  6)2 
+
+S^  +  22.  1S  +  (34.  6)2 
+
+
+_ L _ 
+
+(0.  029+  1) 
+
+
+•  The  rate  sensor  dynamics  were  a  pure  transport  delay  as 
+follows: 
+
+T(S)  =  e"  tS 
+
+
+Changing  the  test  helicopter  to  a  UH-1C  and  using  the  rate  sensor  and 
+servoactuator  with  the  dynamic  characteristic  described  above  requL  ed 
+modification  of  the  roll  and  pitch  controllers.  These  changes  and  the 
+final  FSAS  characteristics  are  explained  in  the  following  sections. 
+
+
+35 
+
+
+T.  -  1.0  SEC 
+lag 
+
+
+PEDAL  SENSITIVITY  -  2  DEG  OP  TAIL  ROTOR/IN.  PEDAL 
+
+
+Figure  33.  Analytic  Block  Diagram  for  UH-1B  Yaw-Axis  SAS. 
+
+
+ROLL  CYCLIC  INPUT 
+
+
+LINKAGE 
+
+BACKLASH 
+
+
+r  20-ms  TRANSPORT  DELAY 
+
+K  0.083  DEG  ROLL  BLADE 
+ANGLE/DEG/SEC 
+
+Thp  11.5  SEC 
+
+ROLL  CYCLIC  STICK  SENSITIVITY  --  1.54  DEG  ROLL  BLADE  ANGLE/IN.  STICK 
+
+Figure  34.  Analytic  Block  Diagram  for  UH-1B  Roll-Axis  SAS. 
+
+
+36 
+
+
+PITCH  CYCLIC  INPUT 
+
+
+LINKAGE 
+
+r  20-ms  TRANSPORT  DELAY  BACKLASH 
+
+K  0.173  DEG  PITCH  BLADE 
+9  ANGLE/DEG/SEC 
+
+Tj  =  0.04  SEC 
+T2  0.107  SEC 
+
+
+THp  2.5  SEC 
+
+PITCH  CYCLIC  STICK  SENSITIVITY  =  1.84  DEG  PITCH  BLADE  ANGLE/IN.  STICK 
+
+
+Figure  35.  Analytic  Block  Diagram  for  UH-1B  Pitch-Axis  SAS. 
+
+
+Yaw-Axis  FSAS 
+
+
+The  yaw  axis  was  designed  to  improve  damping  of  the  external  flight 
+path  disturbance  during  steady  maneuvers  without  opposing  the  pilot's 
+commands.  The  original  control  equation  of  the  yaw  axis  was: 
+
+
+<5.  = 
+
+
+m 
+
+
+.%  lTlag 
+
+
+S^l  > 
+
+
+aug 
+
+
+-  ay  ^e 
+
+
+-tS 
+
+
+1 
+
+
+0.05  S  +1 
+
+
+where 
+
+
+(62.8)' 
+
+
+THP  s 
+
+THP  S+1||  S2+2(0.  7)(62.  8)S  +  (62.  8)2  j 
+
+(ioo); 
+
+
+S2+2(0.  7)(100)S  +  (100)2 
+
+
+6 ^  =  mechanical  tail  rotor  command  from  pilot's  pedals,  deg 
+
+
+m 
+
+
+5^  =  total  tail  rotor  deflection,  deg 
+
+
+37 
+
+
+<5  .  =  augmented  servoactuator  command  from  pilot's  pedals,  deg 
+
+*aUg 
+
+Kg  =1.5  augmented  servoactuator  command/mechanical  tail 
+rotor  command,  in.  /in. 
+
+
+1. 0  sec 
+
+0.  15  tail  rotor  angle/aircraft  yaw-axis  turning  rate, 
+
+deg/deg/sec 
+
+0.02  sec 
+
+
+i p  =  yaw  rate,  deg/sec 
+
+Tjjp  =  2.5  sec 
+
+
+The  yaw-axis  aerodynamic  characteristics  of  the  UH-1B  and  UH-1C  are 
+similar;  therefore,  changes  in  the  series  servoactuator  and  sensor 
+dynamics  mentioned  above  did  not  significantly  deteriorate  the  gain  band¬ 
+width  of  the  yaw-axis  FSAS.  As  a  result,  no  design  modifications  were 
+required  to  the  yaw  system  during  the  flight  test  program. 
+
+
+Roll-Axis  FSAS 
+
+
+The  roll-axis  stability  augmentation  system  was  designed  to  decrease 
+the  control  sensitivity  of  the  UH-1B  helicopter  without  mechanical  sta¬ 
+bilizer  bar  to  the  level  of  control  sensitivity  characterized  by  the  UH-1B 
+helicopter  with  mechanical  stabilizer  bar.  The  roll  rate  feedback  was 
+high-passed  to  provide  a  long-term  trim  on  the  roll  FSAS  output.  The 
+original  control  equation  for  the  roll  FSAS  was: 
+
+
+.  IT  S 
+
+)  *  „  •  e -tS 
+
+1  \2  j  HP 
+
+0.  05  S  +  l  \T„„S  +  1 
+
+m 
+
+/  \  HP 
+
+(62.  8)2 
+
+S2+2(0.  7)<62.  8) 
+
+
+_ (10Q12- _ _ 
+
+S2  +  2(0. 7 )  ( 100)S  +(100)2 
+
+
+where 
+
+=  0.055  deg  roll  cyclic  blade  angle/deg/sec 
+
+Ttr-r,  >  10  sec 
+HP  = 
+
+t  =0.02  sec 
+
+6*  =  mechanical  roll  cyclic  command  from  pilot's  stick,  deg 
+
+m 
+
+6^  =  total  roll  cyclic  blade  deflection,  deg 
+
+
+38 
+
+
+The  roll-axis  aerodynamic  characteristics  of  the  UH-1B  and  UH-1C 
+are  quite  similar,  and  the  desired  level  of  control  sensitivity  was 
+achieved  by  increasing  the  roll  rate  gain  by  50  percent.  This  was  ac¬ 
+complished  by  reducing  the  size  of  the  bleed  orifices  in  the  preampli¬ 
+fier.  The  schematic  of  the  roll-axis  controller  is  shown  in  Figure  36. 
+
+
+Frequency  response  of  the  controller  after  the  gain  was  increased  is 
+shown  in  Figure  37.  The  shaping  network  was  not  changed.  The  final 
+value  of  FSAS  roll  rate  gain  established  during  flight  test  was: 
+
+
+0.083  deg  roll  cyclic  blade  angle/deg/ sec 
+
+
+The  changes  in  the  sensor  and  series  servoactuator  dynamics  mentioned 
+previously  did  not  significantly  affect  roll  FSAS  performance. 
+
+
+Pitch- Axis  FSAS 
+
+The  pitch-axis  FSAS  was  designed  to  increase  vehicle  damping  ratio 
+without  significantly  affecting  the  control  power  of  the  UH-1B.  The 
+original  control  equation  of  the  pitch  FSAS  was: 
+
+
+■e  '  Ke9  e 
+
+m 
+
+
+-tS 
+
+
+(  1  ]2 
+
+thps\ 
+
+'Tj  S+l  1 
+
+10.  05S+1I 
+
+iThps+1) 
+
+iT2  3+1  1 
+
+(62.8)" 
+
+
+S2+2(0.7)(62.  8)S+(62.8)2 
+
+
+(100)" 
+
+
+S2+2(0.  7)(100)S+(100)2 
+
+
+where 
+
+K.  -  0.25  pitch  blade  angle/aircraft  pitch-axis  turning  rate, 
+
+deg/deg/sec 
+Tr?  =  1-5  sec 
+
+Tj  =0.25  sec 
+
+T2  =  0.  1  sec 
+
+t  =  0. 02  sec 
+
+=  total  pitch  cyclic  blade  angle,  deg 
+6  =  mechanical  pitch  cyclic  command  from  pilot's  stick,  deg 
+
+
+39 
+
+
+AMPLITUDE  RATIO  (06) 
+
+
+RETURN 
+
+
+Figure  36.  Roll-Axis  Controller  Schematic. 
+
+
+Figure  37.  Frequency  Response  of  Roll-Axis  Controller 
+After  Gain  Increase. 
+
+
+40 
+
+
+The  pitch  rate  feedback  was  high-passed  to  avoid  damper  opposition  to 
+the  relatively  low-frequency  pilot  control  inputs.  Also,  the  original  pilch 
+FSAS  was  designed  so  that  the  high-frequency  gain  was  sharply  attenua¬ 
+ted  above  3  Hz.  This  gain  attenuation  function  was  performed  by  the 
+double-lag  dynamics  of  the  rate  sensor.  Absence  of  the  double-lag  sen¬ 
+sor  dynamics  caused  the  high-frequency  gain  of  the  pitch  FSAS  to  be  in¬ 
+creased  rather  than  attenuated.  In  addition,  the  0.  32  damped,  5.  5-Hz 
+servoactuators  caused  a  further  increase  in  the  high-frequency  gain, 
+especially  in  the  area  of  6  Hz,  the  UH-lC's  rotor  frequency.  Because 
+of  these  dynamic  conditions,  the  pitch-axis  controller  could  not  be 
+engaged  above  an  airspeed  of  approximately  70  kn,  where  a  severe  ver¬ 
+tical  oscillation  resulted.  The  Phase  II  closed-loop  testing  had  failed 
+to  show  this  problem,  as  the  rotor  characteristics  were  not  in  the  simu¬ 
+lation.  The  solution  was  to  change  the  lead-lag  shaping  network  to  a  lag- 
+lead.  This  circuit  was  examined  on  the  analog  computer  to  verify  its 
+effect  on  aircraft  performance.  The  change  was  then  incorporated  in 
+the  controller. 
+
+Schematics  of  the  controller  before  and  after  modification  are  shown  in 
+Figures  38  and  39,  respectively.  Frequency  response  of  the  controller 
+before  and  after  modification  is  shown  in  Figures  40  and  41,  respec¬ 
+tively.  This  entire  operation  was  accomplished  in  one  8 -hour  day, 
+demonstrating  the  versatility  of  the  controller  package. 
+
+With  this  modification  it  was- then  possible  to  fly  at  speeds  up  to  110  kn 
+without  any  adverse  effects.  Above  110  kn,  the  vertical  oscillation 
+again  became  excessive.  The  controller -servoactuator  gain  was  then 
+reduced  30  percent  to  0.  026  in.  servoactuator/  deg /  sec.  Frequency 
+response  data  ar.  shown  in  Figure  42. 
+
+
+The  pitch-axis  FSAS  control  equation  then  became: 
+
+
+where 
+
+
+K0  =  0.  173  deg/ deg/ sec 
+Tj  a  0.  04  sec 
+T2  =  0.  107  sec 
+t  -  0.  02  sec 
+
+THP  =  2*  5  sec 
+
+
+41 
+
+
+Figure  38.  Schematic  of  Pitch-Axis  Controller 
+Before  Modification. 
+
+
+Figure  39.  Schematic  of  Pitch-Axis  Controls 
+After  Modification 
+
+
+42 
+
+
+o 
+
+UJ 
+
+O 
+
+UJ 
+
+-J 
+
+X 
+
+< 
+
+UJ 
+
+(/> 
+
+< 
+
+X 
+
+CL 
+
+
+Figure  40.  Frequency  Response  of  Pitch-Axis  Controller 
+Before  Modification. 
+
+
+Figure  41.  Frequency  Response  of  Pitch-Axis  Controller  After 
+Modification 
+
+
+43 
+
+
+PHASE  ANCLE  (DEC) 
+
+
+i 
+
+
+Figure  42.  Frequency  Response  of  Pitch-Axis  Controller  After 
+Gain  Reduction. 
+
+
+TABLE  II. 
+
+PINAL  FSAS  CONTROLLER  -  SERVOACTUATOR 
+
+PERFORMANCE 
+
+Controller 
+
+Gain 
+
+Equation 
+
+Pitch-Axis 
+
+0.  26  psi/deg/sec 
+
+-0. 02S 
+
+e 
+
+2.  5S  \  1  0.04S  +  1  \ 
+
+2.  5S+l|  0.  107S+1 1 
+
+Roll- Axis 
+
+0.  125  psi/deg/sec 
+
+-0.02S 
+
+e 
+
+1  11. 5S  I 
+
+jll.  5S  +  1] 
+
+Yaw-Axis 
+
+0.  22  psi/deg/sec 
+
+-0.02S 
+
+e 
+
+1  2. 5S  I 
+
+[2.  5S  +  1 J 
+
+6,  9  psi/in.  cable 
+
+S+l 
+
+Servoactuator 
+
+0. 1  in.  / psi 
+
+1  i 
+
+H  _ (34,  6)2  1 
+
+\  0.  029S+1/I  s2+2(0  32)04.  6)S+(34. 6)2  / 
+
+44 
+
+
+These  changes  resulted  in  pitch-axis  FSAS  performance  that  satisfied 
+the  requirements  of  the  design  goals.  The  FSAS  was  engaged  without 
+difficulty  up  to  the  140*kn  limit. 
+
+The  flight  test  program  was  completed  with  the  FSAS  controllers  and 
+series  servoactuator  characteristics  shown  in  Table  II. 
+
+
+NULL  OFFSETS 
+
+The  only  problem  encountered  with  the  hydrofluidic  controllers  was  a 
+null  offset  occurring  in  the  roll-axis  controller.  The  offset  was  caused 
+by  shreaded  bits  of  Teflon  tape  lodging  in  the  output  bleed  orifices.  The 
+tape  had  been  used  to  seal  the  threaded  output  fittings.  After  the  Teflon 
+tape  was  completely  removed  from  the  fittings,  the  null  problem  did  not 
+reoccur. 
+
+
+FLIGHT  TEST  USING  VORTEX  VALVE  SERVOACTUATORS 
+
+After  the  flight  test  program  with  spool  valve  servoactuators  was  com¬ 
+pleted,  these  servoactuators  were  removed  and  replaced  with  vortex 
+valve  servoactuators  supplied  as  GFE  by  USAAMRDL. 
+
+
+Pressure  Surge  Problems 
+
+The  yaw-axis  servoactuator  was  damaged  during  startup  of  the  aircraft 
+when  part  of  the  aircraft  preflight  was  done  after  the  manually  operated 
+valve  had  been  opened  (see  Figure  19  for  circuit  details).  The  aircraft 
+has  two  hydraulic  systems,  and  it  is  possible  to  use  each  one  indepen¬ 
+dently  to  supply  the  boost  servoactuator  power.  In  so  doing,  the  No.  2 
+system  is  shut  off  with  a  solenoid  valve  while  the  No.  1  system  is  being 
+checked,  and  vice  versa.  This  checkout  procedure  resulted  in  a  pressure 
+surge  being  applied  to  the  servoactuator  input  force  capsule,  thus  rup¬ 
+turing  it. 
+
+The  vortex  valve  servoactuators  are  slightly  different  in  their  input  con¬ 
+figuration  than  the  spool  valve  servoactuators.  As  shown  in  Figure  43, 
+the  cavities  for  the  signal  inputs  for  the  vortex  valve  servoactuators  are 
+dead  ended,  while  the  spool  valve  servoactuator  (Figure  32)  has  a  bleed 
+orifice  between  the  input  signal  line  and  reference  signal  line.  There  is 
+no  steady- state  flow  through  the  lines  from  the  controller  to  the  vortex 
+valve  servoactuator,  as  in  the  spool  valve  servoactuator,  due  to  the  lack 
+of  bleed  orifices.  Also,  the  cavity  designated  Cp2  is  quite  large  com¬ 
+pared  with  cavity  Cpi.  These  differences  make  it  extremely  difficult  in 
+the  aircraft  installation  to  prevent  the  accumulation  of  air,  or  removal 
+of  trapped  air  from  the  lines  and  cavities.  Therefore,  assuming  trapped 
+air  in  cavity  Cp2  of  the  vortex  valve  servoactuator,  prior  to  startup,  a 
+finite  time  will  be  needed  to  compress  this  air  to  the  operating  pressure 
+(350  psi  in  the  yaw-axis  servoactuator),  while  cavity  Cpi,  which  has  no 
+
+
+45 
+
+
+FEEDBACK 
+
+PIN 
+
+
+SIGNAL 
+INP 
+Cot 
+
+
+P2 
+cave 
+
+
+FEEDBACK  SPRING 
+
+
+FORCE  CAPSULE 
+
+
+SIGNAL  INPUT  Cc 
+
+
+CoxCAVITY 
+
+
+FLAPPER 
+
+
+NOZZLES 
+
+
+Figure  43.  Schematic  of  Vortex  Valve  Servoactuator  -- 
+Input  Portion. 
+
+trapped  air,  will  charge  up  almost  immediately  upon  pressurization.  The 
+differential  pressure  that  develops  across  the  force  capsule  can  destroy  it. 
+
+One  other  failure  occurred  with  the  vortex  valve  servoactuators.  During 
+pressurization  of  the  system  using  the  hand  valve,  the  pitch  servoactuator 
+went  hard-over  in  the  retracted  direction.  The  servoactuator  was  removed 
+and  tested  in  the  laboratory  and  exhibited  the  same  hard-over  with  zero 
+differential  pressure  applied  to  the  signal  ports.  Removal  of  the  bias 
+springs,  shown  in  Figure  43,  did  not  eliminate  the  hard-over  condition. 
+
+The  pin  connecting  the  force  capsule  to  the  flapper  was  ultimately  found 
+to  be  exerting  considerable  force  on  the  flapper,  thus  causing  the  hard- 
+over.  The  pin  was  moved  and  it  snapped  to  a  new  position.  It  appeared 
+that  the  pin  had  been  hung  up  on  the  side  of  the  detent  in  the  flapper. 
+
+With  more  care  taken  during  system  pressurization,  the  servoactuator 
+performed  properly  during  the  rest  of  the  flight  test  program. 
+
+The  pins  and  seats  on  future  servoactuators  should  be  polished  so  that  if 
+the  pin  slides  partially  out  of  the  detent,  it  will  slide  back  to  the  proper 
+position  again. 
+
+
+Vortex  Valve  Servoactuator  Performance 
+
+
+The  flight  test  recordings  disclosed  that  the  vortex  valve  servoactuators 
+did  not  linearly  follow  the  SAS  fluidic  output  commands.  It  could  be  seen 
+that  the  servoactuators  were  not  moving  for  low-amplitude,  low-frequency 
+
+
+46 
+
+
+signals  until  the  input  differential  pressure  from  the  FSAS  controller  in¬ 
+creased  to  approximately  0.  5  psi.  This  is  equivalent  to  a  servoactuator 
+motion  of  approximately  0.  05  in.  In  some  flight  conditions,  the  duration 
+of  this  deadband  would  be  1  sec  or  longer,  depending  on  the  rate  buildup 
+of  the  FSAS  controllers.  Servoactuator  thresholds  of  this  type  cause  the 
+helicopter  to  respond  as  though  it  were  augmented  up  to  the  time  the 
+servoactuator  starts  to  move.  However,  even  after  the  initial  servo¬ 
+actuator  movement  took  place,  it  usrually  continued  to  move  in  discrete 
+steps  rather  than  smoothly  proportional  to  the  controller  commands. 
+
+These  servoactuator  characteristics  cause  the  helicopter  to  take  on 
+response  characteristics  which  are,  in  general,  different  or  variable 
+from  test  to  test  or  maneuver  to  maneuver.  Stability  augmentation 
+systems  containing  servoactuators  with  the  characteristics  described 
+above  will  provide  aircraft  control  responses  that  lie  somewhere  be¬ 
+tween  the  free  aircraft  and  the  nominally  augmented  aircraft.  This 
+variable  response-type  of  control  will  cause  the  pilot  to  fly  with  less 
+precision  and  control  during  tracking  maneuvers  and  may  result  in 
+unsafe  flight  conditions  when  the  helicopter  is  flown  at  low  altitudes. 
+
+because  the  vortex  valve  servoactuators  were  not  functioning  in  a  man¬ 
+ner  required  by  the  FSAS  design  specifications,  a  detailed  evaluation  of 
+the  FSAS/vortex  valve  servoactuactor  performance  in  compliance  with 
+the  design  goals  was  not  attempted. 
+
+The  vortex  valve  servoactuators  were  tested  in  the  laboratory  after  the 
+flight  test  program  was  completed.  A  load  of  approximately  20  lb  would 
+make  the  ram  move  approximately  0.  05  in.  If  the  friction  leve1  were 
+this  amount,  the  servoactuator  would  be  prevented  from  moving  until  it 
+developed  enough  force  to  overcome  this  load.  The  spool  valve  servo¬ 
+actuators  were  also  tested  and  did  not  exhibit  this  problem  because  they 
+move  only  0.  0025  in.  for  a  load  of  approximately  20  lb.  If  the  pressure 
+gain  of  the  vortex  valve  servoactuators  were  higher,  such  as  in  the  spool 
+valve  servoactuators,  the  problem  would  probably  be  eliminated. 
+
+
+UH-1C  HELICOPTER  CHARACTERISTICS 
+
+During  some  of  the  flights  conducted  at  60  kn,  high-level  rotor  vibra¬ 
+tions  at  about  one-half  per  revolution  were  detected.  These  vibrations 
+occurred  most  frequently  when  flying  the  UH-1C  without  the  mechanical 
+stabilizer  bar. 
+
+A  check  with  the  helicop  er  manufacturer  disclosed  that  this  problem  was 
+called  "pylon  rock"  and  may  be  caused  by: 
+
+•  Deteriorating  pylon  friction  mounts;  worn  pylon  dampers 
+
+•  Cracked  support  structure 
+
+•  Loose  collective  sleeve  device  on  tne  mast  causing 
+intermittent  one-per-revolution  random  hop. 
+
+
+47 
+
+
+Preventive  maintenance  was  performed  to  remedy  this  problem.  How¬ 
+ever,  this  problem  reoccurred,  and  it  was  decided  that  those  tests 
+scheduled  for  60  kn  should  be  flown  at  70  kn  to  avoid  this  portion  of  the 
+flight  envelope  where  the  helicopter  is  susceptible  to  the  pylon  rock 
+problem. 
+
+
+DATA  REDUCTION 
+
+
+Several  factors  complicated  evaluation  and  correlation  of  FSAS  perfor¬ 
+mance  with  free-aircraft  performance: 
+
+•  Weather  conditions  at  the  time  of  test.  To  complete  the 
+program  on  schedule,  flight  testing  was  conducted  on  all 
+flyable  days.  Data  flights  were  conducted  in  weather  con¬ 
+ditions  ranging  from  clear,  with  winds  less  than  3  kn,  to 
+freezing  drizzle  with  wind  20  kn  gusting  to  30  kn. 
+
+•  Consistent  and  repeatable  pilot  inputs  could  not  be  made 
+
+for  each  test.  The  pilot  input  test  brackets  were  made 
+of  lightweight  aluminum  and  would  bend  dr  flex  under 
+pilot-applied  forces.  This  required  the  conversion  of  all 
+performance  data  to  a  common  base  of  "per  in.  of  stick 
+or  pedal."  ' 
+
+•  Test-bracket  bending  had  a  serious  impact  on  the  pitch 
+pulse  tests.  Control  stick  pulses  were  not  made  with  the 
+magnitudes  specified  for  each  test,  and  the  control  stick 
+was  not  returned  to  the  trim  position  that  existed  at  the 
+start  of  the  test.  This  caused  the  helicopter  to  fly  to  a 
+new  trim  position,  and  this  commanded  maneuver  masked  , 
+the  damping  action  of  the  pitch  FSAS.  Similar  character¬ 
+istics  were  noted  for  the  yaw-axis  tests;  but,  because  of 
+the  underdamped  character: sties  of  the  free  helicopter's 
+yaw  axis  and  because  the  velocity  and  attitude  of  the  heli¬ 
+copter  were  not  grossly  affected  by  the  tests,  yaw-axis 
+damping  performance  could  be  measured. 
+
+These  factors  made  it  extremely  difficult  to  accurately  and  consistently 
+determine  quantitative  data  for  evaluating  certain  performance  mea¬ 
+sures.  Performance  measures  most  seriously  affected  were  response 
+time  (tg0^),  control  power,  and  pitch-axis  damping. 
+
+Cross-coupled  pilot- commanded  inputs  in  the  two  axes,  which  were  not 
+the  test  axes,  also  had  a  masking  effect  on  the  performance  response  in 
+the  axis  being  tested. 
+
+
+48 
+
+
+SECTION  V 
+
+UH-1C/FSAS  FLIGHT  TEST  RESULTS 
+
+
+TEST  PROCEDURE 
+
+
+The  three-axis  FSAS  was  installed  in  a  UH-1C  helicopter  and  was  evalu¬ 
+ated  both  quantitatively  and  qualitatively  over  the  flight  envelope  and  con¬ 
+ditions  shown  in  Table  I. 
+
+FSAS  quantitative  performance  w?1  established  by  analyzing  flight  test 
+tracings  recorded  at  each  flight  condition  for  the  following  tests: 
+
+•  Pilot- commanded  pulses  and  steps  in  pitch,  roll,  and  yaw 
+axes 
+
+•  Stabilized  flight 
+
+•  FSAS  engage/disengage  transients 
+
+•  Autorotation  entries 
+
+•  Trim  maneuvers 
+
+These  tests  were  performed  for  four  helicopter/SAS  configurations  as 
+follows: 
+
+•  UH-1C  helicopter  without  mechanical  stabilizer  bar,  with 
+FSAS  engaged  in  pitch,  roll,  and  yaw  axes,  and  with 
+spool  valve  servoactuators 
+
+•  UH-1C  helicopter  without  mechanical  stabilizer  bar,  with 
+FSAS  engaged  in  pitch,  roll,  and  yaw  axes,  and  with  vortex 
+valve  servoactuators 
+
+•  UH-1C  helicopter  without  mechanical  stabilizer  bar,  with 
+FSAS  disengaged 
+
+•  UH-1C  helicopter  with  mechanical  stabilizer  bar,  with 
+FSAS  disengaged 
+
+Qualitative  evaluation  was  conducted  by  the  project  pilot,  two  Army 
+pilots,  and  pilots  from  two  airframe  manufacturers. 
+
+All  flight  testing  was  conducted  on  a  UH-1C  helicopter  with  a  gross 
+weight  of  less  than  8000  lb  and  a  mid-center-of-gravity  loading  condition. 
+
+YAW  FSAS  PERFORMANCE 
+
+Yaw  FSAS  performance  was  evaluated  for  the  four  vehicle  configurations 
+and  flight  conditions  listed  in  Table  I.  The  principal  criteria  for 
+
+
+49 
+
+
+evaluating  yaw  FSAS  performances  were  control  sensitivity  and  damping 
+ratio.  Yaw-axis  control  sensitivity  is  defined  as  the  ratio  of  peak  yaw 
+rate  attained  for  a  given  pedal  step  input  command.  Desired  yaw-axis 
+performance  is  achieved  when  the  control  sensitivity  of  the  helicopter  is 
+not  significantly  decreased  when  the  yaw  FSAS  is  engaged.  A  small  de¬ 
+crease  in  control  sensitivity  is  permissable  providing  it  has  the  effect  of 
+giving  pilots  the  capability  to  perform  yaw-axis  maneuvers  in  a  smooth 
+and  more  controlled  manner.  Maintaining  the  inherent  augmented  heli¬ 
+copter's  control  sensitivity  is  especially  important  at  hover  and  low- 
+speed  flight  conditions. 
+
+The  damping  ratio  criterion  is  satisfied  if  the  underdamped  charac¬ 
+teristics  of  the  helicopter's  yaw  axis  are  eliminated  and  the  yaw-axis 
+damping  ratio  is  increased  from  approximately  0.  15  to  0.  7.  This  cri¬ 
+terion  was  investigated  by  observing  the  yaw-rate  response  to  pedal 
+pulse  commands  which  simulate  wind  disturbances  acting  on  the  heli¬ 
+copter. 
+
+Pedal  Step  Inputs  -  Yaw  FSAS  With  Spool  Valve 
+Servoactuator 
+
+
+Flight  recordings  for  the  pedal  step  input  tests  are  presented  in  Appen¬ 
+dix  II,  Figures  44  through  53.  Performance  results  taken  from  these 
+recordings  are  presented  in  Table  III. 
+
+A  comparison  of  the  recordings  for  the  FSAS  with  those  of  the  free 
+helicopter,  with  and  without  the  mechanical  stabilizer  bar,  shows  that 
+the  FSAS  virtually  eliminated  the  underdamped  yaw  rate  response.  The 
+augmented  helicopter  responds  with  a  yaw  rate  which  is  easy  to  control 
+and  exhibits  one  overshoot  to  pedal  step  input  commands.  This  is 
+generally  true  for  the  complete  operational  flight  envelope  of  the  UH-1C. 
+
+Control  sensitivity  data  taken  from  Figures  44  through  53  are  presented 
+in  Table  III.  These  data  show  that  the  control  sensitivity  of  the  UH-  1C 
+helicopter  is  retained  when  the  FSAS  is  engaged.  Step  input  response 
+time  data  are  also  presented  in  Table  III.  Response  time  is  defined  as 
+the  time,  in  seconds  per  inch  of  pedal,  to  reach  90  percent  of  the  peak 
+yaw  rate.  The  summarized  data  show  that  yaw  rate  response  time  was 
+not  changed  significantly  by  the  FSAS. 
+
+The  project  pilot  commented  that  he  could  not  detect  any  difference  in 
+helicopter  handling  characteristics  in  response  to  step  inputs  with  the 
+FSAS  engaged  or  disengaged.  This  is  the  way  it  should  be;  the  yaw 
+FSAS  was  designed  with  a  pedal  feed  forward  loop  which  cancels  the 
+damping  function  of  the  SAS  for  pilot  command  inputs. 
+
+
+50 
+
+
+TABLE  III.  YAW  FSAS/UH-1C  PERFORMANCE  --  STEP  INPUTS 
+
+
+UH-1C/FSAS 
+
+Configuration 
+
+Teat 
+
+(Right  Step 
+or  ' 
+Left  Step) 
+
+Control  Sensitivity, 
+
+^peak/in-  of  pedal 
+(deg/sec/in. ) 
+
+Response  Time, 
+
+*90% 
+
+(sec) 
+
+Hover,  3000  Ft 
+
+SV  Servo,  W/O  Stab 
+
+RS 
+
+13.  0 
+
+0.  54 
+
+LS 
+
+16.  5 
+
+0.  83 
+
+VV  Servo,  W/O  Stab 
+
+RS 
+
+15.  0 
+
+0.  64 
+
+LS 
+
+12.  7 
+
+0.  45 
+
+W/O  Stab 
+
+RS 
+
+14.  5 
+
+0.70 
+
+LS 
+
+16.7 
+
+1.00 
+
+With  Stab 
+
+RS 
+
+13.0 
+
+0.60 
+
+LS 
+
+13.  5 
+
+0.70 
+
+60  Kn,  3000  Ft 
+
+SV  Servo,  W/O  Stab 
+
+RS 
+
+10.  5 
+
+0.  50 
+
+LS 
+
+10.  0 
+
+0.  50 
+
+VV  Servo,  W/O  Stab 
+
+RS 
+
+11.7 
+
+0.  25 
+
+LS 
+
+10.4 
+
+0.  26 
+
+W/O  Stab 
+
+RS 
+
+15.  0 
+
+0.  36 
+
+LS 
+
+19.  0 
+
+0.  57 
+
+60  Kn,  5000  and  10,000  Ft 
+
+SV  Servo,  W/O  Stab 
+
+RS* 
+
+9.  0 
+
+0.42 
+
+LS< 
+
+8.  9 
+
+0.  45 
+
+VV  Servo,  W/O  Stab 
+
+RS* 
+
+7.  6 
+
+C.  25 
+
+LS* 
+
+9.  5 
+
+0.40 
+
+W/O  Stab 
+
+RS* 
+
+14.0 
+
+0.  59 
+
+RS** 
+
+13.4 
+
+0.  58 
+
+LS** 
+
+10.  6 
+
+0.  59 
+
+90  Kn.  3000  Ft 
+
+SV  Servo,  W/O  Stab 
+
+RS 
+
+12.  5 
+
+0.40 
+
+LS 
+
+9.  4 
+
+0.30 
+
+VV  Servo.  W/O  Stab 
+
+RS 
+
+9.  6 
+
+0.20 
+
+LS 
+
+8.  7 
+
+0.20 
+
+W/O  Stab 
+
+RS 
+
+13.  6 
+
+0.  32 
+
+LS 
+
+13.7 
+
+0.  46 
+
+With  Stab 
+
+RS 
+
+13.  2 
+
+0.43 
+
+LS 
+
+11.  0 
+
+0.  50 
+
+120  Kn,  3000  Ft 
+
+SV  Servo,  W/O  Stab 
+
+RS 
+
+8.  1 
+
+0.  50 
+
+LS 
+
+8.  8 
+
+0.  33 
+
+VV  Servo,  W/O  Stab 
+
+RS 
+
+7.4 
+
+0.  30 
+
+LS 
+
+7.7 
+
+0.  26 
+
+W/O  Stab 
+
+RS 
+
+10.  2 
+
+0.  69 
+
+LS 
+
+9.  4 
+
+0.  35 
+
+•  Altitude  10,  000  ft 
+
+Altitude  5000  ft 
+
+51 
+
+
+Pedal  Step  Inputs  -  Yaw  FSAS  With  Vortex  Valve 
+Servoactuator 
+
+
+Flight  recordings  for  the  vortex  valve  servo  actuators  plus  FSAS  combina¬ 
+tion  pedal  step  input  tests  are  also  presented  in  Appendix  II.  Figures  44 
+through  53  show  that  yaw  rate  response  for  these  tests  was  underdamped 
+and  jerky.  These  undesirable  response  characteristics  were  caused  by 
+servoactuator  threshold  nonlinearities.  That  is,  the  servoactuator  did 
+not  linearly  follow  FSAS  commands,  but  moved  in  discrete  steps.  As 
+the  flight  test  program  progressed,  this  servoactuator  problem  became 
+worse,  and  FSAS  performance,  with  vortex  valve  servoactuator s,  deteri¬ 
+orated  significantly.  This  problem  area  is  covered  in  greater  detail  in 
+Section  IV. 
+
+Pedal  Pulse  Inputs  -  Yaw  FSAS  With  Spool  Valve 
+Servoactuator 
+
+
+Flight  recordings  for  the  pedal  pulse  tests  are  presented  in  Figures  54 
+through  63.  Damping  and  performance  results  taken  from  these  re¬ 
+cordings  are  presented  in  Table  IV. 
+
+The  flight  recordings  show  that  with  the  FSAS  engaged,  the  oscillatory 
+or  underdamped  yaw  rate  response  of  the  free  helicopter  is  changed  to 
+a  well-damped  rate  response.  Damping  ratio  data  summarized  in 
+Table  IV  show  the  following  improved  yaw-axis  performance: 
+
+•  At  hover  and  120  kn,  yaw-axis  damping  ratio  was  increased 
+from  approximately  0.  25  to  0.  6  or  0.  7. 
+
+•  At  60  and  90  kn,  yaw-axis  damping  ratio  increased  from 
+0.  15  to  0.  7. 
+
+This  improved  yaw-axis  damping  performance  was  noted  by  all  pilots 
+who  participated  in  the  flight  test  program. 
+
+Pedal  Pulse  Inputs  -  Yaw  FSAS  With  Vortex  Valve 
+Servoactuator 
+
+
+Flight  recordings  for  the  vortex  valve  servoactuator  FSAS  tests  are 
+shown  in  Figures  54  through  63.  The  recordings  show  that^  at  times, 
+yaw  rate  response  was  underdamped  (refer  to  Figures  54,  58,  60,  and 
+62).  This  is  attributed  to  sticking  of  nonlinear  servoactuators.  Because 
+of  these  servoactuator  thresholds,  a  yaw  rate  disturbance  was  not 
+damped  in  a  linear  manner,  and  the  helicopter's  yaw  axis  was  allowed  to 
+drift  until  yaw  rate  reached  a  level  that  resulted  in  a  FSAS  output  com¬ 
+mand  that  overcame  the  servoactuator  thresholds. 
+
+
+52 
+
+
+TABLE  IV.  YAW  FSAS/UH-1C  PERFORMANCE 
+PULSE  INPUTS 
+
+-- 
+
+UH- 1C/FSAS 
+
+Test 
+
+(Right  Pulse 
+or  Left 
+
+Frequency, 
+
+u 
+
+Damping 
+
+Configuration 
+
+Pulse) 
+
+(rad/sec) 
+
+<0 
+
+Hover,  3000  Ft 
+
+SV  Servo,  W/O  Stab 
+
+RP 
+
+0.00 
+
+>0.  70 
+
+LP 
+
+- 
+
+0.60 
+
+VV  Servo,  W/O  Stab 
+
+RP 
+
+2.  00 
+
+0.  35 
+
+LP 
+
+- 
+
+0.40 
+
+W/O  Stab 
+
+RP 
+
+- 
+
+LP 
+
+1.60 
+
+0.  26 
+
+With  Stab 
+
+RP 
+
+1.65 
+
+0.  35* 
+
+LP 
+
+1.  90 
+
+0.  23 
+
+60  Kn,  3000  Ft 
+
+SV  Servo,  W/O  Stab 
+
+RP 
+
+- 
+
+0.  78 
+
+LP 
+
+- 
+
+0.  65 
+
+VV  Servo,  W/O  Stab 
+
+RP 
+
+- 
+
+>0.  70 
+
+LP 
+
+- 
+
+0. 70** 
+
+W/O  Stab 
+
+RP 
+
+1.  70 
+
+0.20 
+
+LP 
+
+2.00 
+
+0.  15 
+
+60  Kn,  5000  and  10,000  Ft 
+
+SV  Servo,  W/O  Stab 
+
+RPt 
+
+- 
+
+0.68 
+
+RPt 
+
+- 
+
+>0.  70 
+
+LPt 
+
+- 
+
+0.  62 
+
+VV  Servo,  W/O  Stab' 
+
+RPt 
+
+- 
+
+>0.  70 
+
+LPt 
+
+- 
+
+0.  40 
+
+W/O  Stab 
+
+RPtt 
+
+1.70 
+
+0.  18 
+
+LPtt 
+
+2.00 
+
+0.  19 
+
+LPtt 
+
+1.80 
+
+0.  17 
+
+90  Kn,  3000  Ft 
+
+SV  Servo,  W/O  Stab 
+
+RP 
+
+0 
+
+>0.  70 
+
+LP 
+
+- 
+
+0.  60 
+
+VV  Servo,  W/O  Stab 
+
+RP 
+
+- 
+
+0.  70 
+
+LP 
+
+- 
+
+0.4-0.  5 
+
+W/O  Stab 
+
+RP 
+
+1.  85 
+
+0.  17 
+
+LP 
+
+2.  19 
+
+0.  22 
+
+With  Stab 
+
+RP 
+
+2.  10 
+
+0.  17 
+
+LP 
+
+2.00 
+
+0.  22 
+
+120  Kn,  3000  Ft 
+
+SV  Servo,  W/O  Stab 
+
+RP 
+
+- 
+
+0.  55 
+
+RP 
+
+- 
+
+0.  70 
+
+LP 
+
+- 
+
+0.  70 
+
+LP 
+
+- 
+
+0.  70 
+
+VV  Servo,  W/O  Stab 
+
+RP 
+
+- 
+
+f 
+
+LP 
+
+- 
+
+0.40 
+
+W/O  Stab 
+
+RP 
+
+2.  29 
+
+0.  20 
+
+LP 
+
+2.  40 
+
+0.  24 
+
+*During  this  test,  cross-coupled  commands  In  pitch  and  roll  axes 
+are  masking  yaw  rate  response. 
+
+
+**Because  of  underdamped  vehicle  characteristic  in  response  to 
+right  yaw  rates,  damping  response  is  masked  by  vehicle  drift 
+characteristic.  Damping  is  estimated  to  be  0.  7. 
+
+tAltitude  10,000  ft 
+
+1 1 Altitude  5000  ft _ 
+
+
+53 
+
+
+Damping  ratio  data  of  Table  IV  show  that  an  FSAS  with  vortex  valve 
+servoactuators  would  provide  random  damping  augmentation  to  the 
+helicopter  yaw  axis,  with  damping  ratios  ranging  from  0.  3  to  0.  7. 
+
+
+ROLL  FSAS  PERFORMANCE 
+
+
+Roll  FSAS  performance  was  evaluated  for  the  four  vehicle  configura¬ 
+tions  and  flight  conditions  listed  in  Table  I. 
+
+Roll  FSAS  performance  was  evaluated  against  the  following  criteria: 
+
+•  Control  sensitivity  of  the  FSAS/UH-1C  without  mechanical 
+stabilizer  bar  should  be  equal  to  or  comparable  to  that  of 
+the  UH-1C  with  mechanical  stabilizer  bar. 
+
+•  The  roll  axis  should  provide  a  steady- state  roll  rate  in 
+response  to  a  roll  cyclic  step  input  with  an  overshoot  that 
+is  acceptable  to  the  pilots. 
+
+•  Control  power  should  be  maintained  at  a  level  which  pre¬ 
+vents  pilot  maneuvering  difficulty. 
+
+Flight  recordings  demonstrating  improved  roll  FSAS/UH-1C  perform¬ 
+ance  satisfying  these  criteria  are  presented  in  Figures  64  through  73. 
+
+Roll  FSAS  performance  data  taken  from  these  recordings  are  pre¬ 
+sented  in  Table  V. 
+
+Roll  FSAS  With  Spool  Valve  Servoactuator 
+
+A  review  of  these  recordings  shows  that  when  the  roll  rate  responses 
+of  the  FSAS-augmented  UH-1C  and  the  helicopter  with  and  without  the 
+mechanical  stabilizer  bar  are  compared,  the  roll-axis  handling  quali¬ 
+ties  are  greatly  improved  by  the  FSAS.  This  improvement  is  due  to  the 
+FSAS  holding  roll  rate  constant  for  a  given  roll  cyclic  input  command. 
+This  gives  the  pilots  the  capability  to  perform  more  precise  and  easily 
+controlled  roll  maneuvers  without  chasing  a  wandering  roll  rate.  In 
+addition,  large  rate  overshoots  were  eliminated,  which  allows  the  pilots 
+to  achieve  and  maintain  a  desired  roll  attitude.  Flight  recordings  of 
+Figures  64  through  73  show  that  this  improved  roll-axis  performance  was 
+provided  over  the  entire  UH-1C  operational  airspeed  envelope. 
+
+At  the  hover  flight  condition,  the  control  sensitivity  of  the  FSAS-aug¬ 
+mented  UH-1C  was  7. 1  and  5.6  deg/sec/in.  roll  cyclic.  This  compares 
+favorably  with  the  control  sensitivities  of  6.7  and  7.0  for  the  UH-1C 
+with  mechanical  stabilizer  bar.  A  review  of  the  control  powers  recorded 
+for  these  two  vehicle  combinations  shows  that  the  inherent  control  power 
+of  approximately  7.5  was  maintained  on  the  FSAS-augmented  helicopter. 
+
+
+54 
+
+
+TABLE  V.  ROLL  FSAS/UH-1C  PERFORMANCE  --  STEP  INPUTS 
+
+
+UH-1C/FSAS 
+
+Configuration 
+
+
+Hover,  3000  Ft 
+SV  Servo,  W/O  Stab 
+
+VV  Servo,  W/O  Stab 
+
+W/O  Stab 
+
+With  Stab 
+
+60  Kn,  3000  Ft 
+SV  Servo,  W/O  Stab 
+
+VV  Servo,  W/O  Stab 
+
+W/O  Stab 
+
+
+60  Kn,  10,000  Ft 
+SV  Servo,  W/O  Stab 
+
+VV  Servo,  W/O  Stab 
+W/O  Stab 
+
+
+90  Kn,  3000  Ft 
+
+SV  Servo.  W/O  Stab 
+
+VV  Servo,  W  /O  Stab 
+W/O  Stab 
+With  Stab 
+
+120  Kn.  3000  Ft 
+
+SV  Servo,  W/O  Stab 
+
+VV  Servo.  W/O  Stab 
+W/O  Stab 
+
+
+Test 
+(Right 
+Step  or 
+Left  Step) 
+
+
+W  "’peak' 
+in.  of  stick 'in.  of  stick 
+(deg/ sec/in. ) 
+
+
+'  Response 
+
+Time>t90% 
+
+(sec) 
+
+
+Control  Power, 
+
+in.  of  stick 
+(deg/in. ) _ 
+
+
+7.  1 
+
+- 
+
+0.  94 
+
+0 
+
+7.  5 
+
+5.  6 
+
+8.  1 
+
+0.63 
+
+40.  0 
+
+7.  5 
+
+- 
+
+7.  4 
+
+0.  33 
+
+- 
+
+5.  3 
+
+- 
+
+7.  5 
+
+0.  31 
+
+- 
+
+6.  9 
+
+- 
+
+8.  5 
+
+1.40 
+
+- 
+
+7.  5 
+
+- 
+
+12.  0 
+
+1.60 
+
+- 
+
+13.  3 
+
+- 
+
+6.  7 
+
+1.00 
+
+- 
+
+6.  3 
+
+- 
+
+7.  0 
+
+0.  85 
+
+7.  5 
+
+5.  9 
+
+6.  5 
+
+0.60 
+
+7.  0 
+
+7.0 
+
+- 
+
+0.  80 
+
+0 
+
+8.  0 
+
+4.  6 
+
+8.  6 
+
+0.40 
+
+87.  0 
+
+7.  2 
+
+4.7 
+
+8.  8 
+
+0.  59 
+
+87.  0 
+
+7.  1 
+
+6.  9 
+
+11.0 
+
+0.  90 
+
+- 
+
+12.  7 
+
+7.  2 
+
+8.  3 
+
+- 
+
+- 
+
+11.  7 
+
+- 
+
+14.  5 
+
+1.00 
+
+- 
+
+10.  0 
+
+* 
+
+14.2 
+
+1.30 
+
+■ 
+
+11.  7 
+
+8  4 
+
+1.20 
+
+10.  0 
+
+8.0 
+
+10.0 
+
+- 
+
+1.30 
+
+0 
+
+7.  5 
+
+4.  8 
+
+7.  8 
+
+0.  39 
+
+60.  0 
+
+8.4 
+
+5.3 
+
+9.  3 
+
+0.40 
+
+75.  0 
+
+8.0 
+
+12.  5 
+
+- 
+
+1.00 
+
+13.  5 
+
+12.0 
+
+18.  0 
+
+- 
+
+2.40 
+
+- 
+
+12.0 
+
+• 
+
+10.  5 
+
+1.27 
+
+60.  0 
+
+8.0 
+
+“ 
+
+10.  5 
+
+0  72 
+
+120.  0 
+
+9.0 
+
+7.  5 
+
+1.  10 
+
+0 
+
+8.  8 
+
+7.6 
+
+- 
+
+1.00 
+
+0 
+
+6.  7 
+
+5.  8 
+
+10.  3 
+
+0.  77 
+
+82.  0 
+
+9.  6 
+
+5.4 
+
+10.0 
+
+0.71 
+
+79.  0 
+
+10.0 
+
+• 
+
+20.  0 
+
+2.  50 
+
+- 
+
+10.  2 
+
+- 
+
+16.  0 
+
+1.00 
+
+- 
+
+10.4 
+
+4.  2 
+
+8.  3 
+
+0.  50 
+
+100.  0 
+
+13.  3 
+
+6.7 
+
+9.  5 
+
+0.  83 
+
+45.  0 
+
+11.  5 
+
+7.9 
+
+10.  3 
+
+1.60 
+
+35.  0 
+
+8.0 
+
+14.  7 
+
+- 
+
+1.30 
+
+0 
+
+10.7 
+
+- 
+
+13.4 
+
+1.  20 
+
+- 
+
+15.0 
+
+14.  7 
+
+- 
+
+1.00 
+
+0 
+
+12.  0 
+
+- 
+
+16.  7 
+
+- 
+
+- 
+
+- 
+
+- 
+
+26.  8 
+
+2.  80 
+
+- 
+
+9.  3 
+
+’■‘Flight  recorder  not  feeding  paper  at  constant  speed. 
+
+Response  time  (tg0y )  and  control  power  cannot  be  determined. 
+
+
+55 
+
+
+At  the  90- kn  flight  condition,  the  steady- state  control  sensitivity  of  the 
+FSAS -augmented  UH-1C  was  increased  slightly  over  that  of  the  UH-1C 
+with  mechanical  stabilizer  bar.  However,  rate  overshoots  on  the  order 
+of  45  to  100  percent  were  eliminated,  which  has  the  effect  of  providing 
+a  more  precisely  controlled  roll  a.  Is  at  these  airspeeds. 
+
+Control  sensitivities  for  the  UH-  1C  without  mechanical  stabilizer  bar 
+are  also  presented  in  Table  V  for  all  flight  conditions  studied.  These 
+control  sensitivities  are  nearly  double  those  of  the  UH-1C  with  mechani¬ 
+cal  stabilizer  bar.  The  FSAS  reduced  these  high-peak  rate  control  sensi¬ 
+tivities  to  steady- state  rate  control  sensitivities  with  magnitudes  com¬ 
+parable  to  those  provided  by  the  stabilizer  bar. 
+
+Roll  FSAS  With  Vortex  Valve  Servoactuator 
+
+
+Flight  recordings  showing  helicopter  roll-axis  response  characteristics 
+for  the  FSAS  with  vortex  valve  servoactuator  are  also  shown  in  Fig¬ 
+ures  64  through  73.  Roll  rate  responses  for  this  system  are  character¬ 
+ized  by  large  rate  overshoots  and,  at  some  flight  conditions;  such  as 
+hover  and  90  kn,  a  wandering  roll  rate  response.  The  gross  shape  of 
+the  rate  responses  is  similar  to  that  of  the  unaugmented  helicopter. 
+These  response  characteristics  are  caused  by  the  high  thresholds  in  the 
+vortex  valve  servoactuator.  The  control  sensitivity  data  of  Table  V 
+does  show,  however,  that  this  system  reduces  control  sensitivities  of 
+the  UH-1C  without  mechanical  stabilizer  bar  to  comparable  levels 
+obtained  with  spool  valve  servoactuators. 
+
+Roll  FSAS  Pilot  Comments 
+
+
+One  of  the  airframe  manufacturer  pilots  commented  after  flying  the  FSAS- 
+augmented  UH-1C  that  (1)  roll-axis  control  response  is  a  constant  rate 
+proportional  to  cyclic  stick  input,  and  (2)  the  helicopter  response  due  to 
+cyclic  inputs  does  not  have  the  rate  control  lag  as  characterized  by  the 
+UH-1C  with  stabilizer  bar.  This  made  it  easier  to  maneuver  the  heli¬ 
+copter  because,  it  was  easier  to  achieve  and  maintain  a  desired  rate 
+maneuvering  command.  He  further  commented  that  the  FSAS-augmented 
+helicopter  could  be  controlled  with  more  precision  and  ease  over  a 
+larger  maneuver  envelope.  The  extent  to  which  helicopter  maneuver¬ 
+ability  was  increased  was  not  put  in  quantitative  terms.  Improvement 
+in  the  UH-1C  roll  rate  response  becomes  apparent  when  the  roll  rate 
+traces  of  Figures  64  through  73  are  compared  for  the  various  FSAS/ 
+UH-1C  configurations  evaluated. 
+
+PITCH  FSAS  PERFORMANCE 
+
+
+Pitch  FSAS  performance  was  evaluated  for  the  vehicle  configurations 
+and  flight  conditions  listed  in  Table  I. 
+
+
+56 
+
+
+Pitch  FSAS  performance  was  evaluateu  against  the  following  criteria: 
+
+•  Control  sensitivity  of  the  FSAS/UH-1C  without  mechanical 
+stabilizer  bar  should  be  comparable  to  that  of  the  UH-  1C 
+with  mechanical  stabilizer  bar.  Control  sensitivity  should 
+not  be  so  high  that  it  causes  the  pilot  to  experience 
+maneuvering  difficulties. 
+
+•  Longitudinal  control  power  should  not  be  less  than  2.  43  deg/ in. 
+when  the  helicopter  is  hovering  in  still  air  at  the  maximum 
+overload  gross  weight  or  at  the  rated  power. 
+
+•  Pitch- axis  damping  ratio  should  be  increased  from  approxi¬ 
+mately  0.  3  to  approximately  0.  5  or  greater  at  or  near  the 
+100-kn  flight  condition. 
+
+•  The  pitch  FSAS  should  provide  a  rate  proportional  to  control- 
+stick  deflection. 
+
+Flight  recordings  demonstrating  improved  pitch  FSAS/UH-1C  perform¬ 
+ance  satisfying  these  criteria  are  presented  in  Appendix  II,  Figures  74 
+through  93. 
+
+Cyclic  Step  Inputs  -  Pitch  FSAS  With  Spool  Valve 
+Servoactuator 
+
+
+Flight  recordings  showing  pitch  FSAS  performance  in  response  to  a 
+pitch  cyclic  step  input  command  are  presented  in  Figures  74  through  83. 
+These  recordings  show  that  for  a  short  time  period,  the  pitch  FSAS 
+changes  the  free-helicopter  characteristics  to  provide  the  desired  rate 
+response  proportional  to  cyclic  stick  deflection.  The  pitch  FSAS  com¬ 
+plements  the  free-aircraft  characteristics  rather  than  changing  them 
+significantly.  That  is,  the  system  produces  a  rate  response  propor¬ 
+tional  to  stick  input  rather  than  the  free  helicopter's  peak  rate  response 
+proportional  to  stick  inputs.  This  peak  rate  response  is  characteristic 
+of  the  UH-1C  with  and  without  the  mechanical  stabilizer  bar.  The  pitch 
+rate  response  of  the  FSAS-augmented  helicopter  provides  the  pilots  with 
+a  vehicle  that  is  easier  to  control  when  performing  tracking  tasks. 
+
+Pertinent  data  showing  that  the  pitch  FSAS  does  not  adversely  affect  the 
+helicopter's  control  sensitivity  (control  power)  are  shown  in  Table  VI. 
+Control  power  at  the  hover  flight  condition  was  7.  0  deg/ in.  This  value 
+more  than  satisfies  the  control  power  criterion  of  2.43  deg/ in. 
+
+Control  sensitivity  data  at  the  hover,  60-,and  90-kn  flight  conditions 
+show  that  the  high  sensitivities  of  the  UH-1C  without  mechanical  stabi¬ 
+lizer  bar  are  reduced  to  more  controllable  levels  with  the  FSAS  engaged. 
+
+
+57 
+
+
+TABLE  VI.  PITCH  FSAS/UH-1C  PERFORMANCE  --  STEP  INPUTS 
+
+
+l  H-1C/FSAS 
+Configuration 
+
+
+Test 
+
+(Down  ss  pej 
+
+f'-P"  'n’  °f  stick  in.  o 
+Up  Step)  (deg/  sec/in. ) 
+
+
+Response 
+peaK  Time  t 
+
+in.  of  stick 
+
+
+Over¬ 
+
+shoot 
+
+
+oniroi  rower 
+91 
+
+in.  of  stick 
+(deg/in.  ) 
+
+
+Hover,  3000  Ft 
+
+SV  Servo,  W/O  Stab 
+
+DS 
+
+9.  6 
+
+1.20 
+
+0 
+
+7.  2 
+
+US 
+
+9.  1 
+
+1.20 
+
+0 
+
+7.  0 
+
+VV  Servo,  W/O  Stab 
+
+DS 
+
+10.  7  at  1.  5 
+
+- 
+
+- 
+
+sec 
+
+US 
+
+10.  0 
+
+1.  67 
+
+0 
+
+8.  3 
+
+W/O  Stab 
+
+DS 
+
+13.  5  at  1.  5 
+
+- 
+
+- 
+
+11.  0 
+
+sec 
+
+US 
+
+9.1  at  1.5 
+
+- 
+
+- 
+
+7.  3 
+
+sec 
+
+With  Stab 
+
+DS 
+
+12.  Oat  1.5 
+
+- 
+
+- 
+
+7.0 
+
+sec 
+
+US 
+
+8.  3  at  1.  5 
+
+- 
+
+- 
+
+6.  5 
+
+sec 
+
+60  Kn,  3000  Ft 
+
+SV  Servo,  W/O  Stab 
+
+DS 
+
+5.  7 
+
+0.60 
+
+- 
+
+4.  5 
+
+US 
+
+5.  5 
+
+0.  98 
+
+- 
+
+4.  8 
+
+VV  Servo,  W/O  Stab 
+
+DS 
+
+6.  2 
+
+0.  77 
+
+- 
+
+6.  1 
+
+US 
+
+6.  5 
+
+0.  86 
+
+- 
+
+7.  2 
+
+W/O  Stab 
+
+DS 
+
+10.  4 
+
+1.00 
+
+- 
+
+9.  0 
+
+US 
+
+10.  2 
+
+1.  50 
+
+- 
+
+9.  0 
+
+60  Kn,  10,000  Ft 
+
+SV  Servo,  W/O  Stab 
+
+DS 
+
+7.0 
+
+0.  70 
+
+- 
+
+7.0 
+
+US 
+
+8.  4 
+
+1. 00 
+
+- 
+
+7.  0 
+
+VV  Servo,  W/O  Stab 
+
+DS 
+
+4.3  7.9 
+
+0.  71 
+
+90 
+
+6.  0 
+
+US 
+
+5.7 
+
+0.86 
+
+- 
+
+6.  0 
+
+W/O  Stab 
+
+DS 
+
+9.  7 
+
+0.  80 
+
+- 
+
+9.  7 
+
+US 
+
+11.0 
+
+1. 40 
+
+- 
+
+11.  5 
+
+US 
+
+11.  3 
+
+1.  10 
+
+9.  0 
+
+90  Kn,  3000  Ft 
+
+SV  Servo,  W /  Stab 
+
+DS 
+
+5.  6 
+
+0.  91 
+
+- 
+
+4.  8 
+
+US 
+
+6.4 
+
+0.  82 
+
+- 
+
+3.  9 
+
+VV  Servo,  W/O  Stab 
+
+ns 
+
+6.  5 
+
+0.67 
+
+- 
+
+6.  7 
+
+us 
+
+6.  5  8.  9 
+
+0.70 
+
+40 
+
+8.  2 
+
+W/O  Stab 
+
+DS 
+
+9.  5 
+
+1.20 
+
+- 
+
+5.  7 
+
+us 
+
+13.  2 
+
+1.  50 
+
+- 
+
+6.  4* 
+
+With  Stab 
+
+DS 
+
+9.  3 
+
+1.00 
+
+7.4 
+
+US 
+
+10.0 
+
+0.  90 
+
+6.  3 
+
+120  Kn,  3000  Ft 
+
+SV  Servo,  W/O  Stab 
+
+DS 
+
+7.  6 
+
+1.20 
+
+0 
+
+7.  0 
+
+US 
+
+10.  0 
+
+1.20 
+
+6.  1 
+
+VV  Servo,  W/O  Stab 
+
+DS 
+
+9.  0 
+
+1.00 
+
+8.  5 
+
+US 
+
+10.  8 
+
+1.  10 
+
+- 
+
+8.  2 
+
+W/O  Stab 
+
+DS 
+
+9.  6 
+
+1.40 
+
+- 
+
+10.  5 
+
+US 
+
+10.  0 
+
+1.30 
+
+" 
+
+6.  7 
+
+Because  of  large  pitch 
+
+-to-roll  rate  cross  coupling,  it  was  difficult  for  the 
+
+pilot  to  hold  roll  cyclic  stick  to  its  trim  position  and  yet  maintain 
+
+safety  of  flight.  This  is  further  evidenced  by  comparing  the  helicopter's 
+
+pitch  and  roll  attitude 
+
+excursions 
+
+for  these  tests  as  shown  on  Figure  82. 
+
+58 
+
+
+Significant  improvement  in  hovering  performance  can  be  seen  by 
+reviewing  the  recordings  of  Figures  74  and  79.  Without  the  FSAS 
+engaged,  the  helicopter  rate  response  is  nearly  a  ramp  with  a  magni¬ 
+tude  that  ranges  from  8  to  14  deg/ sec  at  the  end  of  1.  5  sec.  A  pitch 
+rate  response  of  this  shape  makes  the  hovering  task  difficult.  With 
+FSAS  engaged,  helicopter  response  is  nearly  a  constant  pitch  rate  pro¬ 
+portional  to  cyclic  inputs.  All  pilots  commented  that  the  hovering  task 
+was  easier  with  FSAS  engaged. 
+
+Cyclic  Step  Inputs  -  Pitch  FSAS  With  Vortex  Valve 
+Servoactuator 
+
+
+Flight  recordings  showing  FSAS  with  vortex  valve  servoactuator  re¬ 
+sponse  to  pitch  cyclic  step  input  commands  are  presented  in  Figures  74 
+through  83.  These  recordings  show  that  at  some  flight  conditions  the 
+FSAS  had  very  little  effect  on  the  shape  of  the  helicopter's  short-terrn 
+response.  This  can  be  seen  by  referring  to  Figures  74,  76,  77,  78, 
+and  82.  On  the  other  hand,  at  other  flight  conditions  the  vortex  valve 
+servoactuators  were  effective  in  changing  the  unaugmented  helicopter's 
+peak  rate  response  to  rate  response  proportional  to  cyclic  inputs. 
+Examples  of  this  desired  performance  are  shown  in  the  recording  of 
+Figures  75,  80,  and  81.  This  nonrepeating  performance  is  due  to  the 
+vortex  valve  servoactuator  threshold  problem  previously  discussed. 
+
+Cyclic  Pulse  Input  -  Pitch  FSAS  With  Spool  Val"e 
+Servoactuator 
+
+
+The  original  criterion  for  determining  FSAS  performance  for  the  pitch 
+cyclic  pulse  input  tests  was  to  increase  the  damping  ratio  to  0.  5  or 
+greater.  During  the  flight  test  program  it  was  discovered  that  quantita¬ 
+tive  values  of  damping  ratio  could  not  be  obtained  from  the  flight  test 
+recordings.  This  is  due  to  the  following: 
+
+•  The  short-period  response  of  the  UH-1C  is  moderately 
+damped  and  slow  over  a  large  portion  of  the  operational 
+flight  envelope,  and  any  improvement  in  damping  is 
+masked  by  the  outside  disturbances  acting  on  the 
+helicopter. 
+
+•  During  the  pulse  inputs,  the  pitch  cyclic  stick  was  not 
+returned  to  the  trim  position  that  existed  at  the  start  of 
+the  test.  This  caused  the  helicopter  to  fly  to  a  new  trim 
+position,  and  the  damping  function  of  the  FSAS  was  super¬ 
+imposed  with  the  rate  command  from  the  cyclic  stick. 
+
+In  light  of  these  difficulties  in  determining  quantitative  values  to  evalu¬ 
+ate  pitch  FSAS  performance,  the  evaluation  was  performed  qualitatively. 
+
+
+59 
+
+
+Pitch  FSAS/UH-1C  response  to  pitch  cyclic  pulse  inputs  is  shown  in 
+the  flight  recordings  of  Figures  84  through  93. 
+
+At  the  hovering  flight  condition.  Figures  84  and  89,  a  significant 
+improvement  in  the  helicopter's  phugoid  characteristics  is  noted.  With 
+FSAS  disengaged,  a  pitch-axis  disturbance  excites  the  divergent  damping 
+phugoid  mode  which  the  pilot  must  overcome  to  perform  a  precision 
+hovering  task.  With  FSAS  engaged,  the  hover  phugoid  mode  is  stabi¬ 
+lized  over  the  short-term  control  response  of  the  helicopter.  Exper¬ 
+ience  with  other  analysis  programs  has  shown  that  a  near-deadbeat  rate 
+response  to  a  longitudinal-axis  disturbance  is  accompanied  by  a  pitch- 
+axis  damping  ratio  of  0.  7.  (This  can  be  verified  by  comparing  pitch 
+SAS  response  to  a  vertical  gust,  as  shown  in  Figure  98  of  USAAMRDL 
+Technical  Report  71-30,  with  those  figures  referenced  above.) 
+
+At  the  60-,  90-,  and  120-kn  flight  conditions,  the  FSAS  improved  heli¬ 
+copter  performance  by  extending  the  period  6f  the  phugoid  and  elimina¬ 
+ting  or  minimizing  overshoot  in  pitch  rate  following  the  pulse  input.  This 
+indicates  that  the  damping  function  is  being  performed,  but  a  firm  damp¬ 
+ing  ratio  value  cannot  be  given.  By  the  shape  of  the  pitch  rate  record-, 
+ings,  damping  is  estimated  to  be  0.  5  to  0.  6. 
+
+
+FSAS-STABILIZED  FLIGHT 
+
+Five-minute  stabilized  flights  of  the  FSAS-augmented  UH-1C  helicopter 
+without  mechanical  stabilizer  bar  were  conducted  at  hover  (in  ground 
+effect)  and  at  3000  feet  pressure  altitude  and  60-kn  indicated  airspeed 
+(IAS).  For  these  tests  the  pilot  minimized  all  induced  inputs.  This  test 
+was  also  conducted  at  hover,  in  ground  effect,  with  FSAS  disengaged. 
+
+The  flight  recordings  with  the  spool  valve  servoactuators  for  these  tests 
+showed  that  with  FSAS  engaged,  the  pilot's  ability  to  fly  in  gusty  and  tur¬ 
+bulent  wind  conditions  was  noticeably  improved.  The  improvement 
+noted  was  that  pilot  input  commands  to  maintain  straight  and  level  flight 
+were  of  smaller  magnitude  and  lower  in  frequency.  Pitch,  roll,  and 
+yaw  rate  and  attitude  excursions  from  the  trimmed  flight  path  were  of 
+smaller  magnitude  and  lower  in  frequency. 
+
+Attempts  to  describe  the  performance  improvement  quantitatively  were 
+not  successful  because  to  do  so  required  the  recording  of  the  instan¬ 
+taneous  outside  disturbances  (winds  and  gusts)  that  the  FSAS  is  designed 
+to  minimize.  Without  a  quantitative  model  of  the  outside  disturbances, 
+a  quantitative  performance  measure  to  evaluate  these  tests  cannot  be 
+developed. 
+
+Therefore,  the  flight  recording  for  these  tests  was  evaluated  by  corre¬ 
+lating  pilot  comments  to  pitch,  roll,  and  yaw  rates  and  attitudes  and 
+control  stick  and  pedal  input  commands.  The  pilot  comments  verified 
+
+
+60 
+
+
+that  when  flying  with  FSAS  disengaged,  more  control  inputs  of  slightly 
+higher  magnitude  were  required  to  maintain  trimmed  straight  and  level 
+flight. 
+
+Flight  recordings  for  these  tests  are  not  included  in  this  report  for  the 
+following  reasons: 
+
+•  The  5-minute  time  duration  of  these  tests  and  the  need  to 
+run  the  recorder  at  a  speed  to  prevent  data  compression 
+resulted  in  recordings  of  considerable  length. 
+
+•  To  take  a  small  portion  of  a  test  recording  where  the  FSAS 
+was  disengaged  and  compare  it  with  a  small  portion  of  a  test 
+recording  where  the  FSAS  was  engaged  requires  a  common 
+reference  for  making  a  performance  comparison.  For  these 
+tests,  this  common  reference  is  a  measure  of  the  outside 
+disturbances  acting  on  the  helicopter.  Without  this  common 
+reference,  a  fair  and  unbiased  selection  of  a  small  portion  of 
+a  test  recorded  with  FSAS  engaged  and  the  selection  of 
+another  small  portion  of  a  test  recorded  with  FSAS  disengaged 
+would  be  very  difficult. 
+
+
+AUTOROTATION  ENTRIES 
+
+Autorotation  entries  were  performed  at  60,  90,  and  120  kn  with  FSAS 
+engaged  and  at  60  kn  with  FSAS  disengaged.  The  autorotations  per¬ 
+formed  with  FSAS  engaged  had  similar  flight  characteristics  and 
+received  similar  comments  by  the  flight  test  pilots,  so  only  the  tests 
+performed  at  60  kn  are  included  in  this  report. 
+
+An  autorotation  was  performed  by  cutting  the  throttle  to  simulate  engine 
+failure  and  then  dropping  collective  control  at  the  appropriate  time  to 
+increase  rotor  rpm.  The  flight  recordings  for  these  tests  are  presented 
+in  Figure  94.  The  most  significant  comments  made  by  the  flight  test 
+evaluation  pilots  were  that  with  FSAS  engaged,  the  high  yaw  rate  kick 
+experienced  on  cutting  the  throttle  was  eliminated.  After  dropping  the 
+collective  control,  the  pitch  and  roll  rate  and  attitude  excursions  were 
+easier  to  control.  These  comments  can  be  visualized  graphically  by 
+reviewing  the  recordings  of  Figure  94. 
+
+
+TURN  MANEUVERS 
+
+Turn  maneuvers  of  3  deg/ sec  to  a  heading  change  of  90  deg  were  per¬ 
+formed  at  two  sets  of  flight  conditions: 
+
+•  Hover,  60,  90,  and  120  kn  (IAS)  at  a  pressure  altitude 
+of  3000  ft 
+
+•  60  kn  (IAS)  at  a  pressure  altitude  of  10,000  ft 
+
+
+61 
+
+
+These  maneuvers  were  performed  in  both  the  left  and  right  directions. 
+During  these  tests,  the  UH-1C  helicopter  was  flown  without  mechanical 
+stabilizer  bar,  and  the  tests  were  repeated  for  both  the  free  aircraft 
+and  the  FSAS-augmented  helicopter.  At  hover,  the  turns  were  per¬ 
+formed  using  the  pedals  as  the  principal  command  function;  at 
+60  kn  and  above,  the  maneuvers  were  performed  using  the  lateral  cyclic 
+stick  as  the  principal  command  function. 
+
+The  criteria  for  evaluating  FSAS  performance  during  these  maneuvers 
+are: 
+
+
+•  At  hover,  does  the  FSAS  fight  the  turn,  or  is  turning 
+maneuver  performance  improved  by  the  FSAS? 
+
+•  At  60  kn  (IAS)  and  above,  does  the  FSAS  have  any  adverse 
+effect  on  turn  coordination,  or  is  turning  maneuver  per¬ 
+formance  improved  by  the  FSAS? 
+
+During  the  hovering  out-of-ground  effect  turns,  the  pilots  commented 
+that  there  was  no  noticeable  difference  in  performance  when  performing 
+these  maneuvers  with  FSAS  engaged  or  disengaged.  The  FSAS  did  not 
+fight  the  turn. 
+
+When  performing  unscheduled  pedal  turns  while  hovering  in  ground  effect, 
+maneuvering  performance  was  improved  when  the  FSAS  was  engaged. 
+
+During  turn  maneuvers  performed  at  60  kn  (IAS)  and  above,  the  pilots 
+commented  that  when  performing  a  steady  cyclic -only  turn,  a  given 
+turning  rate  was  easier  to  achieve  and  maintain  when  the  FSAS  was 
+engaged.  The  FSAS  does  not  degrade  turn  coordination. 
+
+Flight  test  recordings  for  these  maneuvers  are  not  included  in  this 
+report,  because  the  criterion  for  judging  FSAS  performance  was  not  a 
+measurable  quantity.  The  recordings  would  be  of  little  value  in  deter¬ 
+mining  FSAS  performance  during  the  above-mentioned  turn  maneuver 
+tests. 
+
+
+62 
+
+
+SECTION  VI 
+CONCLUSIONS 
+
+
+The  following  conclusions  regarding  FSAS  performance  were  drawn 
+from  evaluation  of  the  flight  data  and  from  the  pilot's  comments: 
+
+•  The  FSAS  significantly  decoupled  external  disturbance  cross 
+coupling.  That  is,  the  drift  or  divergence  from  trim  rates 
+was  much  less  in  the  two  nondisturbed  axes  for  a  disturbance 
+in  a  third  axis. 
+
+•  For  theFSAS/UH-lC  without  mechanical  stabilizer  bar,  a  given 
+test  or  control  input  could  be  held  in  much  longer  (2  or  3 
+times)  due  to  stability  augmentation  control  action  of  the 
+FSAS. 
+
+•  Pilots  could  fly  with  more  precision,  that  is,  rate  excur¬ 
+sions  from  trim  were  much  less,  with  the  FSAS  engaged. 
+
+•  The  roll-yaw  control  function  of  the  FSAS  did  not 
+reduce  the  turn  coordination  capability  of  the  aircraft  to  a 
+level  detectable  by  the  pilots.  One  of  the  FSAS  design 
+ground  rules  was  that  it  would  not  contain  turn  coordination 
+sensors  and  shaping  networks.  The  FSAS  was  designed  to 
+provide  the  desired  stability  functions  and  have  minimum 
+effect  on  turn  coordination. 
+
+•  The  longitudinal  divergent  phugoid  mode  was  stabilized  by 
+the  FSAS. 
+
+•  The  FSAS/UH-1C  without  mechanical  stabilizer  bar  can  be  flown 
+at  a  continuous  speed  10  to  20  kn  faster  with  the  FSAS 
+engaged. 
+
+•  The  FSAS  augments  damping  and  control  response  char¬ 
+acteristics  of  the  UH-1C  in  a  manner  that  satisfies  the 
+requirements  of  the  design  goals.  These  design  goals  were 
+generated  in  light  of  Military  Specification  MIL-H-8501A 
+requirements  and  good  engineering  judgment. 
+
+•  There  were  no  detectable  effects  on  FSAS  performance  due  to 
+changes  in  gains,  time  constants,  or  noise  levels,  which  are 
+functions  of  oil  temperature,  for  the  range  of  oil  tempera¬ 
+ture  changes  that  occurred  during  flight  test. 
+
+
+•  The  FSAS  augmented  the  stability  of  the  UH-1C  helicopter 
+in  a  manner  comparable  to  or  better  than  that  provided  by 
+the  mechanical  stabilizer  bar. 
+
+
+63 
+
+
+The  following  conclusions  are  items  that  become  particularly  critical  in 
+the  development  of  outer-loop  flight  path  control  modes: 
+
+•  Gain  scheduling  of  the  control  system,  to  improve  aircraft 
+performance  and  handling  qualitites  over  the  entire  flight 
+envelope,  is  required. 
+
+•  Development  of  flight  path  control  system  components,  such 
+as  aircraft  angular  measurement  devices,  angular  measure¬ 
+ment  synchronizers,  and  automatic  trim  systems,  is 
+required. 
+
+•  Development  of  a  rotor/pylon  stabilization  system  to  mini¬ 
+mize  or  eliminate  vibration  modes  that  exist  in  the  UH-1 
+series  helicopter  is  necessary. 
+
+•  Development  is  required  of  design  and  hardware  build  tech¬ 
+niques  to  eliminate  system  gain  and  noise  level  changes 
+caused  by  hydraulic  oil  temperature  changes. 
+
+•  Elimination  of  signal  drift  in  the  fluidic  components  is 
+necessary. 
+
+This  analysis  study,  hardware  build,  and  flight  test  program  have  demon¬ 
+strated  the  feasibility  of  using  hydrofluidic  sensors  and  shaping  networks 
+in  stability  augmentation  flight  control  applications.  This  work  should  be 
+continued  to  further  advance  the  state  of  the  art  in  hydrofluidic  controls 
+to  permit  development  of  control  systems  to  automatically  stabilize  the 
+flight  of  an  aircraft,  that  is,  automatic  flight  control  system  (AFCS) 
+capability. 
+
+
+APPENDIX  I 
+
+PILOT  FLIGHT  TEST  REPORTS 
+OF  THREE-AXIS  HYDROFLUIDIC  STABILITY 
+AUGMENTATION  SYSTEM 
+
+
+HONEYWELL  PILOT  REPORT  OF  FSAS  FLIGHT  TEST 
+
+
+Summary 
+
+
+The  FSAS -augmented  UH-1C  without  stabilizer  bar  exhibited  excellent 
+damping  and  handling  characteristics.  The  FSAS  provided  better  roll 
+stabilization  than  the  mechanical  stabilizer  bar.  The  handling  charac¬ 
+teristics  of  a  UH-1C  hovering  in  a  strong  downwind  condition  were 
+improved  by  the  FSAS.  The  stability  of  the  aircraft  at  all  flight  test 
+conditions  was  improved  by  the  FSAS. 
+
+Introduction 
+
+
+The  following  paragraphs  constitute  the  project  pilot's  qualitative 
+flight  test  report  of  the  FSAS. 
+
+Twenty-two  data  flights  were  conducted  during  the  period  from  2  Sep¬ 
+tember  1970  to  2  December  1970.  The  test  vehicle  was  a  UH-1C 
+helicopter.  Serial  No.  64-14101. 
+
+The  flight  test  program  was  initiated  with  a  series  of  FSAS  engage  and 
+disengage  tests  in  hovering  and  translational  flight.  Limited  pulse  and 
+step  response  tests  were  conducted  in  the  roll  and  yaw  axis  while 
+hovering  in  ground  effect.  A  series  of  control  pulses  and  steps  was 
+used  at  all  other  flight  conditions  to  evaluate  FSAS  performance.  Stabi¬ 
+lized  flight  conditions  were  also  evaluated.  Finally,  a  series  of  turns 
+and  autorotation  entries  was  evaluated. 
+
+The  data  flights  were  conducted  in  weather  conditions  ranging  from  clear 
+with  15  miles  visibility  and  wind  less  than  3  kn  to  600  ft  overcast  with  3 
+miles  visibility  and  light  freezing  drizzle  with  wind  20  kn  gusting  to 
+30  kn. 
+
+Results  and  Discussion 
+
+
+Stick  Forces 
+
+
+During  flight  No.  1  (maintenance  test  flight),  a  left  lateral  cyclic 
+stick  pull  was  noted.  It  was  estimated  that  a  1.  5-lb  pull  to  the 
+right  was  required  to  maintain  level  flight.  The  magnitude  and 
+
+
+65 
+
+
+direction  of  the  force  on  the  cyclic  stick  was  subsequently  measured 
+and  verified  during  ground  tests.  The  pilot  considered  the  force 
+objectionably  high.  The  existence  of  a  lateral  force  made 
+accurate  pitch-axis  control  difficult.  Postflight  investigations 
+revealed  that  the  lateral  force  was  caused  by  the  geometry  of 
+the  flexible  hydraulic  lines  connected  to  the  FSAS  roll  servoactuator. 
+The  lateral  force  was  removed  by  rerouting  the  flexible  lines 
+in  a  manner  to  nearly  balance  the  forces  on  the  roll  servoactuator.  In 
+general,  throughout  the  flight  test  program,  small  forces  detect¬ 
+able  at  the  cyclic  stick  were  caused  by  the  flexible  lines. 
+
+Built-In-Test  System  Checks 
+
+FSAS  built-in-test  (BIT)  buttons  were  actuated  during  ground  running 
+at  6600  engine  rpm.  FSAS  response  to  the  BIT  system  was  just 
+barely  detectable  at  the  cyclic  stick  and  pedals.  Unfortunately,  the 
+BIT  system,  as  presently  designed,  does  not  afford  the  pilot  a  con¬ 
+venient  preflight  check  of  the  FSAS.  Even  though  the  FSAS  is  not  a 
+safety-of-flight  item,  it  would  be  desirable  to  know  the  operational 
+status  of  the  system  before  takeoff. 
+
+Engage  and  Disengage  Tests 
+
+Engage  and  disengage  tests  were  conducted  on  the  FSAS  both  in-flight 
+and  during  ground  operation.  No  objectionable  transients  were  noted 
+during  ground  operation.  Initial  tests  disclosed  an  objectionable 
+transient  in  flight  when  the  yaw  FSAS  was  engaged  or  disengaged. 
+
+Upon  engaging  the  yaw  FSAS,  the  aircraft  would  yaw  to  the  right 
+approximately  5  deg  and  about  the  same  amount  to  the  left  at  dis¬ 
+engage.  Subsequent  investigation  revealed  that  a  high  null  signal  in 
+the  yaw  FSAS  caused  the  transient.  The  null  signal  was  reduced, 
+eliminating  the  objectionable  transient  for  the  remainder  of  the  flight 
+test  program. 
+
+Thereafter,  very  small  nonobjectionable  transients  were  detectable  at 
+the  cyclic  stick  and  pedals  as  the  FSAS  was  engaged  and  disengaged. 
+The  pilot  considered  these  transients  desirable  as  an  indication  that 
+the  FSAS  had  in  fact  engaged  or  disengaged. 
+
+At  various  times  during  the  flight  test  program,  a  roll  cyclic  stick 
+offset  resulted  when  the  roll  FSAS  was  engaged.  Disassembly  of  the 
+roll  controller  revealed  Teflon  particles  in  the  roll  output  block  which 
+caused  the  offset. 
+
+No  change  in  FSAS  engage-disengage  characteristics  was  noted 
+during  maneuvering  flight,  including  hovering,  climbing,  or 
+descending  turns,  and  autorotation. 
+
+
+66 
+
+
+Yaw-Axis  Performance 
+
+
+1)  Hovering  In  Ground  Effect  -  A  very  limited  number  of 
+dynamic  yaw-axis  tests  were  conducted  while  hovering 
+in  ground  effect.  The  pilot  input  feature  of  the  FSAS 
+yaw  axis  was  very  effeptive  in  that  no  difference  in  yaw- 
+axis  response  could  be  detected  with  the  FSAS  on  or  off. 
+
+There  was  no  tendency  for  the  FSAS  to  "fight"  the  pilot. 
+During  initial  flights,  yaw  FSAS  performance  was  not 
+impressive  in  a  hover.  During  the  latter  part  of  the 
+program,  extensive  downwind  hovering  was  performed 
+with  adverse  conditions  of  strong,  gusting  winds.  Under 
+these  conditions,  the  contribution  of  the  yaw  FSAS  was 
+evident.  The  pilot's  control  task  was  reduced  slightly. 
+
+It  is  recognized  that  the  FSAS  was  not  designed  to  im¬ 
+prove  the  handling  qualities  at  a  hover,  but  evaluation 
+at  this  flight  condition  was  inevitable  because  the  control 
+task  in  a  hover  is  considerable. 
+
+Airframe  manufacturer  test  pilot  H  spent  a  considerable 
+amount  of  time  evaluating  the  performance  of  the  FSAS 
+while  hovering  in  ground  effect.  He  stated  that  he  was 
+particularly  impressed  with  improvement  of  the  handling 
+qualities  during  lateral  translation. 
+
+2)  Hovering  Out  of  Ground  Effect  -  Dynamic  yaw-axis  tests 
+were  conducted  at  approximately  3000  ft  pressure  alti¬ 
+tude.  A  series  of  yaw  step  inputs,  pulse  inputs,  and  pedal 
+turns  was  executed. 
+
+FSAS  improvement  of  the  aircraft  handling  qualities  in 
+response  to  yaw  step  inputs  was  not  obvious  to  the  pilot. 
+The  flight  records  may  show  an  improvement  in  damping 
+or  response  characteristics. 
+
+On  the  other  hand,  FSAS  improvement  of  the  aircraft 
+damping  and  handling  qualities  in  response  to  yaw  pulse 
+inputs  was  clearly  evident.  Without  stabilization  in  the 
+yaw  axis,  the  aircraft  exhibited  4  or  5  overshoots  in  re¬ 
+sponse  to  a  left  yaw  pulse  input,  while  2  or  3  overshoots 
+resulted  from  a  right  yaw  pulse  input.  With  FSAS 
+engaged,  overshoots  to  the  left  were  reduced  to  2,  while 
+overshoots  to  the  right  were- eliminated.  The  adverse 
+roll  developed  during  yaw  pulse  inputs  was  also  reduced 
+when  the  roll  FSAS  was  engaged. 
+
+
+67 
+
+
+Consecutive  FSAS  on  and  off  pedal  turns  were  not  executed 
+during  out-of-ground-effect  tests;  therefore,  improvements 
+were  not  noted.  Consecutive  FSAS  on  and  off  pedal  turns 
+were  executed  during  in- ground-effect  hovering,  and  slight 
+improvement  was  noted,  probably  due  to  the  combined 
+effect  of  roll  and  yaw  FSAS. 
+
+3)  Translational  Flight  (60,  90,  and  120  KIAS)  -  Yaw  step 
+inputs  and  pulse  inputs  were  used  to  evaluate  the  per¬ 
+formance  of  the  yaw  FSAS  at  60,  90,  and  120  KIAS. 
+
+Yaw  FSAS  performance  was  not  detectable  in  response  to 
+step  inputs  at  the  three  test  airspeeds.  Here  again,  though, 
+yaw  FSAS  performance  was  readily  detectable  in  response  to 
+pulse  input.  The  improvement  in  helicopter  handling  qual¬ 
+ities  becomes  more  evident  with  increasing  airspeed.  Yaw 
+FSAS  performance  was  enhanced  when  combined  with  the  roll 
+FSAS.  Yaw  FSAS  performance  during  simulated  rocket 
+runs  was  evaluated.  The  action  of  the  yaw  FSAS  did  not 
+impair  the  maneuverability  of  the  aircraft  and  aided  the 
+pilot's  ability  to  maintain  a  line  of  sight  to  the  target. 
+
+Roll-Axis  Performance 
+
+Roll  step  inputs  and  "cyclic -only"  turns  were  used  to  evaluate  roll 
+
+FSAS  performance  at  the  following  flight  conditions: 
+
+1)  Hovering  Out  of  Ground  Effect  -  Roll  rate  sensitivity  of 
+the  unaugmented  aircraft  without  a  stabilizer  bar  was  too 
+high.  The  roll  FSAS  markedly  decreased  roll  rate  sensi¬ 
+tivity  to  a  more  desirable  value.  The  roll  FSAS  provided 
+a  smoother  roll  response  to  step  inputs  and  provided  a 
+definite  stiffening  of  the  roll  axis. 
+
+2)  Translational  Flight  (60.  90,  and  120  KIAS)  -  The  per¬ 
+formance  of  the  roll  FSAS  is  immediately  obvious  upon 
+engagement.  The  augmented  aircraft  without  a  stabilizer 
+bar  exhibited  a  strong  tendency  to  maintain  a  residual  roll 
+oscillation  when  induced  by  the  pilot  or  external  distur¬ 
+bances.  The  roll  FSAS  dramatically  damped  this  roll 
+oscillation.  The  aircraft  exhibited  the  same  tendency,  to 
+a  lesser  degree,  with  stabilizer  bar  attached.  The  roll 
+FSAS  very  definitely  provided  better  handling  qualities  in 
+roll  than  did  the  stabilizer  bar. 
+
+At  higher  airspeeds,  the  spiral  instability  of  the  aircraft 
+without  a  stabilizer  bar  was  readily  detected  in  response 
+to  roll  step  input.  The  aircraft  had  a  tendency  to  rapidly 
+increase  bank  angle  in  response  to  a  fixed  roll  input 
+
+
+68 
+
+
+command  when  the  bank  angle  exceeded  approximately 
+20  deg.  The  action  of  the  roll  FSAS  was  to  delay  the 
+onset  of  this  instability. 
+
+During  the  steady  "cyclic -only" turns,  a  given  turning  rate  was 
+easier  to  achieve  and  maintain  when  using  the  FSAS. 
+
+Pitch-Axis  Performance 
+
+Pitch  step  inputs  and  pulse  inputs  were  used  to  evaluate  pitch  FSAS 
+performance  at  the  following  flight  conditions: 
+
+1)  Hovering  in  Ground  Effect  -  During  initial  flights,  pitch 
+FSAS  gain  was  too  high.  The  excessive  gain  overcontrolled 
+the  pitch  axis  as  evidenced  by  a  strong  vertical  bounce  of 
+the  test  aircraft. 
+
+Eventually,  pitch  FSAS  gain  was  reduced  to  a  value  which 
+eliminated  the  overcontrol.  The  handling  qualities  of  the 
+test  aircraft  without  a  stabilizer  bar  were  very  acceptable, 
+and  the  pitch  FSAS  did  not  provide  detectable  improvement. 
+
+The  pitch  FSAS  aggravated  the  pylon  rock  problem  in  the 
+test  aircraft.  Apparently,  the  pylon  isolation  mounts  were 
+deteriorated,  as  pylon  rock  could  easily  be  induced  by  a 
+fore  and  aft  motion  of  the  cyclic  stick.  Washing  out  the 
+cockpit  with  the  cyclic  stick  also  produced  severe  pylon 
+rock  while  in  a  hover. 
+
+2)  Translational  Flight  (60,  90,  and  120  KIAS)  Pitch  FSAS 
+performance  at  the  60- ,  96-,  and  120-KIAk  flight  conditions 
+was  investigated  with  a  series  of  pulse  inputs  and  step  in¬ 
+puts.  The  handling  qualities  of  the  aircraft  in  the  pitch 
+axis  without  a  stabilizer  bar  were  good.  The  pitch  FSAS 
+provided  slight  improvement,  especially  at  airspeeds  above 
+120  KIAS. 
+
+Autorotation  Entries 
+
+
+Autorotations  were  initiated  at  each  of  the  flight  test  conditions  (60, 
+90,  and  120  KIAS).  The  unaugmented  aircraft  without  the  stabilizer 
+bar  possesses  satisfactory  handling  characteristics  in  autorotation. 
+The  FSAS  functioned  to  reduce  the  yaw  rate  during  autorotation  and 
+the  yaw  rate  and  yaw  angle  produced  at  the  time  of  throttle  chop. 
+The  FSAS  further  improved  handling  qualities  by  stiffening  the  roll 
+axis. 
+
+
+69 
+
+
+Vortex  Valve  Servoactuator  Evaluation 
+
+
+There  is  a  complete  lack  of  engage  or  disengage  transients  when 
+using  vortex  valve  servoactuators.  There  is  a  detectable  difference 
+between  the  performance  of  an  FSAS  using  the  spool  valve  servo- 
+actuators  and  one  using  the  vortex  valve  servoactuators.  There 
+appears  to  be  a  time  lag  before  the  vortex  valve  servoactuators 
+arrest  an  induced  rate.  This  action  is  readily  detectable  when  ex¬ 
+ecuting  yaw  step  inputs.  The  initial  yaw  rate  response  is  reduced 
+after  approximately  2  seconds  when  the  vortex  valve  servoactuators 
+respond  to  the  rate  signal.  This  effect  was  not  noted  during  the 
+initial  flights  with  the  vortex  valve  servoactuators,  which  leads  one 
+to  suspect  a  degradation  of  performance. 
+
+
+Conclusions 
+
+The  FSAS-augmented  UH-1C  without  a  stabilizer  bar  exhibited  excellent 
+damping  and  handling  characteristics.  The  FSAS  improved  handling 
+characteristics  of  the  UH-1C  aircraft  over  the  speed  range  from  hover 
+to  140  KIAS.  The  roll  FSAS  provided  better  roll  stability  than  the 
+mechanical  stabilizer  bar. 
+
+
+Recommendations 
+
+•  The  servoactuator  installation  should  be  redesigned  to  preclude 
+the  introduction  of  control  forces  due  to  flexible  hose  connec¬ 
+tions. 
+
+•  The  built-in  test  (BIT)  system  should  be  redesigned  to  permit 
+its  use  for  an  operational  check  of  the  FSAS  during  preflight 
+checkout. 
+
+•  The  FSAS  should  be  evaluated  under  operational  conditions 
+to  include  actual  rocket  runs. 
+
+•  FSAS  gains  should  be  optimized  at  hover  and  normal  cruise 
+airspeed. 
+
+•  An  automatic  yaw  trim  feature  should  be  added  to  the  FSAS. 
+
+
+REPORT  OF  ARMY  PILOT  J,  FSAS  FLIGHT  TEST 
+
+The  three-axis  fluidic  stability  augmentation  system  (FSAS)  (spool 
+valve  servoactuators)  installed  in  a  UH-1C  helicopter  was  evaluated  at 
+the  contractor's  site  on  27  October  1970. 
+
+Table  VII  lists  the  conditions  tested  and  the  pilot  comments  regarding 
+the  apparemt  qualitative  increase  in  aircraft  damping  using  the  three- 
+axis  fluidic  damping  system  (FSAS).  The  table  shows  that  increased 
+damping  was  apparent  in  10  cases,  slightly  apparent  in  five  cases,  and  not 
+
+
+70 
+
+
+TABLE  VII.  UH-1C  QUALITATIVE  DAMPING  EVALUATION 
+WITHOUT  STABILIZER  BAR 
+
+
+Input 
+
+Airspeed 
+
+(KIAS) 
+
+Pressure 
+
+AlUtude 
+
+(ft) 
+
+Increased 
+
+Damping 
+
+Fwd  Longitudinal  Step 
+
+65 
+
+2000 
+
+Not  apparent 
+
+Aft  Longitudinal  Step 
+
+65 
+
+2000 
+
+Yes 
+
+Fwd  Longitudinal  Pulse 
+
+65 
+
+2000 
+
+Slight 
+
+Aft  Longitudinal  Pulse 
+
+65 
+
+2000 
+
+Slight 
+
+Right  Roll  Step 
+
+65 
+
+2000 
+
+Slight 
+
+Left  Roll  Step 
+
+65 
+
+2000 
+
+Slight 
+
+Left  Yaw  Step 
+
+65 
+
+2000 
+
+Slight 
+
+Right  Yaw  Step 
+
+65 
+
+2000 
+
+Not  apparent 
+
+Right  Yaw  Pulse 
+
+65 
+
+2000 
+
+Yes 
+
+Left  Yaw  Pulse 
+
+65 
+
+2000 
+
+Not  apparent 
+
+Fwd  Longitudinal  .Step 
+
+110 
+
+4700 
+
+Not  apparent 
+
+Aft  Longitudinal  Step 
+
+110 
+
+4700 
+
+Not  appar  ent 
+
+Aft  Longitudinal  Pulse 
+
+110 
+
+4700 
+
+Yes 
+
+Fwd  Longitudinal  Pulse 
+
+110 
+
+4700 
+
+Yes 
+
+Right  Roll  Step 
+
+110 
+
+4700 
+
+Yes 
+
+Left  Roll  Step 
+
+110 
+
+4700 
+
+Yes 
+
+Left  Yaw  Step 
+
+110 
+
+4700 
+
+Yes 
+
+Right  Yaw  Step 
+
+110 
+
+4700 
+
+Yes 
+
+Right  Yaw  Pulse 
+
+110 
+
+4700 
+
+Yes 
+
+Left  Yaw  Pulse 
+
+110 
+
+4700 
+
+Yes 
+
+71 
+
+
+I 
+
+
+apparent  in  five  cases.  These  results  are  limited  by  two  conditions. 
+
+First,  aircraft  damping  is  difficult  to  determine  qualitatively;  and 
+second,  weather  conditions  during  the  siqgle  flight  were  unstable, 
+with  clouds  and  high,  gusting  winds. 
+
+The  following  comments  were  noted: 
+
+•  Pitch  rate  damping  apparently  was  not  uniform  between 
+forward  and  aft  steps. 
+
+•  I 
+
+•  Stick  and  pedal  trim  positions  changed  as  a  function  of 
+the  FSAS  null  positions. 
+
+•  UH-1C  pylon  rock  was  not  affected  by  incorporation  of 
+the  FSAS. 
+
+•  FSAS  gain  appeared  to  be  a  function  of  system  oil  tem¬ 
+perature. 
+
+! 
+
+•  The  FSAS  did  not  significantly  improve  aircraft  response 
+following  throttle  chops. 
+
+•  There  was  no  objectionable  feedback  in  the  controls  with 
+the  FSAS  actuated. 
+
+I 
+
+•  The  FSAS  did  not  restrict  the  basic  mission  envelope  of 
+the  UH-1C  helicopter,  although  maneuvering  flight  at 
+levels  below  1.0  g  should  receive  further  evaluation.  In 
+this  area,  the  FSAS  appeared  to  restrict  rapid  recovery 
+from  pushover  maneuvers. 
+
+The  results  of  this  evaluation  were  significantly  restricted  by  the 
+calendar,  weather,  and  qualitative  constraints  of  the  program.  In  addi¬ 
+tion,  a  comparative  evaluation  between  a  standard  UH-1C  and  the  FSAS 
+helicopter  was  not  possible  because  the  evaluation  helicopter  lacked  a 
+stabilizer  bar. 
+
+
+REPORT  OF  ARMY  PILOT  S,  FSAS  FLIGHT  TEST  NO.  1 
+Introduction 
+
+The  three-axis  fluidic  stability  augmentation  system  (FSAS)  (spool  valve 
+servoactuators)  installed  in  a  modified  Army  UH-1C  helicopter  was 
+evaluated  at  the  contractor's  site  on  28  October  1970.  The  2 -hour  flight 
+was  conducted  in  stable  air  with  the  wind  reported  at  less  than  3  kn.  Con¬ 
+trol  fixtures  were  used  to  assist  in  obtaining  crisp,  measured  pulse  and 
+step  control  inputs.  The  fixtures  were  structurally  flexible,  which  made 
+it  nearly  impossible  to  reestablish  the  original  trim  position  following  an 
+
+
+| 
+
+72 
+
+
+/ 
+
+
+/ 
+
+
+input.  The  helicopter  modifications  allowed  for  the  testing  of  two  con¬ 
+figurations:  (1)  FSAS  off  with  the  stabilizer  bar  removed,  and  (2)  FSAS 
+on  with  stabilizer  bar  removed. 
+
+Separate  FSAS  channels  (pitch,  roll,  yaw)  could  be  selected  by  console- 
+mounted  switches.  System  gains  and  sensitivities  were  fixed.  The 
+takeoff  gross  weight  was  approximately  7425  lb,  and  the  center  of 
+gravity  was  within  0.25  in.  of  the  mast  centerline. 
+
+Results  and  Discussion 
+
+Initial  hovering  was  conducted  with  the  FSAS  off  because  the  hydraulic 
+fluid  temperature  was  too  low,  even  though  the  aircraft  had  just  been 
+rolled  out  of  the  hangar.  The  aircraft's  low  roll- axis  damping  was  very 
+apparent;  in  fact,  the  combination  of  roll  sensitivity  and  damping  was 
+such  that  low-time  pilots  could  probably  experience  PIO  (pilot-induced 
+oscillation)  problems.  Pitch  was  not  bad,  although  damping  seemed 
+lower  than  that  of  the  UH-1B.  Nothing  different  was  noticed  in  the  yaw 
+axis  -  as  one  might  expect. 
+
+The  flight  test  engineer  then  arrived,  and  by  the  time  he  finished  the 
+pre flight  FSAS  checks  and  calibration  (the  aircraft  was  not  shut  down), 
+the  hydraulic  fluid  temperature  was  up  and  we  proceeded  to  the  test 
+area  with  FSAS  on.  A  64 -kn  instability  phenomenon  was  investigated 
+enroute  to  the  test  area. 
+
+The  so-called  64 -kn  instability  phenomenon  was  quite  apparent,  al¬ 
+though,  oh  this  flight,  it  did  not  initiate  itself  (stable  air).  Short  fore 
+and  aft  pitch  cyclic  stick  pulse  inputs  would  set  it  off  every  time;  lateral 
+roll  cyclic  stick  pulse  inputs  would  not.  The  initial  body  motion  was  a 
+definite  lateral  acceleration.  The  following  motion  seemed  to  be  pre¬ 
+dominantly  lateral,  although  it  felt  as  if  some  combination  of  longitudinal 
+and  lateral  body  motion  (acceleration)  was  occurring  -  perhaps  somewhat 
+circular  (whirl  mode)  at  a  frequency  of  9  cycles  per  5  sec.  It  was  poorly 
+damped  as  long  as  airspeed  remained  constant.  Small  changes  in  air¬ 
+speed  affected  the  damping  strongly.  It  occurred  most  strongly  at  about 
+60  KIAS  and  persisted  until  the  airspeed  was  reduced  to  58  KIAS  or  in¬ 
+creased  to  63  KIAS.  FSAS  had  little  or  no  effect  on  its  occurrence  or 
+damping.  The  tip  path  plane  seemed  to  be  oscillating  (flapping)  a  couple 
+of  inches  both  ahead  and  to  the  side  of  the  helicopter. 
+
+Hover  testing  was  conducted  over  a  grass -covered  taxiway.  All  FSAS 
+channels  were  turned  off  for  a  baseline  qualitative  feel.  Then  roll  FSAS 
+was  switched  on.  Its  contribution  was  very  obvious,  while  no  significant 
+degradation  of  control  power  or  change  in  sensitivity  was  noticed.  The 
+same  technique  was  used  to  evaluate  pitch  and  roll,  and  then  all  three 
+channels.  The  effect  on  the  pitch  mode  was  least  noticeable.  It  seemed 
+that  more  stick  was  required  to  stop  a  pitch  rate,  although  the  rates 
+
+
+73 
+
+
+developed  by  a  given  input  seemed  almost  unchanged.  In  yaw,  the  sys¬ 
+tem  was  more  effective  in  stopping  right  yaw  rates,  while  the  initial  re¬ 
+sponses  seemed  unchanged.  With  all  three  channels  on,  the  aircraft 
+was  obviously  easier  to  hover;  however,  the  greatest  improvement  was 
+in  the  lateral  mode. 
+
+Six  power-recovery,  180-deg  autorotations  were  performed  to  evaluate 
+the  effect  of  the  system  (all  channels  on  versus  all  channels  off).  The 
+only  significant  effect  was  a  reduction  of  the  yaw  excursions  (a  slight 
+effect  in  pitch)  following  the  throttle  chop  and  lowering  of  collective 
+pitch.  The  aircraft  also  seemed  "tighter"  in  autorotative  maneuvering 
+flight.  (Note:  Engine  acceleration  in  power  recoveries  was  extremelv 
+slow.  ) 
+
+The  project  pilot  and  the  flight  test  engineer  then  exchanged  seats  and 
+proceeded  to  satisfy  the  contractual  step  and  pulse  control  inputs  using 
+the  control  positioning  fixtures.  The  same  conditions  that  Army  Pilot  J 
+flew  were  chosen  in  the  interest  of  acquiring  comparative  pilot  comments; 
+i.e. ,  65  and  110  KIAS  at  3000  ft  pressure  altitude.  Additional  comments 
+are  as  follows: 
+
+•  The  only  aspect  of  the  step  inputs  that  was  noticeable  was 
+the  reduction  in  angular  rate  (pitch  and  roll),  the  roll-pitch 
+coupling,  and  the  negative  dihedral  effect.  The  character¬ 
+istics  at  110  KIAS  were  much  more  dramatic  than  those  at 
+65  KIAS. 
+
+•  The  low  yaw  damping  became  more  apparent  at  the  higher 
+speed,  which  was  expected;  basic  aircraft  yaw  damping  was 
+stronger  with  left  pedal  pulse  inputs  than  right  pedal  pulse 
+inputs  by  a  factor  of  2.  The  influence  of  FSAS  yaw  damping 
+was  very  strong  (as  the  time  histories  will  indicate);  i.e. , 
+
+4  to  5  cycles  without  FSAS  to  damp  following  right  pedal 
+pulse  inputs  versus  1  to  1-1/4  cycles  with  FSAS  -  with  only 
+a  slight  overshoot.  No  numbers  can  be  attached  to  the  roll 
+characteristics,  but  the  FSAS  improved  them  at  least  1  to 
+1-1/2  Cooper  Rating  units.  This  became  even  more  ap¬ 
+parent  with  brisk  rolling  maneuvers  at  120  KIAS.  The  pitch 
+characteristics  due  to  pulse  inputs  did  not  appear  to  be 
+affected  much  by  FSAS.  The  developed  pitch  rates  seemed 
+more  constant  with  FSAS  on  for  the  step  inputs. 
+
+Push-overs  were  conducted  with  FSAS  on  and  off,  but  nothing  seemed 
+improved  or  adverse. 
+
+Controls-fixed  throttle  chops  were  performed  at  100  KIAS.  The  re¬ 
+coveries  were  initiated  when  the  rotor  speed  reached  approximately 
+270  rpm.  The  FSAS  seemed  to  reduce  yaw  excursion  somewhat,  with 
+a  similar  but  less  noticeable  effect  in  pitch. 
+
+
+74 
+
+
+The  system  was  turned  off  in  straight  and  level  flight  at  140  KIAS, 
+with  noticeable  improvements  in  pitch  and  roll.  Note:  This  would 
+probably  reach  very  important  proportions  in  rough  air. 
+
+
+The  FSAS  caused  no  apparent  change  to  maneuvering  stability. 
+
+An  unsatisfactory  tendency  for  the  pedals  to  "float"  was  noted  when  my 
+feet  were  removed  from  the  pedals.  This  is  reportedly  due  to  the  spring 
+action  of  the  hydraulic  lines  which  serve  .the  FSAS  actuator.  Also,  a 
+slight  roll  cyclic  stick  preload  was  reportedly  being  caused  by  the  same 
+situation.  In  addition,  there  was  a  slight  amount  of  drag  in  the  cyclic  stick 
+due  to  the  friction  involved  in  dragging  the  FSAS  servoactuators  across 
+their  respective  sliding  plates.  These  discrepancies  are  minor  and  can 
+be  expected  in  view  of  the  research  nature  of  the  hardware. 
+
+Summary 
+
+The  flight  conditions  were  ideal  for  acquiring  good  data  and  the  data 
+are  accurate;  i.  e.  ,  altitude  3000  to  3500  ft  pressure  altitude,  air¬ 
+speeds  within  ±2  kn,  and  quality  pulse  and  step  inputs  (test  sheets).  The 
+FSAS  improved  the  aircraft's  handling  qualities  significantly.  The 
+strongest  improvement  was  in  the  roll  mode.  A  lesser  improvement 
+was  noticed  in  yaw  in  spite  of  the  big  improvement,  quantitatively,  in 
+the  directional  dynamics.  Little  improvement  was  noticed  in  pitch. 
+
+The  washout  scheme  in  yaw  was  apparently  optimized,  since  no  change 
+in  steady-state  yaw  rate  was  detected  when  engaging  the  system.  A 
+roll  cyclic  trim  shift  was  detected  when  engaging  and  disengaging  the 
+system,  and  it  changed  "sign"  from  hover  to  forward  flight;  i.  e.  ,  in 
+hover,  the  stick  trim  position  moved  approximately  1  in.  to  the  left  when 
+engaging  the  system  but  it  moved  to  the  right  in  forward  flight.  Engaging 
+transients  could  be  felt  in  the  pedals,  and  they  were  felt  ever  so  slightly 
+in  pitch  cyclic.  In  forward  flight,  the  sideslip  ball  moved  about  a  "half 
+a  ball"  when  engaging  and  disengaging,  but  this  is  attributed  to  the  cou¬ 
+pling  with  the  roll  cyclic  trim  shift.  No  additional  transients  occurred 
+when  engaging  or  disengaging  the  system  while  imposing  angular  rates  or 
+accelerations  to  the  aircraft.  It  is  felt  that  some  disengaging  transient  is 
+desirable  to  signal  the  pilot  of  the  situation.  Other  than  the  roll  cyclic 
+trim  shift,  the  system  transients  were  satisfactory. 
+
+
+REPORT  OF  ARMY  PILOT  S,  FSAS  FLIGHT  TEST  NO.  2 
+Discussion 
+
+
+This  was  the  second  2 -hour  flight  evaluation  of  the  three-axis  fluidic 
+stability  augmentation  system  (FSAS)  installed  in  a  modified  UH-1C 
+helicopter.  The  first  evaluation  was  conducted  on  28  October  1970; 
+this  one  was  conducted  a  month  later,  on  17  and  18  November.  The  pur¬ 
+pose  of  the  second  evaluation  was  to  investigate  the  performance  of  the 
+system  with  vortex  valve  servoactuators  installed  and  to  compare  it  with 
+the  original  system,  which  uses  spool  valve  servoactuators. 
+
+
+75 
+
+
+>  pm.  w*  tmi  w 
+
+
+Qualitatively  there  was  no  detectable  difference  except  for  the  complete 
+absence  of  any  engaging  or  disengaging  transients.  The  roll  cyclic 
+trim  shift  transient  experienced  during  the  first  evaluation  was  report¬ 
+edly  due  to  system  contamination.  A  small  piece  of  a  Teflon  joint  seal 
+had  accidentally  gotten  into  the  system.  In  the  interest  of  evaluating  the 
+system  as  thoroughly  as  possible  within  the  time  allotted,  considerable 
+attention  was  paid  to  acquiring  good  quantitative  data.  Damping  is  often 
+difficult  to  assess  qualitatively;  therefore,  actual  response  character¬ 
+istics  must  be  measured  and  recorded. 
+
+During  the  contractor's  flight,  which  immediately  preceded  the  Govern¬ 
+ment  evaluation,  a  yaw-axis  FSAS  servoactuator  hard -over  was  experi¬ 
+enced.  It  posed  no  problem  to  flight  safety,  in  that  the  servoactuator 
+moved  to  and  locked  in  the  mid-position  (as  advertised)  when  the  yaw  axis 
+was  disengaged.  The  reason  for  the  malfunction  was  structural  failure 
+within  the  servo  valve  of  the  servoactuator  caused  by  a  surge  in  the 
+hydraulic  pressure.  The  surge  occurred  as  a  result  of  aircraft  system 
+checks  prior  to  takeoff. 
+
+Conclusions 
+
+
+The  comments  submitted  in  connection  with  the  initial,  28  October  1970 
+flight  test  are,  in  general,  unchanged.  The  major  conclusion  is  that  this 
+project  has  quite  successfully  demonstrated  that  a  three-axis  rate 
+damping  system  can  be  provided  using  fluidics.  Additional  testing  would 
+be  required,  however,  to  establish  and/or  demonstrate  adequate  reli¬ 
+ability  and  maintainability. 
+
+The  FSAS  also  demonstrated  the  capability  of  replacing  the  stabilizer  bar 
+on UH- 1-type  helicopters.  The  system,  would  appear  to  be  competitive 
+(cost,  weight,  cube,  and  power-wise)  with  electrical  stability  augmentation 
+systems. 
+
+
+Recommendations 
+
+
+1.  The  Army  should  continue  to  pursue  fluidic  artificial 
+stability  system  research  and  development  by  proceeding 
+with  the  study,  design,  and  testing  of  a  fluidic  autopilot 
+(attitude  hold).  In  addition,  it  would  appear  logical  to 
+investigate  the  possibility  of  algebraically  summing  the 
+various  signals  fluidically  (SAS,  autopilot,  pilot  inputs, 
+and  perhaps  guidance)  such  as  the  Air  Force  is  doing 
+electrically  with  their  "Pilot  Assist  System." 
+
+2.  Operational  experience  (RAM)  should  be  obtained  by 
+installing  a  fluidic  yaw  damper  on  an  Army  OH-58  air¬ 
+craft.  It  should  be  noted  that  the  OH-58  is  a  good  candi¬ 
+date  aircraft  because  it  possesses  very  poor  directional 
+control  characteristics. 
+
+
+76 
+
+
+3.  Additional  effort  should  be  expended  to  optimize  the  FSAS 
+"gains"  across  the  entire  flight  envelope;  i.e. ,  the  damping 
+desired  in  hover  is  different  from  that  desired  for  brisk 
+maneuvering  or  at  high  speed. 
+
+
+AIRFRAME  MANUFACTURER  B  PILOT'S  REPORT  OF 
+FSAS  FLIGHT  TEST 
+
+
+The  weather  at  the  time  of  flight  was  quite  marginal,  so  the  flight  was 
+quite  short.  Also,  the  pitch  servoactuator  malfunctioned  before  takeoff, 
+so  only  the  yaw  and  roll  axes  were  operational.  This  failure  is  described 
+in  Section  IV  of  the  main  text. 
+
+The  pilot’s  comments  are  summarized  as  follows: 
+
+•  The  pylon  dampers  were  apparently  worn  out  because  of 
+pylon  rock  in  hover  and  in  the  45-  to  65 -kn  speed  range. 
+
+Pylon  rock  is  aggravated  by  the  FSAS. 
+
+•  Yaw  rate  with  FSAS  off  is  higher  initially,  but  slows  as 
+the  vehicle  turns  downwind.  With  the  FSAS  on,  yaw  rate 
+is  not  quite  as  high  initially,  but  remains  nearly  constant 
+as  the  vehicle  turns.  This  makes  the  vehicle  slightly 
+easier  to  turn  while  in  hover. 
+
+•  With  the  FSAS  engaged,  roll  rate  is  constant,  as  compared 
+with  a  change  in  rate  after  3  or  4  sec  with  the  stabilizer  bar. 
+
+•  At  most  forward  speeds,  the  vehicle  with  FSAS  engaged 
+handled  better  than  a  vehicle  with  the  stabilizer  bar. 
+
+•  The  vehicle  is  somewhat  more  stable  in  hover,  but  exhibits 
+a  small  reduction  in  control  power  from  a  UH-1C  with 
+stabilizer  bar.  This  helped  yaw  but  did  not  make  roll 
+
+feel  any  better. 
+
+•  The  vehicle,  at  approximately  120  kn  with  FSAS  engaged, 
+handled  very  much  like  the  standard  UH-1C  with  stabilizer 
+bar,  which  was  one  of  the  design  goals. 
+
+
+77 
+
+
+APPENDIX  II 
+TEST  DATA 
+
+
+This  appendix  contains  flight  recordings  taken  at  various  speeds  and 
+altitudes  for  yaw,  roll,  and  pitch  step  and  pulse  inputs  for  the  UH-1C 
+helicopter  with  and  without  mechanical  stabilizer  bar,  with  the  three- 
+axis  FSAS  engaged  and  disengaged,  and  with  spool  valve  servoactuators 
+and  vortex  valve  servoactuators. 
+
+The  flight  recordings  are  categorized  as  follows: 
+
+•  Yaw  step  -  right  (Figures  44  through  48) 
+
+•  Yaw  step  -  left  (Figures  49  through  53) 
+
+•  Yaw  pulse  -  right  (Figures  54  through  58) 
+
+•  Yaw  pulse  -  left  (Figures  59  through  63) 
+
+•  Roll  step  -  right  (Figures  64  through  68) 
+
+•  Roll  step  -  left  (Figures  69  through  73) 
+
+•  Pitch  step  -  down  (Figures  74  through  78) 
+
+•  Pitch  step  -  up  (Figures  79  through  83) 
+
+•  Pitch  pulse  -  down  (Figures  84  through  88) 
+
+•  Pitch  pulse  -  up  (Figures  89  through  93) 
+
+•  Autorotation  (Figure  94) 
+
+
+78 
+
+
+79 
+
+
+Figure  44.  Yaw  Step  -  Right  (Hover,  3000  ft). 
+
+
+1 
+
+) 
+
+/f 
+
+J  '  '  1  '  j 
+
+i 
+
+s> 
+
+80 
+
+
+81 
+
+
+Figure  49.  Yaw  Step  -  Left  (Hover,  3000  ft) 
+
+
+f 
+
+
+SPOOL  VALVE  SERVQACTUATORS 
+
+
+VORTEX  VALVE  SERVQACTUATORS 
+
+
+WITHOUT  STABILIZER  BAR 
+(70  KNOTS,  3000  FEET) 
+
+
+Figure  51.  Yaw  Step  -  Left  (60  kn,  10,000  ft). 
+
+
+86 
+
+
+87 
+
+
+YAW 
+
+RATE 
+
+<io 
+
+
+PEDAL 
+POSITION 
+Cfy  ) 
+
+
+PITCH 
+
+RATE 
+
+<») 
+
+
+PITCH 
+
+CYCLIC 
+
+
+PITCH 
+
+ATTITUDE 
+
+<01 
+
+
+ROLL 
+
+ATTITUDE 
+
+<•> 
+
+
+ROLL 
+
+RATE 
+
+
+ROLL 
+
+CYCLIC 
+
+“*  » 
+
+
+10s8P 
+
+~T~ 
+
+
+1.0  IN. 
+
+1 
+
+
+10  DEC/ 
+SEC 
+
+~r~ 
+
+~r~ 
+
+1.0  w. 
+
+i 
+
+
+20  DEO 
+
+— i — 
+
+
+~T~ 
+
+20  DEC 
+
+
+♦ 
+
+10  DEG/ 
+SEC 
+
+~T~ 
+
+1.0  IN. 
+
+J 
+
+
+SPOOL  VALVE  SERVOACTUATORS  VORTEX  VALVE  SERVOACTUATORS 
+
+
+WITHOUT  STABILIZER  BAR 
+
+
+Figure  53.  Yaw  Step  -  Left  (120  kn,  3000  ft). 
+
+
+88 
+
+
+si5 
+
+
+o 
+
+o 
+
+o 
+
+CO 
+
+
+c 
+
+o 
+
+CD 
+
+
+tuO 
+
+•r— I 
+
+ps 
+
+
+CD 
+
+CO 
+
+r— < 
+
+3 
+
+& 
+
+& 
+
+ctf 
+
+
+IO 
+
+LO 
+
+<U 
+
+S-i 
+
+3 
+
+tuo 
+
+•r-< 
+
+fin 
+
+
+90 
+
+
+Figure  57.  Yaw  Pulse  -  Right  (90  kn,  3000  ft). 
+
+
+I 
+
+
+97 
+
+
+SPOOL  VALVE 
+
+
+SEUVOACTUATOIB 
+
+
+V OAT  EX  VALVE  SERVOACTUATORS 
+
+
+WITH  STABILIZER  BAR 
+(70  KNOTS) 
+
+
+Figure  66.  Roll  Step  -  Right  (60  kn,  10,000  ft). 
+
+
+101 
+
+
+3 
+
+
+-It* I-  M-l  -114  41  M-l  HH  -1 14  M- 
+
+*"  r  Sa;  _  5S“«  -)3.  jH* 
+
+!a's  ei/  Es*  E^»*  e£»  h*  igs 
+
+
+105 
+
+
+SPOOL  VALVE 
+SERVOACTUATORS 
+
+
+VORTEX  VALVE  SERVOACTUATORS 
+
+
+WITHOUT  STABILIZER  BAR 
+
+
+Figure  73.  Roll  Step  -  Left  (120  kn,  3000  ft) 
+
+
+9 
+
+
+SPOOL  VALVE 
+SERVGACT  UAT  ORS 
+
+
+VORTEX  VALVE  SERVOACTUATORS 
+
+
+WITHOUT  ! 
+
+
+igure  75.  Pitch  Step  Down  (60  kn,  3000  ft) 
+
+
+SPOOL  VALVE  VORTEX  VALVE  SERVOACTUATORS  WITHOUT  STABILIZER  BAR 
+
+SERVOACTUATORS  (70  KNOTS) 
+
+
+Figure  76.  Pitch  Step  -  Down  (60  kn,  10,000  ft). 
+
+
+Ill 
+
+
+SPOOL  VALVE 
+
+SERVOACTUATOftS 
+
+
+VORTEX  VALVE  SERVOACTUATORS  WITHOUT  STABILIZER  BAR 
+
+
+Figure  77.  Pitch  Step  -  Down  (90  kn,  3000 
+
+
+3 
+
+
+SPOOL  VALVE 
+SERVOACTUATORS 
+
+
+VORTEX  VALVE  WITHOUT  STABILIZER 
+
+SERVOACTUATORS  BAR 
+
+
+WITH  STABILIZER 
+BAR 
+
+
+Figure  79.  Pitch  Step  -  Up  (Hover,  3000  ft) 
+
+
+YAW 
+
+RATE 
+
+WO 
+
+
+PEDAL 
+
+POSITION 
+
+) 
+
+
+PITCH 
+
+RATE 
+
+<i> 
+
+
+PITCH 
+
+CYCLIC 
+
+
+PITCH 
+
+ATTITUDE 
+
+(a) 
+
+
+ROLL 
+
+ATTITUDE 
+
+<♦> 
+
+
+ROLL 
+
+RATE 
+
+
+ROLL 
+CYCLIC 
+(6  ) 
+
+
+.  SPOOL  VALVE 
+i ERVOACT  UAT OR  S 
+
+
+VORTEX  VALVE  SCrVOACTUATORS 
+
+
+WITHOUT  STABILIZER  BAR 
+
+
+Figure  80.  Pitch  Step  -  Up  (60  kn,  3000  ft). 
+
+
+115 
+
+
+SPOOL  VALVE  VORTE*  VALVE  SERVOACTUATORS  WITHOUT  STABILIZER  BAR 
+
+SERVOACTUATORS  (70  KNOTS) 
+
+
+Figure  81.  Pitch  Step  -  Up  (60  kn,  10,000  ft). 
+
+
+116 
+
+
+117 
+
+
+I  I 
+
+118 
+
+
+I 
+
+
+120 
+
+
+Figure  85.  Pitch  Pulse  -  Down  (60  kn,  3000  ft). 
+
+
+VORTEX  VALVE  SERVOACTUATORS 
+
+
+WITHOUT  STABILIZER 
+
+
+SPOOL  VALVE 
+SERVOACTUATORS 
+
+
+Figure  88. 
+
+
+Pitch  Pulse  -  Down  (120  kn,  3000  ft). 
+
+
+124 
+
+
+125 
+
+
+Figure  90.  Pitch  Pulse  -  Up  (60  kn,  3000  ft). 
+
+
+SPOOL  VALVE  VORTEX  VALVE  SERVOACTUATORS 
+
+SERVOACTUATORS 
+
+
+WITHOUT  STABILIZER  BAR 
+<70  KNOTS,  5000  FEET) 
+
+
+Figure  91.  Pitch  Pulse  -  Up  (60  kn,  10,000  ft.) 
+
+
+YAW 
+
+RATE 
+
+(*) 
+
+
+PIOAL 
+POSIT  K)k 
+**  » 
+
+
+<ti 
+
+
+PITCH 
+
+CYCLIC 
+
+' 
+
+
+WTCH 
+
+attituoc 
+
+If) 
+
+
+•OLL 
+
+ATTITUOC 
+
+M 
+
+
+ROLL 
+
+RATE 
+
+4> 
+
+
+ROLL 
+CYCLIC 
+U  ) 
+
+
+SPOOL  VALVE 
+
+SERVOACTUATORS  VORTEX  VALVE  SERVOACTUATORS 
+
+
+Figure  93.  Pitch  Pulse  -  Up  (120  kn. 
+
+
+128 
+
+
+WITHOUT  STABILIZER  BAR 
+
+3000  ft). 
+
+
+) 
+
+
+I 
+
+
+APPENDIX  III 
+
+MECHANICAL  PROBLEM  AREAS  ENCOUNTERED  DURING 
+INSTALLATION,  GROUND  TEST,  AND  FLIGHT  TEST  OF 
+THE  THREE-AXIS  HYDROFLUIDIC  SAS 
+
+
+ROLL  SERVOACTUATOR  TRAVEL  INTERFERENCE 
+
+During  preliminary  mockup  of  the  servoactuator  installation,  it  became 
+apparent  that  full  forward  travel  of  the  roll  servoactuator  and  supply 
+hoses  would  be  restricted  by  the  position  of  the  link  rod  which  connects 
+thb  pilot's  and  copilot's  throttle  control. 
+
+Several  solutions  to  the  problem  were  advanced  and  rejected,  and  finally 
+the  control  link  was  simply  removed.  A  placard  was  installed  to  note  the 
+inoperative  throttle. 
+
+Two  relay  boxes,  a  wire  terminal  junction  board,  and  considerable  wiring 
+also  restricted  full  forward  travel  of  the  roll  servoactuator  and  its  supply 
+hoses.  The  relays  were  moved  to  the  left,  and  the  terminal  strip  was 
+moved  to  the  right  of  its  original  location. 
+
+I 
+
+The  cutout  area  in  the  bulkhead  at  station  66.00  was  enlarged  at  the  lower 
+right-hand  corner  to  allow  clearance  for  the  roll  servoactuator  supply 
+hoses.  ■ 
+
+One  solution  to  the  three  problem  areas  mentioned  above  would  be  to 
+move  the  roll  servoactuator  further  aft  and  mount  the  support  bracket 
+on  the  longitudinal  bulkhead,  with  the  support  bracket  arms  extended 
+laterally. 
+
+REMOVAL  OF  HEATING  SYSTEM  DUCT  CONTROL  BOX 
+AND  FLEXIBLE  DUCT  TUBING _ _ _ 
+
+The  design  layout  made  it  necessary  to  modify  bulkheads  at  stations 
+66.00  and  78.  00  to  provide  a  structural  location  for  the  support  brackets 
+and  idler  arms  used  with  the  roll  and  pitch  servoactuators. 
+
+The  lightening  holes  formerly  used  to  route  heater  system  ducting  were 
+covered  with  doublers  and  stringers.  The  main  duct  and  control  box 
+were  removed  to  allow  space  for  the  support  brackets,  idler  arms,  and 
+flexible  hydraulic  supply  hoses.  , 
+
+It  might  be  possible  to  shorten  the  idler  arm  used  to  support  the  pitch 
+servoactuator  and  move  its  support  bracket  inboard  toward  the  center  of 
+the  fuselage.  This  change  would  allow  the  duct  control  box  to  remain 
+in  its  present  position,  with  some  compromise  concerning  the  flexible 
+tube  routing. 
+
+
+130 
+
+
+I 
+
+
+CONTROL  FORCES  APPLIED  TO  SERVOACTUATOR  LINKAGE 
+BY  MULTIPLE  HOSE  LOOPS 
+
+
+The  force  generated  by  five  hose  loops  extending  aft  first  became 
+apparent  in  the  roll  axis.  The  combined  force  pushed  the  roll  servo  - 
+actuator  linkage  forward  and  displaced  the  cyclic  control  stick  to  the  left 
+approximately  1  in. 
+
+A  similar  problem  existed  in  the  yaw  axis,  as  all  flexible  supply  ho=!es 
+extended  aft.  A  tendency  to  drive  right  pedal  forward  existed. 
+
+No  problems  were  encountered  in  the  pitch  axis,  as  the  hose  loop  forces 
+were  balanced. 
+
+When  loop-caused  forces  were  measured  with  the  aircraft's  hydraulic 
+boost  on  and  FSAS  off,  a  0.5-lb  force  applied  to  the  servoactuator  linkage 
+displaced  the  cyclic  stick  in  roll  approximately  0.5  in.  Approximately 
+1  lb  of  force  was  applied  by  the  combined  five  hose  loops. 
+
+The  3000-psi  hose  used  is  excellent,  and  it  is  made  up  of  alternating 
+layers  of  neoprene,  fabric,  and  woven  stainless-steel  wire.  However, 
+the  hose  is  not  as  light  or  flexible  as  might  be  desired  for  this  applica¬ 
+tion. 
+
+Loop-caused  forces  were  measured  with  and  without  system  pressure. 
+
+No  difference  could  be  detected. 
+
+The  hose  problem  in  the  roll  axis  was  corrected  by  locating  two  hose 
+loops  forward  beneath  the  roll  servoactuator.  The  wiring  which  was 
+routed  under  this  area  was  covered  with  a  linen  bakelite  plate.  This 
+smooth  surface  allowed  the  hose  to  slide  relatively  free  without  becoming 
+entangled. 
+
+
+USE  OF  NEOPRENE  WASHERS  ON  CLEVIS  ENDS  OF 
+YAW  SERVOACTUATOR  LINKAGE 
+
+
+The  yaw- axis  bellcrank  bearing  was  not  modified.  The  spherical  bear¬ 
+ings  allowed  the  servoactuator  and  rod  linkage  to  sway  enough  to  cause 
+hangup  on  the  edges  of  the  enlarged  cutout  in  the  bulkhead  at  station  52.00. 
+
+This  problem  was  corrected  by  installing  1/8-in. -thick  x  1-1/8-in. -dia. 
+neoprene  washers  on  either  side  of  the  bearings  at  the  forward  and  aft 
+clevis  fittings.  The  addition  of  the  washers  restrained  torsional  move¬ 
+ment  enough  so  the  danger  of  hangup  ceased. 
+
+
+131 
+
+
+SHIMMED  COUPLING  USED  TO  ATTACH  YAW  SERVO- 
+ACTUATOR  TO  CONTROL  TUBE  LINKAGE 
+
+
+A  complicated,  possible  source  of  failure  --  shearing  of  a  very  small 
+screw  --  could  allow  the  yaw  servoactuator  to  rotate  or  sway  enough  to 
+hang  up  on  structure. 
+
+
+MODIFICATION  OF  FLOOR  AREA  ABOVE 
+SERVOACTUATOR  POSITIONS 
+
+
+In  a  future  installation,  a  great  deal  of  time  would  be  saved  by  installing 
+10-32  plate  nuts  at  all  former  rivet  holes,  and  leave  the  structure  so 
+modified. 
+
+
+MODULE  AND  ASSOCIATED  EQUIPMENT  LOCATIONS 
+
+A  future  installation  could  be  simplified  if  the  modules,  regulators, 
+solenoids,  and  other  equipment  were  mounted  further  aft.  The  supply, 
+return,  and  control  lines  could  be  routed  beneath  the  floor  section. 
+
+This  change  would  allow  simple  access  to  the  servoactuators  without  the 
+need  to  dismantle  and  disconnect  multiple  hydraulic  lines  and  other 
+equipment. 
+
+
+USE  OF  STEEL  FLARED  FITTINGS  AND 
+STAINLESS-STEEL  LINES 
+
+
+This  proved  to  be  an  excellent  choice  of  material,  particularly  in  a  test 
+program  where  fittings  were  removed  and  installed  many  times.  No 
+failures  or  extreme  leakage  was  experienced  throughout  the  program. 
+
+
+132 
+
+
+APPENDIX  IV 
+
+CONTROL  TUBES  TEST  REPORT* 
+
+
+1.0  ABSTRACT 
+1.  1  Object 
+
+To  apply  a  50-percent  overload  in  compression  and  tension  on  five 
+linkage  assemblies  of  the  YG1053A01  Three-Axis  Hydrofluidic  Stability 
+Augmentation  System  to  demonstrate  that  the  tubes  have  sufficient 
+strength. 
+
+1.  2  Conclusion 
+
+No  buckling,  breakage  or  permanent  deformation  was  obtained  by  over¬ 
+loading  the  linkages.  Their  strengths  are  adequate  for  use  in  the  sys¬ 
+tem. 
+
+
+2.0  UNITS  TESTED 
+
+The  five  linkages  tested  for  the  YG1053A01  Three-Axis  Hydrofluidic 
+Stability  Augmentation  System  are: 
+
+•  One  299-008-021-1  Actuator  Assembly,  66.20  in.  pin-to-pin 
+
+•  One  299-008-017-33  Actuator  Assembly,  24.  37  in.  pin-to-pin 
+
+•  One  299-008-017-45  Actuator  Assembly,  34.  13  in.  pin-to-pin 
+
+•  One  299-008-017-41  Tube  Assembly,  15.  30  in.  pin-to-pin 
+
+•  One  299-008-017-53 Tube  Assembly,  21.  87  in.  pin-to-pin. 
+
+3.0  REFERENCE  DOCUMENTS 
+
+1)  Honeywell  Memo,  B.  Johnson  from  W.  M.  Posingies,  "Testing  of 
+Primary  Linkage  Control  Tubes,  "  dated  9  July  1970. 
+
+2)  Summary  of  Telecon  between  W.  M.  Posingies  of  Honeywell  and 
+Leo  Norman  and  Frank  Depaw  of  Bell,  May  26,  27  and  28,  1970, 
+regarding  stabilizer  bar  disenabling  blocks,  deviations  to 
+materials  indicated  in  drawings,  and  deviations  to  tapers  on 
+primary  linkage  tubes. 
+
+3)  Bell  Helicopter  Drawings  299-008-017  and  299-008-021. 
+
+
+*  Honeywell  Aero  Engineering  Test  Report  No.  QFA-06190  dated 
+July  1970. 
+
+
+133 
+
+
+4.0  PROCEDURES  AND  RESULTS 
+
+
+A  loading  fixture  which  could  accept  all  of  the  linkages  was  made  up  as 
+shown  in  Figure  95.  The  ram  piston  areas  were  used  to  make  a  con¬ 
+version  table  of  hydraulic  pressure  versus  pound  force  load.  A  10,000- 
+psi  hydraulic  hand  pump  and  pressure  gauge  assembly  was  obtained  for 
+powering  the  ram. 
+
+
+Figure  95.  Linkage  Load  Fixture. 
+
+
+Each  linkage  assembly  was  inserted  in  the  loading  fixture,  and  the  fol¬ 
+lowing  procedure  was  used  for  loading  in  each  direction: 
+
+1)  Half  of  maximum  load  was  applied  and  removed  at  least 
+three  times  to  take  out  slack.  The  last  load  was  reduced 
+to  100  lb  in  preparation  for  the  next  step. 
+
+2)  The  dial  indicator  was  zeroed  at  the  100-lb  load. 
+
+3)  The  maximum  load,  listed  in  Table  VIII,  was  applied  and  then 
+dial  indicator  was  read  to  give  a  measure  of  the  change  in 
+length. 
+
+4)  The  load  was  reduced  to  100  lb  and  the  indicator  checked 
+for  zero. 
+
+5)  Steps  3  and  4  were  repeated  three  times. 
+
+6)  The  maximum  load  was  applied,  and  the  linkage  was  deflected 
+by  hand  to  observe  for  any  weakness,  tendency  to  buckle  or 
+deform,  or  inability  to  spring  back. 
+
+Vortex  Valve  servoactuator  24SA31AA0002  was  used  for  all  three 
+actuator  linkages.  The  tubes  were  changed  to  obtain  the  different 
+assemblies.  The  299-008-017-65  clevis  was  left  on  the  servoactuator 
+'or  all  three  tests,  so  the  299-008-021  linkage  was  65.  5  in.  long  in¬ 
+stead  of  the  specified  length  of  66.  20  in. 
+
+
+134 
+
+
+The  values  obtained  for  changes  in  length  with  loads  are  given  in 
+Table  VIII.  The  readings  indicate  that  no  permanent  set  occurred 
+fo~  any  of  the  linkages  and  that  the  elastic  limit  was  never  reached. 
+
+
+TABLE  VIII. 
+
+DEFORMATION  OF  LINKAGE 
+ASSEMBLIES  WITH  LOAD 
+
+Load 
+
+Dial  Indicator  Reading 
+(Hundredths  of  an  In.  ) 
+
+Assembly  No. 
+
+(lb) 
+
+Compression  Tension 
+
+299-008-021-1* 
+
+100 
+
+0 
+
+0 
+
+1155 
+
+25.0 
+
+2.0 
+
+299-008-017-33* 
+
+100 
+
+0 
+
+0 
+
+1000 
+
+8.0 
+
+8.  5 
+
+299-008-017-45* 
+
+100 
+
+0 
+
+0 
+
+750 
+
+10.  5 
+
+11.0 
+
+299-008-017-41 
+
+100 
+
+0 
+
+0 
+
+1000 
+
+11.0 
+
+12.  0 
+
+2S9-008-017-53 
+
+100 
+
+0 
+
+0 
+
+750 
+
+13.  0 
+
+14.0 
+
+‘-Some  deflection  may  occur  in  actuator  center  lock 
+mechanism  when  under  high  load. 
+
+
+The  tube  assemblies  were  very  rigid.  A  side  load  on  the  actuator 
+assemblies  produced  some  deflection  -  up  to  ±1/16  in.  at  the  large 
+flange  with  a  relatively  light  hand  load  on  the  299-008-021-1  assembly 
+but  spring-back  was  very  positive.  Some  of  this  deflection  could  be  ob 
+served  between  the  actuator  and  the  piston  rod.  There  appeared  to  be 
+no  difference  in  deflection  action  between  a  compressive  and  a  tensile 
+load.  The  actuator  was  not  hydraulically  powered. 
+
+
+5.0  INSTRUMENTATION 
+
+The  following  instruments  were  used  for  this  test: 
+
+•  Dial  indicator,  0.001-in.  divisions,  406-010,  with 
+magnetic  holder 
+
+•  Hydraulic  pump  assembly,  including: 
+
+a)  Heise  gauge,  10,000  psi,  961-005,  in  panel  box 
+
+b)  Blackhawk  hand  pump,  10,000  psi 
+
+•  Rulers  and  scales 
+
+
+6.0  RECOMMENDATIONS 
+None.  Data  submittal  only. 
+
+
+135 
+
+
+APPENDIX  V 
+
+CALIBRATION  CURVES  OF  VARIOUS  TRANSDUCERS 
+
+
+All  sensors  used  during  the  flight  test  were  calibrated  by  the  contractor's 
+Development  and  Evaluation  Laboratory.  This  appendix  presents  the 
+data  that  were  obtained. 
+
+Test  data  for  the  three  rate  gyros  used  to  measure  aircraft  turning 
+rates  are  presented  in  Figures  96,  97,  and  98. 
+
+Figures  99  and  100  are  calibration  curves  for  the  vertical  gyro.  Fig¬ 
+ure  101  is  the  curve  for  the  heading  gyro,  and  Figure  102  shows  the 
+performance  of  the  three  accelerometers. 
+
+The  performance  of  the  four  potentiometers  used  to  measure  pilot 
+cyclic,  collective,  and  rudder  controls  is  shown  in  Figures  103  through 
+106,  respectively. 
+
+
+136 
+
+
+RATE  OUTPUTS: 
+
+
+INPUT 
+
+(OEG/SEC  CW) 
+
+OUTPUT 
+
+(%) 
+
+INPUT 
+
+(OEG/SEC  CCW) 
+
+OUTPUT 
+
+<%> 
+
+INPUT 
+
+(DEG/SEC  CCW) 
+
+OUTPUT  INPUT 
+
+!%)  (OEG/SEC  CW) 
+
+OUTPUT 
+
+(7> 
+
+20 
+
+00.00 
+
+i 
+
+>20 
+
+100.00 
+
+20 
+
+100.00  i 
+
+(20 
+
+oo.co 
+
+15 
+
+10.88 
+
+15 
+
+88.77 
+
+15 
+
+89.35 
+
+15 
+
+11.43 
+
+10 
+
+23  96 
+
+10 
+
+75.80 
+
+10 
+
+76.38 
+
+10 
+
+24.58 
+
+5 
+
+36.82 
+
+5 
+
+62.70 
+
+5 
+
+63.35 
+
+5 
+
+37.40 
+
+' 
+
+f  0 
+
+49.80 
+
+'  0 
+
+50.18 
+
+COUNTERCLOCKWISE  CLOCKWISE 
+
+'NPUT  TURNING  FATE  (OEG/SEC) 
+
+Figure  96.  Gyro  Output  Versus  Input  Turning  Rate  for 
+GG79-Type  Rate  Gyro  Used  as  a  Roll 
+Rate  Gyro. 
+
+
+137 
+
+
+RATE  OUTPUTS: 
+
+
+INPUT  OUTPUT  INPUT  OUTPUT  INPUT  OUTPUT  INPUT  OUTPUT 
+(OEC/SEC)  (%)  (DEG/SEC)  (%)  (DEG/SEC)  (%)  (DEG/SEC)  (%) 
+
+
+50 
+
+01.63 
+
+50 
+
+98.01 
+
+50 
+
+98.85 
+
+150 
+
+02.49 
+
+40 
+
+11.27 
+
+40 
+
+88.36 
+
+40 
+
+89.22 
+
+40 
+
+12.13 
+
+30 
+
+20.86 
+
+30 
+
+78.89 
+
+30 
+
+79.53 
+
+30 
+
+21.76 
+
+20 
+
+30.53 
+
+20 
+
+69.07 
+
+20 
+
+69.79 
+
+20 
+
+31.58 
+
+10 
+
+39.68 
+
+10 
+
+53.22 
+
+10 
+
+60.26 
+
+10 
+
+40.54 
+
+0 
+
+49.46 
+
+i  0 
+
+50  JO 
+
+COUNTERCLOCKWISE  CLOCKWISE 
+
+INPUT  TURNING  RATE  (DEG/SEC) 
+
+
+Figure  97.  Gyro  Output  Versus  Input  Turning  Rate  for 
+GG79-Type  Rate  Gyro  Used  as  a  Yaw  Rate 
+Gyro 
+
+
+138 
+
+
+RATE  OUTPUTS: 
+
+
+******  , 
+
+
+INPUT 
+
+(DEG/SEC  CW) 
+
+OUTPUT 
+
+CW 
+
+INPUT 
+
+(DEG/SEC  CCW) 
+
+OUTPUT  INPUT 
+
+CW  (OEG/SEC  CCW) 
+
+OUTPUT 
+
+(/•> 
+
+INPUT 
+
+(DEG/SEC  CW) 
+
+OUTPUT 
+
+<>> 
+
+15 
+
+01.00 
+
+’  15 
+
+97.76 
+
+15 
+
+98.17 
+
+15 
+
+01.79 
+
+10 
+
+17.33 
+
+10 
+
+82.03 
+
+10 
+
+82.48 
+
+10 
+
+17.73 
+
+5 
+
+33.23 
+
+5 
+
+65.79 
+
+5 
+
+66.41 
+
+5 
+
+34.15 
+
+2 
+
+43.14 
+
+2 
+
+56.35 
+
+2 
+
+56.69 
+
+2 
+
+43.87 
+
+0 
+
+49.78 
+
+-  0 
+
+50.20 
+
+r.  Plw  LOCATION 
+
+A  AN  3106A-16S-1S 
+
+
+ELECTRICAL  CONNECTIONS 
+
+
+COUNTERCLOCKWISE 
+
+
+CLOCKWISE 
+
+
+INPUT  TURNING  RATE  (OEG/SEC) 
+
+
+Figure  98.  Gyro  Output  Versus  Input  Turning  Rate  for 
+
+GG79-Type  Rate  Gyro  Used  as  a  Pitch  Rate  Gyro. 
+
+
+139 
+
+
+Figure  99.  Pitch  Output  Voltage  Versus  Pitch  Input  Angle 
+for  JG7044A  Cageable  Vertical  Gyro  Used  on 
+Three-Axis  FSAS  Program. 
+
+
+140 
+
+
+Figure  100.  Roll  Output  Voltage  Versus  Roll  Input  Angle  for 
+JG7044A  Cageable  Vertical  Gyro  Used  on  Three- 
+Axis  FSAS  Program. 
+
+
+OUTPUT  VOLTS 
+
+
+/ 
+
+
+Figure  101.  Yaw  Output  Voltage  Versus  Input  Angle  for 
+Heading  Gyro  Used  on  Three-Axis  FSAS 
+Program. 
+
+
+142 
+
+
+i 
+
+
+l 
+
+
+SCALE  FACTOR:  1.0267  VOLTS/G  SCALE  FACTOR:  2.20  VOLTS/G  SCALE  FACTOR: 
+LINEARITY:  1.45%  LINEARITY:  0.7*/.  1.0133  VOLTS/G 
+
+REPEATABILITY:  <  0.01  G  REPEATABILITY'  0  01  G  LINEARITY:  0.99% 
+
+REPEATABILITY:  0.01  G 
+
+rigure  102.  Output  Voltage  Versus  Input  G- Level  for  Downer 
+Model  4310  Linear  Accelerometer  Used  on  Three- 
+Axis  FSAS  Program. 
+
+
+143 
+
+
+Figure  103.  Cyclic  Stick  (Pitch)  Position  Calibration  -- 
+Output  Voltage  Versus  Pitch  Stick  Position. 
+
+
+144 
+
+
+V: 
+
+
+Figure  104.  Cyclic  Stick  (Roll)  Position  Calibration  -- 
+Output  Voltage  Versus  Roll  Stick  Position. 
+
+
+145 
+
+
+OUTPUT  VOLTS 
+
+
+Figure  105.  Collective  Stick  Position  --  Output  Voltage 
+Versus  Collective  Stick  Position. 
+
+
+146 
+
+
+3.0 
+
+
+Figure  106.  Tail  Rotor  Pedal  Position  Calibration  --  Output 
+Voltage  Versus  Tail  Rotor  Pedal  Position. 
+
+
+147 
+
+
+APPENDIX  VI 
+
+FLIGHT  TEST  PLAN  FOR  A  THREE -AXIS 
+HYDROFLUIDIC  STABILITY 
+AUGMENTATION  SYSTEM* 
+
+
+1.  0  SCOPE 
+
+This  specification  defines  the  scope  of  flight  testing  required  to  evalu¬ 
+ate  the  three-axis  hydrofluidic  stability  augmentation  system  (FSAS). 
+
+
+2.0  APPLICABLE  DOCUMENTS 
+
+•  Honeywell  Flightworthy  Test  Report  No.  A  EX-53737 
+
+•  Honeywell  Design  Specification  DS-2 1565-01 
+
+
+3.0  REQUIREMENTS 
+3.  1  General 
+
+The  objectives  of  the  flight  test  evaluation  of  the  FSAS-equipped 
+UH-1C  are: 
+
+•  Quantitatively  assess  the  FSAS's  performance  and 
+capability  of  improving  the  UH-1C  flying  qualities 
+
+•  Quantitatively  compare  flight  test  results  with 
+analytical  predictions 
+
+•  Recommend  improvements  to  the  FSAS 
+
+•  Determine  feasibility  of  the  FSAS  for  possible  replace¬ 
+ment  of  the  stabilizer  bar  in  the  UH-1  series  helicopter 
+control  system  and  incorporation  in  and  improvement  of 
+the  current  inventory  aircraft. 
+
+The  above  objectives  shall  be  accomplished  within  approximately  20 
+flights  and  shall  not  exceed  a  total  of  13  hours  of  actual  flight  time. 
+
+
+♦Honeywell  document  21476-FR1  (Revised),  dated  July  1970. 
+
+
+148 
+
+
+3.  2  Installation  and  Checkout 
+
+
+1)  Interface  and  installation  problems  shall  be  recorded  and 
+sorted  into  categories  depending  on  whether  they  are  in¬ 
+herent  problems  or  problems  peculiar  to  the  test  hardware. 
+
+2)  A  ground  check  (helicopter  not  to  leave  ground)  with  rotor 
+running  shall  be  conducted  at  several  power  levels;  the 
+duration  of  the  ground  check  is  to  be  at  the  discretion  of  the 
+project  pilot.  The  project  pilot  shall  engage  and  disengage 
+the  sytem,  noting  any  problems.  All  safety  disengage 
+switches  shall  be  tested  for  disengaging  the  FSAS.  All  in¬ 
+strumentation  shall  function  properly.  The  FSAS  null,  both 
+servoactuator  output  and  hydrofluidic  output,  shall  be  evaluated 
+during  and  after  the  ground  check. 
+
+3.  3  Flight  Test  Procedures 
+
+1)  All  flights  shall  be  conducted  at  weights  under  8000  lb  and 
+at  mid-center-of-gravity  loading  conditions. 
+
+2)  Continuous  recordings  shall  be  made  of  all  takeoffs,  land¬ 
+ings,  and  letdowns,  even  though  specific  response  tests 
+are  not  made. 
+
+3)  Prior  to  each  flight,  all  instrumentation  shall  be  adequately- 
+checked  to  assure  proper  operation. 
+
+4)  The  built-in  test  (BIT)  button  on  each  axis  controller  shall 
+be  pressed  and  released  before  and  after  each  flight  to  de¬ 
+termine  satisfactory  hydraulic  system,  controllers,  and 
+servoactuator  operation.  The  BIT  button  shall  be  guarded 
+so  as  to  prevent  inadvertent  operation  of  this  button  by  any 
+means  during  flight  which  could  jeopardize  flight  safety. 
+
+5)  A  preflight  plan  shall  be  prepared  jointly  by  the  project 
+pilot,  flight  test  engineer,  and  analyst  prior  to  each  flight. 
+
+A  separate  plan  will  be  required  for  each  flight. 
+
+6)  A  pil.*f  report  shall  be  completed  by  the  pilot  after  each 
+flight. 
+
+7)  Flight  evaluation  reports  will  be  completed  by  the  project 
+analyst  after  each  flight  on  which  data  are  taken.  This 
+report  will  approve  or  disapprove  recordings  taken  on  the 
+flight.  These  reports  will  be  a  basis  for  preparing  future 
+preflight  plans. 
+
+
+149 
+
+
+3.  4  Quantitative  Flight  Tests 
+
+
+1)  A  5-minute  FSAS-stabilized  flight  shall  be  conducted  at 
+(1)  hover  in  ground  effect,  and  (2)  at  2500  ±1000  feet 
+density  altitude,  60  kn  calibrated  airspeed  (KCAS). 
+
+For  these  tests  the  project  pilot  shall  minimize  all  induced 
+inputs.  These  tests  shall  also  be  conducted  for  the  basic 
+aircraft  (FSAS  disengaged)  for  one  flight. 
+
+2)  The  FSAS  shall  be  quantitatively  evaluated  per  the  flight 
+conditions  listed  in  Table  IX.  Changes  in  the  FSAS  may 
+be  made  between  flights  in  an  effort  to  optimize  perfor¬ 
+mance.  The  changes  shall  be  based  on  the  project  pilot's 
+qualitative  evaluation  and  the  flight  recordings;  this  will 
+require  approximately  nine  flights. 
+
+3)  The  response  of  the  FSAS  during  autorotational  entries 
+shall  be  measured  and  recorded.  Entries  shall  be  made 
+from  trim  speeds  of  60,  90,  and  velocity-never-to-exceed 
+(Vne)  KCAS  for  one  flight.  Autorotational  condition  shall 
+be  maintained  for  at  least  3  seconds  unless  terminated 
+sooner  at  the  discretion  of  the  pilot. 
+
+4)  All  transient  aircraft  movements  occurring  in  the  helicopter 
+from  engaging  and  disengaging  the  FSAS,  during  level  flight 
+at  speeds  of  60,  90,  and  KCAS,  as  well  as  climbing 
+turns  to  the  left  and  to  the  right,  shall  be  measured  and 
+recorded. 
+
+5)  The  project  pilot  shall  provide  a  qualitative  opinion  report 
+on  each  quantitative  test  flight.  These  reports  will  be 
+combined  by  the  project  pilot  into  a  summary  report  at  the 
+end  of  the  flight  test  program. 
+
+6)  The  analyst  will  attempt  to  correlate  project  pilot  qualitative 
+comments  with  project  pilot  quantitative  data,  correlate 
+Government  pilot  qualitative  comments  with  Government  pilot 
+quantitative  data,  and  compare  project  pilot  and  Government 
+pilot  qualitative  comments. 
+
+3.  5  Qualitative  Flight  Tests 
+
+The  FSAS  shall  be  qualitatively  flight  evaluated  by  two  Government 
+research  test  pilots  designated  by  the  Contracting  Officer.  The  Tight 
+evaluation  shall  be  conducted  within  the  established  flight  envelope. 
+The  Contractor  shall  support  and  provide  guidance  as  requested  to  the 
+Government  test  pilots.  The  Government  pilots  shall  fly  the  test  heli¬ 
+copter  fre-m  the  right  seat  during  the  qualitative  flight  evaluation  of 
+the  FSr."  If  it  is  required  for  the  contractor's  project  pilot  to  fly 
+
+
+150 
+
+
+during  the  Government  qualitative  evaluation,  he  shall  do  so  only  as  a 
+safety/instructor  pilot.  Flight  data  resulting  from  these  flights  shall 
+be  recorded,  reduced,  and  analyzed  by  the  contractor  as  requested  by 
+the  Government  pilot  or  pilots  and  authorized  by  the  Contracting  Officer. 
+The  Government  research  test  pilot's  or  pilots'  evaluation  will  approxi¬ 
+mate  but  shall  not  exceed  3  hours  of  flight. 
+
+
+4.  0  INSTRUMENTATION 
+
+Instrumentation  for  the  following  parameters  shall  be  installed  on  the 
+Government-furnished  UH-1C  test  helicopter.  All  parameters  shall  be 
+recorded  on  every  flight  on  the  24 -channel  recorder: 
+
+1)  Aircraft  roll  rate 
+
+2)  Aircraft  pitch  rate 
+
+3)  Aircraft  yaw  rate 
+
+4)  Aircraft  yaw  attitude 
+
+5)  Aircraft  roll  attitude 
+
+6)  Aircraft  pitch  attitude 
+
+7)  Pedal  position 
+
+8)  Collective  position 
+
+9)  Lateral  cyclic  position 
+
+10)  Longitudinal  cyclic  position 
+
+11)  Roll  FSAS  servoactuator  output 
+
+12)  Pitch  FSAS  servoactuator  output 
+
+13)  Yaw  FSAS  servoactuator  output 
+
+14)  Roll  FSAS  fluidic  output 
+
+15)  Pitch  FSAS  fluidic  output 
+
+16)  Yaw  FSAS  fluidic  output 
+
+17)  FSAS  supply  pressure 
+
+18)  FSAS  supply  flow 
+
+19)  Event  marker 
+
+20)  Time  correlation 
+
+21)  Linear  accelerations  --  longitudinal 
+
+22)  Linear  accelerations  --  lateral 
+
+23)  Linear  accelerations  --  vertical 
+
+
+152 
+
+
+The  8-channel  recorder  shall  record  parameters  selected  in  the  pre¬ 
+flight  plan  to  more  clearly  exemplify  the  quantitative  portion  of  the 
+flight  test. 
+
+
+5.0  RECORDED  DATA 
+
+Data  as  listed  shall  be  recorded,  reduced,  and  submitted  in  report 
+form.  Correlation  between  the  following  shall  be  stressed: 
+
+•  Augmented  versus  free  vehicle 
+
+•  Actual  flight  data  versus  computer  simulation  data  in 
+USAAMRDL  Technical  Report  71-30,  Appendix  I 
+
+•  Pilot  qualitative  evaluation  versus  quantitative  data. 
+
+
+153 
+
+

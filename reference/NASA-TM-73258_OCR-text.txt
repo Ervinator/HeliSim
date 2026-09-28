@@ -1,0 +1,3369 @@
+NASA TECHNICAL
+MEMORANDUM
+
+NASA TM-73,258
+
+8
+
+CM
+
+CO*
+
+A FAILURE EFFECTS SIMULATION OF A LOW AUTHORITY FLIGHT
+CONTROL AUGMENTATION SYSTEM ON A UH-1H HELICOPTER
+
+Lloyd D. Corliss and Peter D Talbot
+Ames Research Center
+and
+
+Ames Directorate
+U.S Army Air Mobility R&D Laboratory
+Moffett Field, California 94035
+
+August 1977
+
+NOTATION
+
+lateral pilot control input, rad
+longitudinal pilot control input, rad
+h
+
+helicopter rate of climb
+
+Pg
+
+body axis roll rate, rad/sec
+
+qg
+
+body axis pitch rate, rad/sec
+
+rg
+
+body axis yaw rate, rad/sec
+
+Ug
+
+x-body axis inertial velocity, ft/sec, m/sec
+
+UQ
+
+longitudinal component of relative wind in wind control axis
+system, ft/sec, m/sec
+
+U
+
+control commands to actuators, rad/sec2
+
+UQ
+
+control command to actuator, ft/sec2, m/sec2
+
+Vg
+
+y-body axis inertial velocity, ft/sec, m/sec
+
+Wg
+
+z-body axis inertial velocity, ft/sec, m/sec
+
+<$a
+
+pilot's lateral stick displacement, in., cm
+
+6C
+
+pilot's collective stick displacement, in., cm
+
+<$e
+
+pilot's longitudinal stick displacement, in., cm
+
+6_
+
+pilot's pedal displacement, in., cm
+
+8
+
+aircraft pitch altitude Euler angle
+
+9Q
+
+main rotor collective pitch
+
+e^jj
+
+tail rotor collective pitch
+
+<(>
+
+aircraft roll attitude
+
+fy
+
+aircraft heading
+
+A1'UB1»UTR
+
+center-and-lock time constant, sec
+monitor delay time, sec
+amplitude of total cyclic pitch control input, rad
+
+AX
+
+longitudinal displacement of helicopter following servo failure, ft, m
+
+AY
+
+lateral displacement of helicopter following servo failure, ft, m
+
+Ah
+
+height loss of helicopter following servo failure, ft, m
+
+Subscripts
+TR
+
+tail rotor
+
+VF
+
+vertical fin
+
+HS
+
+horizontal stabilizer
+
+1C
+
+inertial conditions - trimmed conditions for the helicopter
+
+m
+
+model
+
+li
+
+NOTATIONS FOR APPENDIX B
+
+x,y, z
+,„ ,_. z
+x, y, _
+
+initial conditions (I.C.) of simulator x,y,z
+simulator
+
+x,y,z commands (including I.C.)
+
+simulator drive accelerations used in the calculation of load
+factors along x,y,z axes
+Ac
+
+x,y, z
+
+desired simulator
+
+x,y,z (excluding I.C.)
+
+ASx, y, z
+
+desired simulator x,y,z
+
+ATSx,y, z
+
+equivalent translational acceleration along
+
+A
+
+FU x,IT z
+y, ,
+
+x,y,z axes
+
+simulator position (from cab or computer) along
+
+x,y,z axes
+
+Ax}y)Z
+
+calculated earth axes accelerations at the pilot station along
+x,y,z axes (inputs to high-pass filter)
+
+AQU
+X y Z
+
+output of high-pass filter (multiplied by gains
+x,y,z axes
+
+x,y, z
+
+gravitational accelerations, due to cab residual tilt, along
+x,y,z axes
+
+''
+
+APM
+A
+
+MLX)y>z
+
+MLx,„ „z
+Y
+y,
+
+) along
+x y z
+
+''
+
+limits of x,y,z
+
+A
+
+Ki
+
+limits of x,y,z
+
+A
+
+MLx,y, ,
+X v z
+a .
+
+.
+>o»V
+Aq,<P.9,i()
+_ .
+
+limits of x,y,z
+initial conditions (I.C.) of simulator
+simulator
+
+<j>,9,i^
+
+desired simulator
+
+4>,6,ij;
+
+commands (including I.C.)
+<f>,9,\J>
+
+AA Q ^
+
+calculated body axes accelerations at the pilot station along
+<j>,9,i|; (input to high-pass filter)
+
+AN
+
+output of high-pass filter (multiplied by gains
+
+•.Q,'!' of simulator cab from high-pass filter
+
+<p,9
+
+>,9
+•
+>,9
+
+due to residual cab tilt
+due to residual cab tilt
+
+111
+
+KI
+
+) along
+
+A
+
+ML,.
+
+n
+
+,,,
+
+limits of
+
+limits of
+g
+
+acceleration due to gravity
+
+Kx,y,z
+
+washout gains for x,y,z axes
+
+K
+
+LLx w
+V
+»y
+KQ
+
+l°w frequency gains, residual tilt for x,y axes
+
+KN
+
+gains for modifying the contribution of the gravitational
+accelerations to the required simulator translational accelerations for x,y,z axes
+
+x
+
+»y»z
+
+K* 9 d,
+
+gains for modifying calculated gravitational acceleration components corresponding to residual tilt, for x,y,z axes
+
+washout gains in
+
+4>,3,i{>
+
+axes
+
+TMij
+transformation between cab fixed axes and earth fixed axes
+(i,j=l,2,3)
+x,y,z
+
+cab position relative to earth fixed axes - also used to designate translational axes
+
+^H^j •> *
+TCi,yi, zi
+(i-1,2)
+
+high-pass washout filter damping factors for
+
+x,y,z axes
+
+CH
+"
+
+high-pass washout filter damping factors for
+
+<b,Q,ty
+
+CD x,y, z
+
+long term filter damping factors, for x,y,z axes
+
+Cx y
+
+load factors along
+
+CLLX y
+
+load factors contributions to be produced by residual tilt
+
+U>H .
+xi,yi,zi
+(1-1,2)
+
+high-pass washout filter undamped frequencies for x,y,z axes
+
+am,. Q . .
+(i = l,2)
+WD
+
+x,y, z
+
+IDTx,y
+u
+
+axes
+
+x,y axes
+
+high-pass washout filter undamped frequencies for
+
+<t>,6,i|>
+
+axes
+
+long term filter undamped frequencies for x,y,z axes
+factors used in residual tilt calculations
+gains multiplying the contribution to the required <|>,6,<|; of
+the error between cab position and required residual tilt
+IV
+
+<J>,0,iJi
+
+Euler angles used to orient the cab relative to earth fixed axes.
+Euler angle sequency is $,9,^. Also used to designate roll,
+pitch and yaw axes, respectively, for both aircraft body axes and
+simulator axes
+
+A FAILURE EFFECTS SIMULATION OF A LOW AUTHORITY FLIGHT CONTROL
+AUGMENTATION SYSTEM ON A UH-1H HELICOPTER
+Lloyd D. Corliss and Peter D. Talbot
+
+Ames Research Center
+and
+Ames Directorate, USAAMRDL
+Moffett Field, California
+SUMMARY
+
+A two-pilot moving base simulator experiment was conducted to assess the
+effects of servo failures of a flight control system on the transient dynamics
+of a Bell UH-1H helicopter. The flight control hardware considered was part
+of the V/STOLAND system built by Sperry with control authorities of from
+20-40%. Servo hardover and oscillatory failures were simulated in each
+control axis. Measurements were made to determine the adequacy of the failure monitoring system time delay and the servo center and lock time constant,
+the pilot reaction times, and the altitude and attitude excursions of the
+helicopter at hover and 60 knots.
+Safe recoveries were made from all failures under VFR conditions. Pilot
+reaction times were from 0.5 to 0.75 sec. Reduction of monitor delay times
+below these values resulted in significantly reduced excursion envelopes.
+A subsequent flight test was conducted on a UH-1H helicopter with the
+V/STOLAND system installed. Series servo hardovers were introduced in hover
+and at 60 knots straight and level. Data from these tests are included for
+comparison.
+INTRODUCTION
+
+The primary objective of this simulation was to assess the recovery characteristics of a given helicopter subjected to a single axis failure of a low
+authority (20-40%) control augmentation system with mechanical backup. For
+the simulation, a UH-1H helicopter was modeled (ref. 1) with an augmentation
+system of parallel and series actuators. The flight control hardware was of
+the type being installed on a UH-1H at Ames as part of the V/STOLAND research
+flight system, and is similar in its actuator installation to several previous
+experimental systems (e.g., HOWAC, ALARMS, and HENILAS). A desired outcome
+of this study was to determine safe altitude-airspeed operating limits in the
+event of failure of the augmentation system.
+This simulation required a two-pilot operation with a research pilot
+handing off control to the safety pilot during the failure. Since motion cues
+
+are important when assessing the severity of the failure, the safety pilot
+(recovery pilot) was situated in a single place six-degree-of-freedom motion
+simulator. The research pilot was located in a fixed-base simulator which was
+deemed suitable since he serves no role after the failure is introduced. Both
+pilots were in voice communication with each other and were presented with the
+same visual scene.
+The failures simulated were single axis failures which resulted in either
+an oscillatory or hardover motion of the series actuator resulting in uncommanded movement of the control to the main rotor or tail rotor.
+
+SYSTEM DESCRIPTION
+
+Helicopter Control System
+The flight control hardware modelled for this simulation represented the
+V/STOLAND control system. The V/STOLAND system is an integrated navigation,
+guidance and flight control system, to be used on a UH-1H helicopter for conducting in-flight simulation. Elements of this system are shown in figure 1.
+The left-hand seat is designated as the research or evaluation side while the
+right-hand seat is the safety pilot side and its controls will remain essentially as a basic UH-1H.
+The flight control portion of the V/STOLAND system is one which utilizes
+a combination of a parallel and a series actuator in the linkage of each control. Both actuators are driven by the control laws as programmed in the
+onboard 1819B digital computer. Functionally, the series actuators, which are
+limited in authority (approximately 20-40%), are the faster responding actuators and thus act primarily on the transient behavior. The parallel actuators,
+are full authority rate servos which act to off-load the series servos and
+thus provide a trimming function. Control schematics of the cyclic, pedal,
+and collective servo installation are shown in figures 2, 3, and 4, respectively. One additional hardware element of the V/STOLAND control system is a
+disconnect device on the research stick which allows that stick to operate in
+a fly-by-wire mode. As indicated above, all flight control experiments will
+be flown from the left seat and thus in the event of a system malfunction or
+failure, control will revert to the right-hand seat. It is this area, that is,
+the effects on vehicle dynamics under a fail condition and the hand-off of
+control from the research pilot to the safety pilot, that this simulation
+addressed.
+
+Potential System Failures
+An integral part of the V/STOLAND system is a safety monitor system.
+When a malfunction is detected (which in many cases results in a hardover
+command) the monitor will disengage the servos after a prescribed time delay
+and annunciate the failure to both pilots. The monitor time delay, which was
+a variable in this study is of the order of 1 sec or less.
+
+DISPLAY
+3-CUE ADI
+HORIZONTAL SIT. IND. (HSI)
+MULTI-FUNCTION DISPLAY (MFD)
+CONTROL PANELS
+BARO + RADIO ALTIMETER
+VERTICAL SPEED
+
+SENSORS
+FLIGHT
+3AXISANG RATES
+VERTICAL GYRO
+DIRECTIONAL GYRO
+LONG. & LAT. ACCEL.
+RADIO ALTIMETER
+INS
+LOW SPEED SENSOR
+AIR DATA SENSOR
+GROUND
+VOR & DME
+TACAN
+MODILS
+MULTILATERAL RANG. SYS,
+
+FLIGHT CONTROL
+CYCLIC, PEDAL & COLL. POSITIONS
+CYCLIC, PEDAL & COLL FORCES
+A PARALLEL ACTUATORS (100% AUTH.)
+4 SERIES ACTUATORS
+25% PITCH
+30% ROLL
+37% YAW
+20% COLLECTIVE
+CYCLIC DISCONNECT DEVICE
+SWASH PLATE & TAIL ROTOR
+POSITIONS
+
+DATA ADAPTER
+
+DIGITAL DATA
+ACQUISITION SYS.
+(DDAS)
+
+BASIC
+COMPUTER
+1819-B
+
+RESEARCH
+COMPUTER
+1819-B
+
+Figure 1.- UH-1H V/STOLAND system block diagram.
+
+SERVO INTERLOCK UNIT
+
+SWASH PLATE
+POSITION SENSORS
+
+SERIES SERVOS
+(PITCH AND ROLL)
+(2PLCSI
+
+SAFETY
+
+STICK
+
+CONTROL
+STOPS
+
+PITCH AND ROLL
+POSITION SENSORS
+PITCH
+PARALLEL
+SERVO
+
+PITCH
+DISCONNECT
+LINK
+
+PITCH
+SAFETY
+BUNGEE
+
+RESEARCH MAGNETIC
+BRAKE (ROLL)
+
+ROLL
+PARALLEL
+SERVO
+RESEARCH MAGNETIC
+BRAKE (PITCH)
+
+RESEARCH BUNGEES
+(PITCH AND ROLL)
+
+Figure 2.- Cyclic controls.
+
+TAIL
+I ROTOR
+POSITION
+SENSOR
+
+'CONTROL
+STOPS
+
+SERIES
+SERVO
+
+Figure 3.- Directional controls.
+
+SWASH
+PLATE
+POSITION
+SENSOR
+
+CONTROL
+STOPS
+
+SERIES
+SERVO
+
+Figure A.- Collective controls.
+
+6
+
+For initial consideration, there are three types of servo responses to
+system failures, hardover, fixed, and oscillatory. Some of the typical
+causes of such failures are described below.
+System Failure
+
+Hardover
+
+Data adapter or computer
+Analog commands to servos
+Loss of stick sensors
+Loss of pedal or collective sensor
+Loss of rate gyros
+Loss of attitude gyros
+Servo failure
+
+Fixed
+
+X
+X
+
+Oscillatory
+
+X
+X
+X
+
+X
+X
+X
+X
+
+X
+
+X
+
+A particular variant of the hardover failure worthy of comment is the
+ramping or drifting servo. While this type of failure along with the fixed
+failure present their own subtle problems, they do not result in the abrupt
+transient vehicle motion which is characteristic of the hardover and oscillatory failures. For this reason they were not pursued in this simulation.
+In addition to these specific objectives, the simulation had the general
+objective of familiarizing the pilots with the V/STOLAND system, its failure
+modes, and general procedures during failure and hand-off of control from the
+research pilot to the safety pilot.
+Piloting Tasks and Flight Conditions
+Two flight conditions were chosen as representative for evaluation of the
+failures: 60 knots level flight cruise and hover out-of-ground effect.
+The hover condition is critical because it represents a maximum power
+condition (maximum collective pitch) with attendant maximum left pedal requirement in the steady-state, prefailure trim condition. Thus, control margins
+for collective pitch and pedal available for recovery are a minimum in this
+situation.
+The 60-knot cruise condition is not critical from a control margin standpoint but is a typical flight speed for the UH-1H, corresponding to the minimum power required point of a speed-power required curve. Landing approach
+and climbout after takeoff are conducted at about 60 knots. Maneuvers for NOE
+flight are typically flown in the 40 to 60-knot speed range. Therefore, failure excursions data obtained at 60 knots is likely to be of general benefit to
+users conducting experiments in these flight regimes.
+For the hover task, the helicopter was trimmed in the hover condition at
+8700 Ib (38,698 N^gross weight. The research pilot was instructed to liftoff and climb above a line of trees immediately in front of the helicopter,
+gradually bringing the helicopter to a stable hover about the tree line. Some
+freedom was given to the research pilot to make small maneuvers (pedal turns,
+lateral translations) when a steady hover altitude, immediately above the tree
+line, was reached.
+
+SIMULATION TEST PLAN
+
+General Description of Simulation
+The requirement in this experiment was to simulate single failures of
+elements in the research control system of the UH-1H helicopter during a typical flight task. Such a task involves a research pilot flying an augmented
+version of the helicopter from the left seat, while a safety pilot monitors
+the aircraft from the right seat. Should a failure of one of the servos occur
+during flight, it is the job of the safety pilot to assume control and make a
+recovery. Normally, such failures will be detected and displayed to the pilot
+through V/STOLAND safety monitoring system; however, the pilot may detect the
+failure first, from motion and visual cues. Any lead time available to the
+safety pilot from these cues is important, because it hastens the recovery
+action and minimizes the perturbations to the helicopter. The use of a motion
+base simulator was therefore necessary for a realistic evaluation of the
+safety pilot's ability to detect the failures. The motion simulator for this
+experiment was a single seat, six-degree-of-freedom simulator which incorporated a black and white TV monitor. Motion washout was used to keep the cab
+excursions within its physical limits. To simulate two-pilot operation, it
+was necessary to situate the research pilot in a second, fixed-base simulator
+remotely located from the first. Both pilots were in voice contact and were
+presented with the same visual scene of a terrain model. Figure 5 shows the
+overall setup for this simulation.
+The software for this all-digital simulation included the basic UH-1H
+helicopter (ref. 1), the flight control augmentation and the servo actuator
+complex (appendix A), and the failure logic. The flight control scheme was a
+prefliter model following type. The helicopter was flown in the augmented
+mode by the research pilot in the fixed-base simulator until the failure to a
+servo actuator was introduced. In the actual aircraft, the safety pilot always
+has a direct connection to the aircraft controls. In the simulation, however,
+the logic was designed so that the safety pilot's inputs were ignored by the
+computer until the moment when the failure was introduced. At any time after
+that, the safety pilot had control of the aircraft.
+Each failure was introduced to one series servo at a time as either a
+servo oscillation or a servo hardover. All other seven servos, both series
+and parallel, continued to function normally for a period of time corresponding to the "time-delay" phase of the V/STOLAND monitoring system. "Normal
+functioning" in the simulation was generally evidenced by rapid movements of
+the good servos attempting to correct for the upset of the aircraft introduced
+by the failed servo.
+At the end of the time delay phase, typically one second, all series
+servos, including the failed servo, begin to go to center-and-lock position,
+the research pilot's inputs no longer have any effect on the controls, the
+parallel servos are frozen and the panel warning light goes on. The series
+servos are essentially in their center positions after one center-and-lock
+time constant (typically three seconds). The sequence is illustrated
+
+MODEL FOLLOWING
+CONTROLLER
+
+FAILURE LO(ilC
+
+RESEARCH PILOT
+
+• fiulo* (Step, r«*p,0scil)
+De.l*j
+Lock
+
+Drive
+
+UH-IH MODEL
+SAFETY PHOT
+Figure 5.- Simulator setup.
+
+schematically in figure 6 showing the position of a failed series servo
+during a hardover failure.
+The model flown by the safety pilot did not fully revert to the unaugmented UH-1H model until the end of the center-and-lock period of the servos.
+The pilot generally was able to detect that a failure had occurred before this
+time by available motion and visual cues.
+All pilots were given some familiarization time in the moving base simulator prior to obtaining the data. This familiarization consisted of undirected flying at hover and 60 knots of the unaugmented helicopter and of the
+augmented helicopter with announced failures. All failures given for the data
+runs were unannounced failures.
+
+Test Objectives
+The test objectives were: (1) to determine if the failure criteria time
+delays, and the servo center-and-lock time constant of the Sperry specification (ref. 2) were adequate, (2) to determine the altitude, horizontal position, and angular excursions associated with normal failures, so as to define
+safe operating margins when flying with the system, (3) to measure pilot reaction time to the failures, and (4) to measure rotor flapping excursions during
+the failures.
+A single axis failure was then given to the pilot at the discretion of
+the experimenter. Control reverted to the safety pilot in the motion simulator, who then made the recovery.
+For the forward flight task, the helicopter was trimmed in an initial
+condition at 60 knots, flying along a line of hills and toward the crest of
+one particular hill. The research pilot was instructed to track a line of
+white disks delineating a slowly curving ground track. Very precise tracking
+was not required. Failures were then initiated at the discretion of the
+experimenter, either in level trimmed flight or in moderate (below 30° bank
+angle) turns.
+In both flight tasks, the physical terrain features were intended to
+provide some reference for the safety pilot as he made his recovery, so that
+excursions would not be unrealistically large due to the single factor of
+having no readily available position and attitude cues.
+Instructions to the safety pilot were to bring the helicopter to an
+unaccelerated flight condition and arrest sink rate as quickly as possible
+following his detection of the failure from motion or visual cues. He was
+permitted to track the cyclic stick with his hand during the prefailure
+flight condition. Both pilots actually could make inputs to the helicopter
+during the "time delay" phase (fig. 6) of the failure sequence, however, the
+research pilot was instructed to relinquish control as soon as he detected the
+failure, and his controls became inoperative after the monitor time delay
+phase.
+10
+
+JI
+J
+§
+0
+4
+J
+
+2.
+
+z.
+
+ft/tor
+t
+
+3,
+
+(o
+TO
+
+Figure 6.- Hardover failure sequence.
+
+11
+
+Recovery criteria.- Following a failure from a nominally unaccelerated
+flight condition, the helicopter was recovered by the safety pilot. In analyzing the failure records, three recovery criteria were considered:
+(1) recovery to an unaccelerated flight condition, (2) recovery to zero rate
+of climb, and (3) pilot's assessment of recovery.
+A truly unaccelerated flight condition in all axes was seldom achieved
+before a run was ended by the pilot. Therefore, the acceleration criterion
+for recovery was not used in evaluation of the data. In practice, the pilot's
+remark ("I have recovered" or "I have control") was sufficiently delayed that
+the maximum excursions in attitude and position of the helicopter had been
+attained, including arresting the sink rate to zero. Therefore, this criterion was considered appropriate.
+Displacements of the helicopter center of gravity following a servo failure were calculated based on an earth-fixed reference system. At the instant
+of failure, an axis system was frozen with axes as follows (fig. 7).
+origin
+
+aircraft center of gravity at instant of failure
+
+X
+
+axis
+
+parallel to earth and lying in the aircraft plane of symmetry
+
+Y
+
+axis
+
+parallel to earth and normal to the
+
+h
+
+axis
+
+normal to X and Y
+
+X-axis
+
+axes
+
+All helicopter excursions (X, Y, and h) were then computed in this system.
+For failures occurring at 60 knots, the X displacements have no significance.
+Test plan.- The tests were divided into two general groups: (1) evaluation of hardover failures of the series servos and (2) evaluation of oscillatory failures of the series servos.
+Within the hardover failure group, there were two system variables evaluated - the time delay TJJ of the failed servo and the center-and-lock time
+constant TQL of all servos, including the failed servo.
+Within the oscillatory failure group, there are no additional system
+variables to be considered. The servos were allowed to oscillate at their
+natural frequency, a failure resulting from loss of the damping feedback term
+to the servo.
+The scope of the tests is shown in table 1.
+All of the test conditions were flown with the simulator cab enclosed and
+with washed-out cab motion. Some preliminary runs for the hover case were
+made without washout - that is, the ratio of cab motion to calculated aircraft
+motions was one - and the simulator cab was opened to surrounding scene.
+These runs were useful for general familiarization and evaluation of moving
+base handling qualities of the model, but many failures at one-to-one motion
+resulted in overloading and cutout of the motion drive system. Therefore,
+motion washout was a necessity in these tests.
+12
+
+Figure 7.- Axis system for computing displacements after a failure.
+
+13
+
+TABLE 1.- SCOPE OF TEST PLAN.
+Number of pilots
+Types of failures
+Monitor time delay, sec
+Center-and-lock
+time constant, sec
+Axes
+
+Flight conditions
+
+4
+Hardovers, single axis
+Oscillatory, single axis
+0.25, 0.50, 1.0,a 5.0
+3.0,a 1.0, 0.5
+Collective - UP, DN
+Pitch
+- UP, DN
+Roll
+- L, R
+Yaw
+- L, R
+Hover, 60 knots
+Gross weight, 8700 Ib (38,698 N)
+
+*»
+
+Standard value
+For selected axes, either the monitor time delay or the center-and-lock
+time constant was varied while holding the other characteristic at its standard value. The values were changed in sequential runs so that the pilot could
+make direct comparisons.
+
+RESULTS
+
+The data collected from this simulation will be discussed under five
+classifications: hardover failures at hover, hardover failures at 60 knots,
+oscillatory failures, effects of monitor delay times, and effects of servo
+center-and-lock time. In each case maximum excursions in 8, <j>, X, Y and h
+were recorded. These maximum occurred sometime between the introduction of
+the failure and the annunciation by the pilot that he had control (usually
+within 5 to 7 sec). Also recorded was the rotor flapping angle.
+The quasi-static rotor flapping equations used permitted only a steadystate estimation of the flapping during a servo hardover failure.
+The results show that the limit flapping value of 12° was not reached in
+any of the runs. Peak values of 8° occurred in the roll and collective down
+hardover failures at 60 knots. Flapping values were generally higher at
+60 knots than in hover. Subsequent tests in flight showed that the measured
+flapping values agreed well with the simulated values in hover and were generally less than the simulated values in forward flight. While the flight tests
+were brief and some of the conditions varied from those of the simulation, the
+comparison does show the rotor equations to be a useful representation.
+Prior co each data run the pilots were asked co "fly" the simulation of
+the unaugmented UH-1H from 60 knots to hover. Generally the pilot agreed the
+simulation was more difficult to fly near hover than the real helicopter.
+Primarily, the pilots indicated that the simulation didn't feel as well damped
+in pitch and roll as the real helicopter. A comparison between the responses
+or the model and response data of a UH-1H in flight may be found in
+reference 1.
+14
+
+Hardover Failures at Hover
+Single axis failures were introduced randomly and unannounced from a
+loiter position at approximately 100 ft (30.5 m) altitude. The visual cues
+during this phase were provided by conifer type trees in the foreground and
+rolling terrain in the background as displayed on a single uncollimated black
+and white TV monitor
+The most frequent complaint with this type of presentation was related to the limited field of view available (38° vertical by 48°
+horizontal), particularly when performing a hovering task.
+Table 2(a) summarizes the hover hardover failure data. Each pilot was
+given each of the eight failures at least once resulting in a total of from
+6 to 13 runs per failure. Shown on table 2(a) are the dispersions of the maximum values of each parameter over all the runs as well as the average of those
+maximum values.
+Based on pilot commentary during the tests, the more severe failures were
+pitch-up and yaw in either direction. However, the severity in the pitch-up
+failure was due, in part, to the loss in the visual scene because of the
+limited field of view TV monitor. During the yaw failures the pilot expressed
+a concern over the remaining margin available in the directional controls.
+This limited control margin inhibited the pilots' ability to arrest the yaw
+rates.
+By referring to table 2(a), it can be seen that for all failures except
+collective, the pilot reaction times were generally from 0.5 to 0.7 sec. In
+collective, however, the reaction times were longer. This longer reaction
+time is consistent with pilot commentary regarding the difficulty he had in
+detecting some of the collective failures.
+Following this simulation, a brief flight test of servo hardovers was
+performed using the V/STOLAND hardware on a UH-1H helicopter. The hover hardover tests were conducted at an altitude of 15-25 ft (4 5-7.6 m) and the
+results are shown for comparison on table 2(b). Unlike the simulation, the
+flight failures were announced hardovers and subject to a monitor time delay
+of 0.5 sec. This monitor time is a reduction from the 1.0 sec originally proposed for the V/STOLAND system (ref. 2) and used for the simulator study.
+Even with these differences the data on table 2(b) shows a reasonable correlation with table 2(a) both in magnitude and trend.
+
+Hardover Failures at 60 Knots
+The 60 knot failures were introduced while the pilot was flying a marked
+track over irregular rolling terrain. His nominal altitude was between
+50-200 ft (15.2-61 m).
+Table 3(a) shows a summary of the 60 knot failure data. As with the
+hover data the pilot reaction times (except for collective) were of the order
+of 0.5 to 0.7 sec. The pitch-up and yaw failures were again considered by the
+pilots to be the more severe. The roll failures, particularly left roll, were
+considered to be severe but manageable.
+15
+
+TABLE 2.- HARDOVER DATA AT HOVER
+
+Failure
+
+e,
+
+*.
+deg
+
+deg
+
+Pitch dn
+
+22
+10
+
+1
+5
+
+Pitch up
+
+32
+4
+
+Q
+19
+
+Coll. dn
+
+12
+0
+
+5
+
+o
+
+s
+5
+
+11
+2
+
+Coll. up
+Roll rt.
+
+13
+
+n
+"2
+
+2
+
+7
+7
+
+25
+
+7 4
+.
+
+]5 „
+"5 U
+
+60 10 J5
+
+7
+?
+
+29 „
+12 22
+
+9 , 10
+2 5
+2
+
+Yaw It.
+
+6 ,
+0 4
+
+22
+
+m
+
+100 .„
+25 62
+
+Yaw rt.
+
+Key:
+
+35
+15
+
+12
+
+2
+
+10
+35
+20
+
+7S
+25
+2?
+
+10.6 ? , 40
+4.6 7'6 o
+20 .
+30.5 1R 0
+8 9
+10 15
+7.6 1 '
+18.3 10 ,o
+» • 1U .
+15
+4.6 10 7
+
+5 '5
+
+12 .2 -ir
+- i. /. 0
+
+^••*
+
+60
+
+35
+
+4R
+48
+
+90
+5 2°
+
+10.6
+1.5
+
+f
+6 1
+
+'
+
+50
+™
+15 3°
+
+ft
+°
+
+30 25 27
+
+9.1
+7.6
+
+8 2
+
+50
+15 3°
+
+-
+
+35
+
+•Averaged value
+
+'Smallest maximum value
+
+'
+
+60
+0
+
+4.6
+
+3
+1.5
+18.3
+10.6
+
+.
+'
+
+24.4
+15.2
+4.6
+
+9 1
+
+'
+
+(
+
+15
+0
+
+2
+
+20
+
+o
+
+8
+8
+
+40
+
+1 6
+4
+
+11
+U
+
+0
+
+5
+2
+14
+0
+0
+0
+0
+0
+
+9
+6
+
+0.25 °>j5
+
+27.4 ,n „
+0 1C*8
+
+0.25 ° 5
+'5
+
+4.5
+
+18.3
+0
+
+'
+
+2
+0.5
+
+.n
+1<3
+
+3
+
+10
+
+0
+
+1.5 ,n
+0.5 1'°
+
+4
+
+6
+
+1 6
+0
+
+1
+
+n"
+
+/\
+
+E; c
+
+4 6
+
+16
+15.2
+0
+4.5 9'1
+(b) Flight
+
+4.5
+
+9.1 „
+0 3
+
+0
+
+'
+
+Number
+of runs
+
+m
+
+35
+
+? ,
+2 2
+
+Rotor
+flapping
+
+Pilot
+reaction
+
+ft
+
+6.1 H . D 90 fi
+.,
+«
+0 61
+
+80
+
+J
+
+11.5
+5
+10
+8.5
+9
+9
+10
+5
+8
+18.5
+11
+11.5
+6
+9
+7
+6
+Largest maximum value
+
+To"15'
+
+m
+
+ft
+
+(a) Simulation
+20
+20 12.2 6 1 30 10
+0 10
+0
+'
+
+15
+40
+
+Height loss
+
+AY
+
+ft
+
+19 ,,
+12 14
+
+5
+„
+a 30 22
+Roll It. I - 8
+4
+10
+
+Pitch dn
+Pitch up
+Coll. dn
+Coll. up
+Roll rt.
+Roll It.
+Yaw rt.
+Yaw It.
+
+AX
+
+2
+
+n fi 1 n ,,
+°'6 0.5 ° 5
+'5
+
+6
+
+'1
+0
+
+?4
+2 4
+'
+
+0.2
+
+1 2
+2
+
+T4
+3 4
+
+1.5
+0.5
+
+'
+0
+
+'
+0
+
+'
+
+1 5
+
+'
+
+n7
+
+°'7
+X
+
+4.9
+0.75
+0 °'6 0.3 °'C
+1.5
+0.61
+4.3
+0
+0
+0
+0
+0
+
+4.5
+
+10
+
+5.5
+
+8
+
+4
+
+8
+
+3
+
+13
+
+3.6
+5.3
+2.4
+2.8
+3.5
+7.2
+2.5
+2.0
+
+TABLE 3.- HARDOVER DATA AT 60 KNOTS
+
+Failure
+
+6,
+deg
+
+*,
+deg
+
+ft
+
+m
+
+80
+10
+
+16
+4
+
+1f)
+10
+
+Pitch up
+
+35
+1
+
+1J
+
+Coll. dn
+
+16
+5
+
+10
+10
+
+23
+5
+
+U
+
+75
+40
+
+Coll. up
+
+22
+2
+
+8
+
+27
+2
+
+U
+
+250
+20
+
+Roll rt.
+
+18
+4
+
+n
+10
+
+27
+15
+
+iq
+19
+
+Roll It.
+
+12 R 40
+4 ° 15
+
+2H
+
+Yaw rt.
+
+14
+3
+
+7
+
+4
+
+Yaw It.
+
+12
+0
+
+J
+
+31
+2
+
+Pitch dn
+Pitch up
+Coll. dn
+Coll. up
+Roll rt.
+Roll It.
+Yaw rt.
+Yaw It.
+
+14
+
+8
+9.5
+2
+3
+3
+2
+1
+2
+
+Q
+
+3
+18
+2
+
+9
+
+m
+
+ft
+
+Pitch dn
+
+16
+
+Height loss
+
+AY
+
+AX
+
+4
+
+°
+
+ft
+(a) Simulation
+24.4
+„
+48 15
+«
+
+J-^L • 2.
+
+10
+0
+
+13
+
+160
+
+40
+
+210
+40
+
+22.8
+12.2
+
+1? £
+17 6
+
+1
+0
+
+°
+
+76.2
+6.1
+
+30 5
+
+inn
+10
+°
+
+48.7
+12.2
+
+c
+30 5
+
+102
+
+64
+12.2
+
+S8
+58
+
+3
+5
+3
+6
+18
+23
+11
+8
+
+'
+
+'
+
+'
+
+31
+
+100
+
+o
+
+24
+
+14.6
+0
+
+4 6
+
+'
+
+Number
+of runs
+
+1.5 n r
+0.1 °'5
+
+7.2
+
+12
+
+, 0.75
+°'6 0.5 °-C
+
+2
+
+3
+0
+
+n
+
+40
+40
+
+30.5
+0
+
+K
+
+„„
+"
+
+2
+
+0.5
+
+12
+1 t
+"
+
+5
+7.3
+
+9.1 n f 6 2.5 . . 8
+0 °' 0.5 1>3
+
+20
+0
+
+6.1 .c
+0 1>5
+
+o
+
+9
+15
+
+0.75
+,
+0.5 °'4
+
+8
+
+8
+
+P P
+J J
+
+1 n7
+0.25 °'7
+
+8
+
+13
+
+c
+20
+20 18.3 f 1
+
+0.75
+0.3 °'C
+
+5
+
+90 18
+
+o
+
+o
+
+40
+12
+
+m
+
+Rotor
+flapping
+
+30 2
+
+60
+
+10
+10
+9
+
+o
+
+Pilot
+reaction
+
+12.2
+25 3
+,
+3.7 7'3
+o
+(b) Flight
+16
+0
+28
+0
+0
+
+27.4
+0
+
+o
+
+7 6
+
+'
+0
+
+4.9
+0
+8.5
+0
+0
+
+'
+
+'
+
+n 0 1-25
+°'9 0.5 °'8
+
+5
+5
+4.2
+5.1
+2.3
+3.2
+4.4
+5.1
+2.9
+3.1
+
+9
+
+Again for comparison, the flight data for 60 knot straight and level
+series servo hardovers are shown on table 3(b). These results were for
+announced failures and a monitor time delay of 0.5 sec. A comparison with the
+simulation data of table 3(a) shows a good correlation in trend, however, the
+simulation data resulted in consistently higher flapping angles.
+Figure 8 depicts the failure envelope which is a summary of the average
+of the maximum values for the hover and 60 knot simulation data. While this
+envelope cannot be considered as absolute it does indicate the likely excursions for a single failure.
+
+Oscillatory Failures
+The oscillatory failures were introduced at 60 knots as undamped servo
+responses at 10 Hz. This frequency is typical of actuators used in control
+augmentation applications. In all cases, these failures were considered mild
+in terms of their effects on the handling qualities of the vehicle. A summary
+of these failures is given in table 4. The detection of such failures by the
+pilot often occurred only through system annunciation. This is indicated by
+the rather long pilot reaction times shown in table 4. Of interest for further study would be to determine if a lower frequency of oscillation would be
+objectionable.
+
+Effects of Monitor Delay Time
+One of the more generally applicable phases of this simulation was one
+which considered varying TD, the system failure detection time. The failure
+detection time is the time from the onset of a failure to the time when the
+system detects the failure and disengages. Disengagement in this case implies
+the reversion to the unaugmented mode and centering and locking of the series
+servos. A failure detection (or monitor) time delay is often a variable and
+is usually made long enough to avoid transients or nuisance disconnects and
+yet short enough to provide some aid to the recovery from a real failure. An
+important fact regarding this time is the pilot's own reaction time; that is,
+if the pilot can react faster than the monitor in disengaging the system, then
+the monitor time may be too long and serve little function in the recovery
+from a failure. Conversely, a monitor time which is consistently shorter than
+the pilot's reaction time, will help reduce the failure excursion envelope.
+The baseline monitor time used in this simulation was 1 sec and as can be seen
+from tables 2 and 3 this was generally longer than the pilot's own reaction
+time.
+The results of variations in the monitor time from 0.25 to 5 sec for a
+roll hardover failure at 60 knots are shown on table 5. Note that for the
+monitor times of 0.5 and 0.25 sec, the average <|> and Y excursions were significantly smaller. Also, note that in most cases the average pilot reaction
+time was of the order of 0.5 sec. This time was also noted for both the hover
+and 60 knot roll data on tables 2(a) and 3(a).
+Such data imply an upper bound
+of useful monitor time of around 0.5 sec, and that a reduction from that value
+18
+
+SINGLE; HARDOVER FAILURE ENVELOPE:
+x
+Y
+Z(DOWN)
+fl
+
+HOVER
+55 FT, (16,7
+80 FT, (24,4
+35 FT, (10,6
+20 DEG,( 6,1
+22 DEG,( 6,7
+
+60 KNOTS
+M)
+M)
+M)
+M)
+M)
+
+Figure 8.- Failure effects simulation results.
+
+100 FT, (30,5 M)
+40 FT, (12,2 M)
+15 DEG,( 4,6 M)
+24 DEG,( 7,3 M)
+
+TABLE 4.- OSCILLATORY FAILURES AT 60 KNOTS
+
+e,
+
+Failure
+
+*,
+deg
+
+deg
+12
+6
+
+Pitch
+
+19
+
+9
+
+9
+
+1A
+l4
+
+Coll.
+
+7
+13 . 24
+4 ° 9
+
+fi
+1C
+
+9>1
+
+L6
+o 4'f
+
+20
+
+6.1
+4.6 „
+2>1
+
+Number
+of runs
+
+1
+
+15 7
+7
+
+Rotor
+flapping
+
+1
+
+1
+
+o
+
+o
+
+o
+
+9.1
+~
+
+n 14 . 30
+7 ° 11 13 10 2°
+
+9
+
+Yaw
+
+Pilot
+reaction
+
+m
+
+ft
+30 15
+
+14
+
+Roll
+
+Height loss
+
+1
+U. JL
+
+0.5
+
+n 77
+5
+°'
+
+TABLE 5.- EFFECTS OF MONITOR DELAY TIME AT 60 KNOTS
+
+to
+o
+
+Failure
+Roll rt.
+
+it
+ii
+
+Monitor
+time delay
+
+e,
+deg
+
+10
+
+0.25
+0.5
+1.0
+
+*,
+deg
+
+12
+
+8
+4
+
+30 5
+
+20
+0
+
+5
+
+6.1 , c
+0 1*5
+
+40 20
+
+12.2 6>1
+30.5 7 9
+
+?fi
+26
+
+250
+180 2°°
+
+24
+6
+
+13
+
+13
+
+1A
+l4
+
+30
+20
+
+0.5
+
+12
+6
+
+q
+9
+
+20
+
+8
+8
+
+40
+
+5.0
+
+10.6 ,
+0 5>Z
+
+31
+21
+
+5
+
+n
+
+?
+17
+
+160
+40
+
+10
+2
+
+1.0
+
+35
+0
+
+iq
+19
+
+0.25
+
+12
+
+4
+
+9
+
+8
+15
+
+30
+
+24
+24
+16
+
+210
+
+40
+
+Pilot
+reaction
+
+0
+
+30.5
+
+in 27
+10
+
+Roll It.
+
+0
+
+14.6
+
+100
+
+6
+
+15
+
+m
+
+ft
+
+25
+
+in 16 n
+10
+U
+
+5.0
+
+n
+
+m
+
+10
+
+18
+
+Height loss
+
+ft
+
+12
+
+n
+
+ii
+
+AY
+
+1
+0
+
+°
+
+48.7
+12.2
+
+'
+
+76.2 fi
+54.9 61
+
+o
+
+24
+24
+
+9.1
+4
+
+7 3
+
+100 ofi
+26
+
+25
+
+9.1
+6.1
+
+7 6
+
+8 7
+2
+
+102
+12
+0
+90
+
+64
+12.2
+
+'
+-
+
+o
+
+o
+90
+
+31
+
+27.4
+
+o
+
+18
+18
+
+0
+
+0.5
+
+8
+
+0.5 n ,
+0.25 ° 4
+'
+
+9
+
+°'75
+0.5
+
+nA
+°4
+'
+
+8
+
+0.5
+
+7.4
+
+rt Tr
+7
+5
+
+5.8
+
+o
+o
+
+'
+
+0.5
+
+°'
+
+2.4
+1.5 n n
+0 °'6 0.25 °'9
+
+27.4 5 5
+
+o '
+0
+
+Rotor
+flapping
+
+1 n7
+0.25 °'7
+0.25
+
+6.5
+
+8
+8
+
+Number
+of runs
+
+can help reduce the excursion envelope. Pilot commentary for the test runs at
+0.25 sec further supported these results. The pilots reported that, for this
+monitor time, failures were very mild or even undetectable (i.e., detected
+only through the annunciator light on the panel). Establishing a lower bound
+for monitor time (i.e., one at which nuisance disconnects begin to occur
+"frequently") would be somewhat more tenuous. No attempt was made in this
+simulation to determine this bound, however, previous experience with other
+systems indicates that around 0.1 sec such disconnects do occur.
+In summary, it appears that in cases where minimizing the failure excursion is of prime importance (e.g., flying close to the ground), then a monitor
+time of 0.25 sec or less should be considered.
+
+Center-and-Lock Time
+The last phase of this simulation considered variations in the centering
+and locking time of a failed series servo. The center-and-lock function is a
+built-in feature of certain series servos and results in a motion of the control linkages while centering occurs. The intent of this part of the study
+was to determine whether the rate at which the centering occurs could conflict
+with the pilots own control inputs. Table 6 shows the results of variations
+in the center-and-lock time for a pitch failure at 60 knots. The pilot commentary for this sequence was somewhat mixed, however, all four pilots tended to
+favor the faster center-and-lock time of 0.5 sec. It was interesting to note
+that one pilot found the 1 sec centering time conflicted with his own control
+corrections, causing overshoot in the vehicles motion. This perhaps indicates
+a centering time which was approaching the pilot's own natural time constant.
+The data show no marked trend for variations in the centering time.
+
+CONCLUSIONS
+
+1. No failures produced a flight condition from which recovery was not
+possible. The maximum altitude loss seen in any failure was 100 ft (30.5 m),
+however, that was for a case when the pilot was not constrained by low
+altitude flight.
+2. Pilot reaction time to most hardover failures was from 0.5 to
+0.75 sec.
+3. Reducing the monitor time to below 0.5 sec significantly reduced the
+hardover failure excursion envelope. Where minimizing the excursion is of
+prime importance, a monitor time of 0.25 sec or less should be considered.
+4. A wide variation in center-and-lock time following a failure had
+little effect on the pilot's recovery. There is a range of center-and-lock
+time around 1 sec which causes overshoot, perhaps because of the proximity to
+the pilot's time constant.
+
+21
+
+TABLE 6.- EFFECTS OF CENTER-AND-LOCK TIME
+Failure
+
+Centerand-lock
+time, sec
+
+Pitch dn
+
+3
+
+it
+
+1
+
+ii
+
+0.5
+
+o,
+deg
+16 ,n
+4 10
+21
+7 13
+13
+
+7
+
+in
+10
+
+AY
+
++,
+deg
+
+ft
+16
+0 80
+3 9 10 4°
+8
+f 20
+5° 5
+
+12
+2
+
+C
+
+50
+5
+
+m
+24.4
+~
+
+15
+
+6 1
+'
+1.5
+
+22
+
+15.2
+1.5
+
+Height loss
+
+0
+i/.. /
+
+ft
+40
+0
+
+.
+6<7
+
+0
+
+1.5 n ,
+01 °5
+.
+'
+
+7.2
+
+12.2
+0 4'3
+
+1<5
+0f
+0.1 ° G
+'
+
+6.4
+
+12.2 „
+0 2'7
+
+1.50 7
+0.1 ° 7
+'
+
+5.8
+
+12 2
+
+15
+
+0
+
+40
+
+Rotor
+flapping
+
+m
+
+40
+4
+14
+14
+4 6fi
+
+'
+
+Pilot
+reaction
+
+Q
+9
+
+0
+
+i fi
+4 6
+'
+
+Number
+of runs
+
+5.
+
+The pilots considered the oscillatory failures to be very mild.
+
+6. Calculated rotor flapping excursions were well within flapping limits;
+however, more detailed analysis or substantiating flight test is warranted.
+7. Excursions from announced hardovers during flight tests showed
+reasonable correlation with the simulator results.
+
+23
+
+APPENDIX A
+
+CONTROL SYSTEM MODEL
+The control system software for this simulation was a prefilter model
+follower type. This system was flown from the fixed-based simulator and was
+the mode to which all failures were introduced. Since the intent of this simulation was to evaluate the recovery from a failure, no major effect was made
+to optimize the control system. Rather, the characteristics chosen for the
+model follower represented "good" handling qualities as determined from a previous simulation (ref. 3). For pitch and roll the model selected was an attitude command type while in height and yaw a rate command type model was used.
+The control equations which provide the commands to the actuators were simple
+sums of the differences between the model states and the corresponding aircraft states. These equations are listed below.
+Model Equations
+
+f
+Roll
+
+0.56,
+
+1.4(2Hm + (2)2*m
+
+Pitch
+
+0.350 = 8m
+
+1.4(2)9m + (2)26m
+
+Yaw
+
+0.76T
+
+3tym - fo.0005UBVB +
+
+where
+Height
+
+sin $f(u)
+
+«p - «p - «pic
+10.66C = hm + h ,
+,,
+
+where
+
+6, - 6,
+
+1C
+
+The control inputs are in inches, the angles in radians, and h^ is in feet
+per second. The function f(u) is a switching term for turn coordinations
+above 30 knots.
+
+Control Equations
+Roll
+Pitch
+Yaw
+
+= 8<S.
+
+6<|>m -
+
+-7.356,
+
+- 5$
+
+66m - 109 - 1.56m - 46
+
+UTR = 8
+
+24
+
+where
+
+- *IC
+
+Height
+
+16(hm - h) + hm - 4h
+
+The control commands (U^i, etc.) drive the parallel and series actuators, as
+shown on figure 9. Since the series is a position servo and the parallel is a
+rate servo, the parallel responds so as to null the control commands and thus
+zero (or off-load) the series servo.
+
+Servo Actuators
+The autuator complex consists of a series, a parallel and a boost actuator in each axis. The boost is the standard UH-1 hydraulic type. The characteristics, authorities, and rate limits of each of the actuators are given in
+table 7.
+
+TABLE 7.- ACTUATOR CHARACTERISTICS
+
+Axis
+
+Authority,3
+%
+
+Roll
+Series
+Parallel
+Boost
+
+±30
+±100
+±100
+
+Pitch
+Series
+Parallel
+Boost
+
+±25
+±100
+±100
+
+Yaw
+Series
+Parallel
+Boost
+
+±37
+±100
+±100
+
+Collective
+Series
+Parallel
+Boost
+
+Dynamics
+
+±20
+±100
+±100
+
+u)0 = 75 r/sec; t, = 0.7
+I/T = 40 r/sec
+I/T = 50 r/sec
+
+Rate limits,b
+deg/sec
+
+±20
+±1.37
+±20
+
+ii
+
+ii
+
+ii
+
+ii
+
+a
+
+ii
+
+ii
+
+Computed based on center to full of actuator over center to
+full of control linkage.
+"Relative to swash plate motion.
+
+25
+
+(pedals f Collet-life 0*lt>)
+
+Model
+
+1
+
+*(X
+
+e
+¥
+
+Pilot
+
+•2
+
+I
+
+o.
+
+Figure 9.- V/STOLAND single axis block diagram.
+
+APPENDIX B
+
+FACILITIES
+
+The facilities used for this experiment were the Ames Research Center
+six-degree-of-freedom moving-base simulator (S.01), a fixed-base chair cab
+simulator (Chair 6), and a Redifon six-degree-of-freedom closed circuit television visual flight attachment (VFA-02). The simulation computer used was an
+EAI-8400 digital computer having a 32,000 word memory.
+
+S.01 Motion Simulator
+The simulator is shown in figure 10. Motion limits for this simulator are
+summarized in table 8. Position drive signals were used for all degrees of
+freedom. For this simulation, lead compensation was used to improve the frequency response of the system. The frequency response characteristics of the
+basic simulator with lead compensation gains for each axis are shown in figure 11. These characteristics are independent of the motion drive system
+logic, or washout, used to keep the simulator within its physical bounds and at
+the same time provide the pilot with motion cues representative of the simulated aircraft. The motion drive logic is presented in a separate section
+below. The section was provided by Mr. Vernon K. Merrick of FSD Branch whose
+contribution is gratefully acknowledged. The data for the basic frequency
+response characteristics were obtained by a program called SAFE, documented in
+reference 4.
+
+TABLE 8.- SUMMARY OF SIX-DEGREE-OF-FREEDOM (S.01)
+SIMULATOR CHARACTERISTICS
+
+Axis
+Roll
+Pitch
+
+Yaw
+Long.
+Lateral
+Vertical
+
+Displacement
+limits (±)
+
+Velocity
+limits (±)
+
+35°
+35°
+35°
+
+1.3 rad/s
+1.7 rad/s
+3.0 rad/s
+9 ft (2.7 m) 9.0 ft/s ( . m/s)
+27
+9 ft (2.7 m) 8.0 ft/s ( . m/s)
+24
+9 ft (2.7 m) 7.5 ft/s ( . m/s)
+23
+
+Acceleration
+limits (±)
+10 rad/s2
+4.5 rad/s2
+3.0 rad/s2
+7.5 ft/s2 (2.3 m/s2)
+9.2 ft/s2 ( . m/s2)
+28
+8.8 ft/s2 (2.7 m/s2)
+
+The pilot's panel instruments are shown in figure 12 and described in
+table 9. The cab was operated closed, with visual information presented by an
+uncollimated black and white TV monitor located above the instrument panel.
+Cab controls consisted of pedals, cyclic stick and collective lever, with
+force gradients representative of a UH-1B helicopter. Pedal forces were
+obtained with bungee cords. A McFadden control loader was used to provide
+forces on the cyclic stick. Use of this loader restricted control travels
+
+27
+
+KJ
+00
+
+Figure 10.- S.01 six-degree-of-freedom motion simulator.
+
+ROLL
+1.50
+
+I.SO
+
+PITCH /9X/S
+K^
+0.30
+
+so
+
+1.00
+
+1.00
+
+I
+
+/7X/S
+
+,50
+
+00
+
+.50
+
+50
+
+O
+
+0.10
+
+0.10
+
+J.O
+
+0.10
+
+J.O
+
+0
+K)
+
+VJ
+
+^> uj
+Q
+
+§
+5?
+I
+
+-too
+
+-200
+
+Figure 11.- Frequency response characteristics of S.01 simulator without washout.
+
+10.0
+
+Y-/9X/S
+
+''**
+
+K-
+
+S 1.00
+
+LOO
+
+1.00
+
+.so
+
+.SO
+
+.so
+
+o.io
+
+7o~
+
+10.0
+
+10.0
+
+0.10
+
+o.io
+
+U)
+
+o
+
+vr
+
+Uj
+
+o
+k?
+-100
+
+-too
+
+-too
+
+-zoo
+
+-7.00
+
+Figure 11.-
+
+Concluded.
+
+»o
+
+Figure 12.- Pilot's instrument panel - S.01 cab.
+31
+
+TABLE 9.- PILOT'S PANEL INSTRUMENTS:
+(see fig. 12)
+1.
+2.
+3.
+4.
+5.
+6.
+
+S.01 CAB
+
+Indicated airspeed
+Attitude indicator
+Altimeter (not present in photo)
+Turn/bank
+Rate of climb (IVSI)
+Failure warning light
+
+slightly below UH-1 values, but the gradient values were maintained. The
+collective lever had a manually adjustable friction level. The control travel
+and gradient values are summarized in table 10. Static and dynamic friction
+levels of the cyclic and pedal controls were not matched with those of the
+helicopter, but were considered acceptable by the pilots. The trim system was
+identical in function to that provided for Chair 6, described below.
+
+TABLE 10.- CONTROL TRAVEL AND FORCE GRADIENT VALUES:
+
+Control
+Longitudinal cyclic
+Lateral cyclic
+Pedals
+Collective
+Collective friction
+
+Gradient,
+Ib/in. (N/cm)
+1.06 (1.93)
+0.8 (1.A6)
+5.8 (10.6)
+0
+Adjustable approx. 3.7
+(16.46)
+
+S.01 CAB
+
+Travel,
+in. (cm)
+±6.25 (±15.24)
+±5.5 (±13.41)
+±3.25 (±7.92)
+0-10.45 (0-25.48)
+
+Chair 6 Fixed-Base Simulator
+This simulator is shown in figure 13. A framework contains the pilot's
+seat; aircraft instrument panel; cyclic, pedal, and collective controls; and a
+color TV monitor with collimating lens. Gradients on the pedals and cyclic
+controls were provided by spring cartridges with movable ground points. The
+trim system duplicated the helicopter's. A force-release button on the cyclic
+grip disengaged a magnetic brake allowing the ground points for the spring
+cartridges to be moved. Release of the button restored the spring gradients
+with zero force at the release position of the controls. Friction level in
+the collective lever was adjustable by the pilot. Control travels and force
+gradients used were representative of a UH-1B helicopter and are shown in
+table 11. Pilot's panel instruments are identified in figure 13 and described
+in table 12.
+
+32
+
+Figure 13.- Pilot's instrument panel - Chair 6.
+33
+
+TABLE 11.- CONTROL TRAVEL AND FORCE GRADIENT VALUES:
+
+CHAIR 6 CAB
+
+Gradient,
+Ib/in. (N/cm)
+
+Control
+Longitudinal cyclic
+Lateral cyclic
+Pedals
+Collective
+Collective friction
+
+Travel,
+in. (cm)
+
+1.0 ( . )
+18
+0.8 ( . 6
+14)
+5.8 ( 0 6
+1.)
+0
+Adjustable approx. 3.7
+(16.46)
+
+±6.33 (±15.43)
+±6.2 (±15.11)
+±3.25 (±7.92)
+0-12.2 (0-29.75)
+
+TABLE 12.- PILOT'S PANEL INSTRUMENTS:
+(see fig. 13)
+1. Rotor/engine RPM (NU)
+2. Indicated airspeed
+3. Attitude indicator
+4. Altimeter
+5. Torque pressure
+NU = Not Used
+
+6.
+7.
+8.
+9.
+10.
+11.
+
+CHAIR 6 CAB
+
+Heading indicator
+Rate of climb (IVSI)
+Percent turbine RPM (NU)
+Turn/bank
+ILS instrument (NU)
+Failure warning light
+
+VFA-02 Visual Flight Attachment
+This facility consists of scale terrain model scanned by an optical probe
+mounted on a movable gantry. Rotation of the probe and its optical elements
+duplicate the angular orientation of the simulated aircraft cockpit scene with
+respect to the earth, while scaled linear motions of the gantry duplicate aircraft position. The probe picture is recorded by a 525-line color TV camera.
+The field of view at the pilot's eye subtends an arc 36° vertically and 48°
+horizontally. Motions of the simulated aircraft calculated by the simulation
+computer are used to drive the probe. Linear motions of the optical probe were
+scaled at 1:600 with aircraft motions. The motion characteristics for VFA-02
+are summarized in table 13.
+
+Motion Drive Logic for S.01
+The motion drive logic is designed to convert the calculated motion of the
+simulated aircraft into drive signals which move the simulator cab, within its
+physical limits, such that the combined effects of cab acceleration and gravity
+subject the pilot to forces which are the best approximation to those that he
+would experience flying the real aircraft. The "best approximation" is that
+which gives the best representation of those forces which provide the pilot
+with motion cues and which, therefore, can influence his control of the
+aircraft.
+
+34
+
+•f-
+
+TABLE 13.- SUMMARY OF VISUAL FLIGHT ATTACHMENT (VFA-02) CHARACTERISTICS
+
+Axis
+
+Roll
+Pitch
+
+Yaw
+Long.a
+Lateral3
+Verticala
+
+Displacement
+limits
+
+100°
++20° , -30°
+Unlimited
+4 mi. (6.44 km)
+±0.5 mi. (0.81km)
+750 ft (228.6 m)
+
+At scale 1:600.
+
+Velocity
+limits (±)
+
+Acceleration
+limits (±)
+
+Frequency
+at 30°
+phase lag, Hz
+
+2 rad/s
+3 rad/s
+0.333 rad/s
+185 knots
+180 knots
+3300 ft/mm (16.76 m/s)
+
+4.2 rad/s2
+16 rad/s2
+2 rad/s2
+15 g
+8.5 g
+5.5 g
+
+1.70
+8.50
+0.80
+0.40
+0.56
+0.75
+
+The motion drive logic is shown in figures 14 and 15. The inputs are the
+calculated aircraft accelerations at the pilot station (Ax>yjZ and A(j))9j1p) and
+the actual position of the simulator cab (Apux y z) • The output is the
+required cab position (AsD™^ Ago,e .). As shown in figures 14 and 15, the
+calculated aircraft accelerations at the pilot station are passed through
+fourth-order washout filters which strongly attentuate the low frequency components, while allowing the high frequency components to pass virtually
+unchanged. If the low frequency components of acceleration were passed
+unattenuated to the simulator drive system they would quickly cause the cab to
+move to its position limits. To recover the motion cues associated with the
+low frequency translational accelerations, the cab is rotated (residual tilt)
+so that gravity provides components of force, acting on the pilot, which are
+roughly equivalent to the calculated low frequency translational inertial
+forces. This residual tilt technique can be used only for force compensation
+in the horizontal plane and must be accomplished at cab rotational accelerations sufficiently low to be undetectable to the pilot. The residual tilt is
+calculated as shown in figure 15 and its degree is controlled through the
+parameters o>Ljr and
+The cab rotational commands, ASD^J from the motion drive logic contain
+some high frequency components which, if uncompensated, would produce false
+translational motion cues through the effects of gravity. These spurious
+motion cues are removed by cab translational accelerations such that the corresponding inertial forces cancel the unwanted high frequency gravitational
+forces but not the low frequency (residual tilt) gravitational forces. This
+type of compensation is produced in computations shown at the top of figure 14
+and its degree is controlled by the parameters KQJ and KN .
+The signals resulting from the calculations described above may still
+contain some residual low frequency translational acceleration components. To
+ensure that these acceleration components do not cause excessive cab translation, the translational velocities and positions derived from the accelerations AXS, are passed through second-order washout (high pass) filters shown
+in figure 14.
+Additional translational position limiting is provided to protect against
+inadvertently driving the simulator hard into its stops. For each translational axis, calculations are performed which continually determine the travel
+remaining in the direction of motion of the cab. This distance, the drive
+acceleration limits, the computation frame time, and the computed cab velocity
+are used to determine whether or not the cab must be given additional deceleration to avoid contact with the stops. Any deceleration command from this
+logic is continued until both the commanded acceleration and velocity change
+sign. If this additional translation position limiting logic becomes active
+during a simulation test it will introduce spurious motion cues.
+In setting up the simulation,
+are adjusted until the motion cues
+aircraft simulated and the type of
+parameters used for the simulation
+table 14.
+
+the parameters of the motion drive logic
+feel subjectively correct for the type of
+task to be flown. The motion drive logic
+described in this report are given in
+
+36
+
+•
+
+TO
+FROM
+OTflT»0|
+AXES
+
+. COM.
+
+. DUE
+f?o7V)T/ON/
+
+TMay
+
+HIGH pass FILTER
+j
+Pi LOT- STA. - —
+
+To
+
+/)CCEL.
+
+U)
+
+L-OflO
+
+Lo^GASj
+
+TO
+
+t
+
+A so,
+
+COMPUTED
+
+Ac:
+
+Figure 14.- Translational axes motion drive logic for S.01 simulator.
+
+FORMATION
+HIGH
+
+PflSS
+
+FILTER
+
+PILOT
+/9CC5L.
+
+R/1TE.
+
+TO
+00
+
+axes
+TO
+
+PILOT
+
+———».
+= x, y
+
+Figure 15.- Rotational axes motion drive logic for S.01 simulator.
+
+TABLE 14.- COEFFICIENT VALUES FOR S.01 SIMULATOR MOTION DRIVE LOGIC
+Value
+
+Symbol
+
+Units
+
+rad/s
+rad/s
+rad/s
+rad/s
+
+0.4, 0.4
+0.4, 0.4
+0.4, 0.4
+0.5, 0.5
+
+rad/s
+rad/s
+
+0.4, 0.4
+
+0.25, 0.25
+1.4, 1.4
+1.4, 1.4
+C
+
+»
+
+H z2
+
+1.4, 1.4
+1.4, 1.4
+1.4, 1.4
+1.4, 1.4
+0.5, 0.5, 0.5
+0.5, 1.0, 0.5
+2.0, 2.0
+
+K
+
+LLX> KLLY
+
+1.0, 1.0
+0.1, 0.1, 0.1
+
+K
+
+0y'
+
+A
+
+MLX»
+
+A
+
+MLX» AMLy> AMLZ
+• AMLg»
+' AMLe>
+
+rad/s
+
+0.707, 0.707, 0.707
+0, 1.0, 1.0
+1.0, 1.0, 1.0
+0.1, 0.1, 0.5
+rad/s
+5.6 (1.7), 6.8 (2.1), 5.5 ( . ) ft/s2 (m/s2)
+17
+8.5 ( . ) 7.5 (2.3), 7.0 ( . ) ft/s (m/s)
+26,
+21
+8.0 (2.4), 8.0 (2.4), 8.0 (2.4) ft (m)
+1.2, 1.5, 2.8
+rad/s
+rad
+0.5326, 0.5326, 0.5326
+
+39
+
+REFERENCES
+
+1.
+
+Talbot, D. D., and Corliss, L. D.: A Mathematical Force and Moment Model
+of a UH-1H Helicopter for Flight Dynamics Simulations. NASA TM-73,254,
+1977.
+
+2.
+
+Baldwin, V.: V/STOLAND Failure Modes and Effects Analysis.
+Report 5440-0888-619, August 21, 1973.
+
+3.
+
+Grief, R. D.; Fry, E. B.; Gerdes, R. M.; and Gossett, T. D.: Effect of
+Stabilization on VTOL Aircraft in Hovering Flight. NASA TN D-6900, 1972.
+
+4.
+
+Users Manual for Operation and Checkout of Simulators and Support Equipment. Computer Sciences Corp. Report, March 1975.
+
+40
+
+Sperry
+
+1 Report No
+
+2 Government Accession No
+
+3 Recipients Catalog No
+
+NASA TM-73,258
+5 Report Date
+
+4 Title and Subtitle
+
+A FAILURE EFFECTS SIMULATION OF A LOW AUTHORITY
+FLIGHT CONTROL AUGMENTATION SYSTEM ON A UH-1H
+HELICOPTER
+7 Author(s)
+
+6 Performing Organization Code
+8 Performing Organization Report No
+
+A-7097
+
+Lloyd D. Corliss and Peter D. Talbot
+
+10 Work Unit No
+
+505-10-23
+
+9 Performing Organization Name and Address
+
+Ames Research Center, NASA and
+Ames Directorate, USAAMRDL
+Ames Research Center, Moffett Field, CA 94035
+
+11 Contract or Grant No
+
+13 Type of Report and Period Covered
+
+Technical Memorandum
+
+12 Sponsoring Agency Name and Address
+
+NASA, Washington, D. C. 20546 and
+U. S. Army Air Mobility R&D Laboratory
+Moffett Field, CA 94035
+
+14 Sponsoring Agency Code
+
+15 Supplementary Notes
+
+16 Abstract
+
+A two-pilot moving base simulator experiment was conducted to assess
+the effects of servo failures of a flight control system on the transient
+dynamics of a Bell UH-1H helicopter. The flight control hardware considered
+was part of the V/STOLAND system built by Sperry with control authorities
+of from 20-40%. Servo hardover and oscillatory failures were simulated in
+each control axis. Measurements were made to determine the adequacy of the
+failure monitoring system time delay and the servo center and lock time constant, the pilot reaction times, and the altitude and attitude excursions of
+the helicopter at hover and 60 knots.
+Safe recoveries were made from all failures under VFR conditions.
+Pilot reaction times were from 0.5 to 0.75 sec. Reduction of monitor
+delay times below these values resulted in significantly reduced excursion
+envelopes.
+A subsequent flight test was conducted on a UH-1H helicopter with the
+V/STOLAND system installed. Series servo hardovers were introduced in hover
+and at 60 knots straight and level. Data from these tests are included for
+comparison.
+
+17 Key Words (Suggested by Author(s))
+
+18 Distribution Statement
+
+Failure effects
+Helicopter
+Flight Control System
+Series servo
+Augmentation system
+19 Security Qassif (of this report)
+
+Unclassified
+
+Unlimited
+
+STAR Category - 08
+20 Security Classif (of this page)
+
+Unclassified
+
+21 No of Pages
+
+46
+
+"For sale by the National Technical Information Service Springfield Virginia 22161
+
+22 Price*
+
+$3.75
+

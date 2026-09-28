@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  HeliSim sample scenery.
+
+  Every object needs a coordinate (x, y, z, mandatory) and may carry an
+  orientation (rx, ry, rz in degrees, optional, default 0).  The orientation
+  is applied to the object's local geometry as R = Ry * Rx * Rz.
+
+  Available objects
+    tree   trunk with a triangular canopy, optional: scale (default 1)
+    hill   pyramid standing on a convex quad base, optional: base_front,
+           base_back, base_depth, height, apex_x, apex_z
+
+  The ground plane and its grid are implicit and must NOT be listed here.
+-->
+<scenery version="1.0">
+
+    <!-- forest in front of the start position -->
+    <tree x="-8" y="0" z="-6" rx="0" ry="20" rz="0" scale="1.15" />
+    <tree x="-4" y="0" z="-4" rx="0" ry="0" rz="0" scale="1" />
+    <tree x="-12" y="0" z="-11" rx="0" ry="55" rz="5" scale="1.3" />
+    <tree x="-7" y="0" z="-14" rx="0" ry="10" rz="0" scale="0.9" />
+    <tree x="-15" y="0" z="-17" rx="0" ry="210" rz="0" scale="1.2" />
+    <tree x="-3" y="0" z="-18" rx="0" ry="130" rz="0" scale="1.05" />
+    <tree x="-20" y="0" z="-8" rx="0" ry="300" rz="0" scale="1.4" />
+
+    <!-- forest on the right -->
+    <tree x="8" y="0" z="7" rx="0" ry="0" rz="0" scale="1.25" />
+    <tree x="9" y="0" z="-5" rx="0" ry="40" rz="0" scale="1" />
+    <tree x="5" y="0" z="-12" rx="0" ry="75" rz="0" scale="1.1" />
+    <tree x="13" y="0" z="-10" rx="0" ry="165" rz="0" scale="0.85" />
+    <tree x="17" y="0" z="-16" rx="0" ry="250" rz="-4" scale="1.35" />
+    <tree x="12" y="0" z="3" rx="0" ry="95" rz="0" scale="1" />
+
+    <!-- scattered around and behind the start position -->
+    <tree x="-10" y="0" z="9" rx="0" ry="0" rz="0" scale="1" />
+    <tree x="9" y="0" z="15" rx="0" ry="25" rz="0" scale="1.15" />
+    <tree x="-14" y="0" z="6" rx="0" ry="190" rz="0" scale="1.05" />
+    <tree x="-6" y="0" z="20" rx="0" ry="320" rz="0" scale="0.95" />
+
+    <!-- hills -->
+    <hill x="0" y="0" z="-38" rx="0" ry="0" rz="0"
+          base_front="20" base_back="26" base_depth="20" height="9" />
+    <hill x="-28" y="0" z="-30" rx="0" ry="0" rz="0" apex_x="-2" apex_z="1"
+          base_front="16" base_back="22" base_depth="18" height="8" />
+    <hill x="26" y="0" z="-32" rx="0" ry="-25" rz="0" apex_x="3"
+          base_front="20" base_back="26" base_depth="24" height="10" />
+    <hill x="18" y="0" z="20" rx="0" ry="15" rz="0"
+          base_front="14" base_back="18" base_depth="14" height="4" />
+
+</scenery>
