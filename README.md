@@ -21,7 +21,7 @@ Layered, each one importing only what sits below it:
 | `simulation.py` | 1579 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the trims, and what a renderer or a HUD asks for |
 | `regression_tm73254.py` | 661 | the report's figures 2 to 9 reflown: eight step inputs from 60 kt and from the hover, laid next to its published responses |
 | `scenery.py` | 280 | the XML scenery format and its loader - no pygame, no OpenGL |
-| `main.py` | 377 | the OpenGL sandbox: the implicit grass plane and its grid, the scenery, and a free camera |
+| `main.py` | 904 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, and the aircraft of `simulation.py` flown from the keyboard, drawn in its own body axes and followed by a camera |
 
 Only `main.py` imports anything outside the standard library.
 
@@ -29,26 +29,39 @@ Only `main.py` imports anything outside the standard library.
 
     pip install -r requirements.txt
     python main.py [scenery.xml]
+    python main.py --check          # the wiring, headless, no window
 
 `sample_scenery.xml` is used when no path is given.  The scenery file lists
 trees and hills with a coordinate and an orientation; `scenery.py`'s docstring
 and the file's own header describe the format.  The ground plane and its grid
 are implicit and are deliberately not part of the description.
 
-The camera in `main.py` is a free one, and its keys are:
+The aircraft is `simulation.py`'s own: the report's 6158 lb instrumented UH-1H,
+which starts parked on the pad, and the keys fly it:
 
 | key | what it does |
 | --- | --- |
-| `W` / `S` | drive forward / back along the view direction |
-| `A` / `D` | yaw left / right |
-| `Left` / `Right` | roll left / right |
-| `Up` / `Down` | pitch down / up |
+| `W` / `S` | collective up / down; a ratchet, so it stays where it is left |
+| `Up` / `Down` | cyclic forward (nose down) / aft (nose up) |
+| `Left` / `Right` | cyclic left / right |
+| `A` / `D` | pedals: nose left / right, the anti torque control |
+| `R` | recover: back to the trimmed hover at 200 m |
+| `P` | park: skids on the pad, collective down |
+| `C` | camera: behind the aircraft, or fixed on the pad |
 | `Esc` | quit |
 
-**`main.py` does not fly the helicopter yet.**  It draws the world and moves a
-free camera through it; the aircraft in `simulation.py`, which is complete and
-trimmed and flies, is not wired to the keyboard or to a chase view.  That is the
-next piece of work, and `TODO.md` has it.
+Hold `W` until the rotor lifts it off the skids.  The keyboard goes in through
+`simulation.PilotInput`, so the cyclic and the pedals spring back to centre when
+they are released, the collective does not, and the aircraft is drawn with one
+`glMultMatrixf` of `Simulation.render_matrix` with a `ChaseCamera` for a view.
+The window's caption is the HUD: altitude, vertical speed, airspeed, collective,
+and the trim, on the ground and crashed flags.
+
+The world is kilometres across because the aircraft is: a 16 km ground plane,
+10 m grid lines within 400 m of the aircraft and 250 m lines out to 8 km, and fog
+that fades the plane's edge into the sky where a horizon belongs.  Nothing
+clamps the aircraft or the camera any more; the envelopes in `simulation.py` are
+the limits.
 
 ## Self tests
 
@@ -63,7 +76,14 @@ its own numbers.  `regression_tm73254.py` is the one worth running after any
 tuning: it is the report's validation chapter, and it prints the eight traces in
 the report's own units and time base so they can be read against figures 2 to 9.
 
-`scenery.py` and `main.py` have no self test; see `TODO.md`.
+`main.py`'s wiring has a check of its own, headless and without a window:
+
+    python main.py --check
+
+It asserts the key mapping, the pickup from the pad, the recover and park keys,
+the camera triples, the sixteen floats the renderer is handed, the rotor
+azimuths and the world's own scale.  `scenery.py` is the module still without a
+test; see `TODO.md`.
 
 ## Layout
 
@@ -86,10 +106,13 @@ the report's own units and time base so they can be read against figures 2 to 9.
 ## Requirements
 
 Python 3.8 was what this was developed against, and `requirements.txt` pins
-exactly what `main.py` imports: numpy, pygame and PyOpenGL.  Nothing else in the
+exactly what `main.py` imports: pygame and PyOpenGL.  Nothing else in the
 project imports anything outside the standard library, so the model runs on a
-bare interpreter.  The pins are exact rather than floors because 1.24 was the
-first numpy to drop 3.8; loosen them to `>=` if the interpreter moves on.
+bare interpreter, and the renderer wants no numpy - it hands the model's own
+column-major tuple to `glMultMatrixf` through a `GLfloat` array.  The pins are
+exact rather than floors because these are the versions this was developed and
+run against, Python 3.8.2 on Windows; loosen them to `>=` if the interpreter
+moves on.
 
 ## The reference documents
 
@@ -101,6 +124,6 @@ rotor's limits come from; the other four were read and are not quoted.
 
 ## Status
 
-The physics chain is complete and the report's own validation responses are
-reproduced.  What is missing is the aircraft in the sandbox: `main.py` is still
-a free camera over the scenery.  See `TODO.md`.
+The physics chain is complete, the report's own validation responses are
+reproduced, and `main.py` flies the aircraft in the sandbox.  What is left is
+`scenery.py`'s own test.  See `TODO.md`.

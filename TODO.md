@@ -2,24 +2,7 @@
 
 ## Next
 
-**1. Fly the aircraft in the sandbox.**  `main.py` draws the world and moves a
-free camera through it; the flight model in `simulation.py` is finished and is
-not wired to it.  Three pieces:
-
-* the keyboard through `simulation.PilotInput` and `Simulation.fly`, over the
-  output of `Simulation.step`, instead of the free camera keys in `main.py`;
-* a chase view from `Simulation.render_matrix` and `ChaseCamera.eye_target_up`,
-  in place of the camera basis `main.py` keeps for itself;
-* a world scale that fits the aircraft.  `main.py` clamps the camera to +/-30 m
-  and 1 to 8 m of altitude, which is a walk around the field the scenery
-  describes, while the trims sit at 200 m and the regression's twelve second
-  traces cover kilometres.
-
-**2. Decide the `numpy` import in `main.py`.**  `main.py` imports numpy and
-never uses it; `requirements.txt` pins numpy because of that import.  Either the
-renderer work wants it, or the import and the pin should both go.
-
-**3. Give `scenery.py` a test.**  It is the one module with no self test and no
+**1. Give `scenery.py` a test.**  It is the one module with no self test and no
 demo, and nothing imports it but `main.py`.  `Scenery` parses *and* writes, so a
 load / save / load round trip of `sample_scenery.xml` would cover the format,
 including the `SceneryError` cases.
@@ -43,6 +26,34 @@ These are choices, not oversights: each is stated where it lives.
 
 ## Done
 
+* 2026-09-28 - **the aircraft is in `main.py`.**  It is `simulation.Simulation`
+  on the report's 6158 lb instrumented configuration, started parked on the pad
+  with the rotor turning and the collective down.  The keyboard goes in through
+  `PilotInput` (`W`/`S` collective, the arrows the cyclic, `A`/`D` the pedals),
+  `R` recovers to the trimmed 200 m hover, `P` parks it on the pad and `C` swaps
+  the chase camera for a fixed one on the pad.  It is drawn in its own body axes
+  - one `glMultMatrixf` of `render_matrix` - with the main and tail rotor discs,
+  the blades at table 2's coning and the clock's azimuth, and a shadow that fades
+  with altitude.
+* 2026-09-28 - **the world now fits the aircraft.**  A 16 km ground plane with a
+  two scale grid - 10 m lines within 400 m of the aircraft, 250 m lines out to
+  8 km, both aligned to world coordinates - fog in the sky's own colour where a
+  horizon belongs, and a 1 m to 20 km depth range in place of the old 80 m far
+  plane.  The camera clamp is gone entirely: +/-30 m and 1 to 8 m of altitude was
+  a walk around the field the scenery describes, while the model's trims sit at
+  200 m and a 60 kt trace covers a kilometre in twenty seconds.  The free camera
+  and its vector helpers went with it, since the keys they used now fly the
+  aircraft.
+* 2026-09-28 - **`numpy` is gone.**  Nothing in the renderer wanted it: the
+  model's own column-major tuple is handed to `glMultMatrixf` through a
+  `GLfloat` array, so the unused import and its pin in `requirements.txt` are
+  both gone, and the requirements are pygame and PyOpenGL.
+* 2026-09-28 - **`python main.py --check`**: the wiring of `main.py` checked
+  headless, with no window and no OpenGL context - the key mapping, the pickup
+  from the pad, the recover and park keys, the camera triples, the sixteen floats
+  of the render matrix, the rotor azimuths and the world's own constants.
+  Verified: `py_compile` clean, `--check` passing, and 300 frames rendered in
+  both views on an OpenGL 4.6 context with `glGetError` returning 0.
 * 2026-09-28 - the root swept: 114 files down to the nine that are the project,
   with the extraction scratch in `attic/`, the mining scripts in `tools/`, three
   OCR texts promoted into `reference/`, and a duplicate of the TM-73254 PDF (MD5

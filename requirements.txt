@@ -1,14 +1,13 @@
 # HeliSim's third party dependencies.  The physics modules - aerodynamics,
 # rotor_control, airframe, simulation, regression_tm73254 - and scenery.py are
 # standard library only; what is here is what main.py, the OpenGL sandbox,
-# imports: numpy, pygame and PyOpenGL (OpenGL.GL and OpenGL.GLU).
+# imports: pygame and PyOpenGL (OpenGL.GL and OpenGL.GLU).  The renderer needs no
+# numpy: it hands the model's own column-major tuple to glMultMatrixf.
 #
 # These are the versions the project is developed and run against: Python 3.8.2
-# on Windows, where numpy 1.23.4 is the last release line that supports 3.8
-# (numpy 1.24 dropped it), which is why the pins are exact rather than floors.
-# Loosen a pin to ">=" if the interpreter is moved on first.
+# on Windows.  The pins are exact rather than floors; loosen one to ">=" if the
+# interpreter is moved on first.
 
-numpy==1.23.4
 pygame==2.6.1
 PyOpenGL==3.1.10
 
