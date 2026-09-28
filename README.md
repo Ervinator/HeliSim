@@ -20,7 +20,7 @@ Layered, each one importing only what sits below it:
 | `airframe.py` | 2094 | TM-73254's force and moment model - main rotor, tail rotor, fuselage, fin, stabilizer - and the six degree of freedom equations of motion |
 | `simulation.py` | 1579 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the trims, and what a renderer or a HUD asks for |
 | `regression_tm73254.py` | 661 | the report's figures 2 to 9 reflown: eight step inputs from 60 kt and from the hover, laid next to its published responses |
-| `scenery.py` | 280 | the XML scenery format and its loader - no pygame, no OpenGL |
+| `scenery.py` | 603 | the XML scenery format and its loader - no pygame, no OpenGL, and the one module whose test needs no window and no physics |
 | `main.py` | 904 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, and the aircraft of `simulation.py` flown from the keyboard, drawn in its own body axes and followed by a camera |
 
 Only `main.py` imports anything outside the standard library.
@@ -69,12 +69,22 @@ Nothing here needs a window, so every test runs headless:
 
     python regression_tm73254.py
 
-The physics modules each run a demo when executed directly - `aerodynamics.py`,
-`rotor_control.py`, `airframe.py`, `simulation.py` and `regression_tm73254.py` -
-and the demos assert as they go, so a module that prints a full demo has passed
-its own numbers.  `regression_tm73254.py` is the one worth running after any
-tuning: it is the report's validation chapter, and it prints the eight traces in
-the report's own units and time base so they can be read against figures 2 to 9.
+The modules each run a demo when executed directly - `aerodynamics.py`,
+`rotor_control.py`, `airframe.py`, `simulation.py`, `regression_tm73254.py` and
+`scenery.py` - and the demos assert as they go, so a module that prints a full
+demo has passed its own numbers.  `regression_tm73254.py` is the one worth
+running after any tuning: it is the report's validation chapter, and it prints
+the eight traces in the report's own units and time base so they can be read
+against figures 2 to 9.
+
+`scenery.py` needs neither a window nor the physics:
+
+    python scenery.py
+
+It lists `sample_scenery.xml`, writes it out again and reads that back - the
+round trip is the whole of the format - and prints what the loader refuses and
+in whose words.  Its self test asserts the same, including that a description
+which is malformed is refused rather than quietly misread.
 
 `main.py`'s wiring has a check of its own, headless and without a window:
 
@@ -82,8 +92,7 @@ the report's own units and time base so they can be read against figures 2 to 9.
 
 It asserts the key mapping, the pickup from the pad, the recover and park keys,
 the camera triples, the sixteen floats the renderer is handed, the rotor
-azimuths and the world's own scale.  `scenery.py` is the module still without a
-test; see `TODO.md`.
+azimuths and the world's own scale.
 
 ## Layout
 
@@ -125,5 +134,6 @@ rotor's limits come from; the other four were read and are not quoted.
 ## Status
 
 The physics chain is complete, the report's own validation responses are
-reproduced, and `main.py` flies the aircraft in the sandbox.  What is left is
-`scenery.py`'s own test.  See `TODO.md`.
+reproduced, and `main.py` flies the aircraft in the sandbox.  Every module has a
+demo that asserts as it prints, so running any one of them is its own test;
+`TODO.md` lists what the model deliberately leaves out.

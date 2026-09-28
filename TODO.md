@@ -2,10 +2,9 @@
 
 ## Next
 
-**1. Give `scenery.py` a test.**  It is the one module with no self test and no
-demo, and nothing imports it but `main.py`.  `Scenery` parses *and* writes, so a
-load / save / load round trip of `sample_scenery.xml` would cover the format,
-including the `SceneryError` cases.
+Nothing outstanding.  Every module has a demo that asserts as it prints - the
+six below and `scenery.py` - and `main.py` has `--check` for the wiring that
+flying cannot test.
 
 ## Known limitations, from the modules themselves
 
@@ -26,6 +25,24 @@ These are choices, not oversights: each is stated where it lives.
 
 ## Done
 
+* 2026-09-28 - **`scenery.py` has a test.**  It is the one module whose test
+  needs no window and no physics, so `python scenery.py` is the whole of it: it
+  lists `sample_scenery.xml`, writes it out again, reads that back, and prints
+  what the loader refuses and in whose words.  The self test under the demo
+  round trips the project's own 21 objects in memory and through a temporary
+  file - the same coordinates, orientations and parameters in the same order,
+  and the same text again from the reloaded copy, since a serializer that
+  drifted a little would make a load and a save a diff - checks the kind
+  defaults a short description leaves out, the element and attribute shape
+  `to_element` writes, and every way a description can be wrong: a root element
+  that is not `<scenery>`, malformed XML, an unknown object kind, a missing
+  coordinate, a coordinate that is not a number, a misspelled parameter such as
+  `hieght`, a child element inside an object, and a file that is not there
+  coming back as an `OSError` rather than as a scenery error.  Verified:
+  `python scenery.py` printing `self test passed`, `py_compile` clean,
+  `main.py --check` still passing, and eleven deliberately broken copies of the
+  module - a dropped check, a dropped attribute or a rounded number each - every
+  one of them caught by the test.
 * 2026-09-28 - **the aircraft is in `main.py`.**  It is `simulation.Simulation`
   on the report's 6158 lb instrumented configuration, started parked on the pad
   with the rotor turning and the collective down.  The keyboard goes in through
