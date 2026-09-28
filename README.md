@@ -21,7 +21,7 @@ Layered, each one importing only what sits below it:
 | `simulation.py` | 1579 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the trims, and what a renderer or a HUD asks for |
 | `regression_tm73254.py` | 661 | the report's figures 2 to 9 reflown: eight step inputs from 60 kt and from the hover, laid next to its published responses |
 | `scenery.py` | 603 | the XML scenery format and its loader - no pygame, no OpenGL, and the one module whose test needs no window and no physics |
-| `main.py` | 904 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, and the aircraft of `simulation.py` flown from the keyboard, drawn in its own body axes and followed by a camera |
+| `main.py` | 948 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, and the aircraft of `simulation.py` flown from the keyboard, drawn in its own body axes and followed by a camera |
 
 Only `main.py` imports anything outside the standard library.
 
@@ -54,8 +54,12 @@ Hold `W` until the rotor lifts it off the skids.  The keyboard goes in through
 `simulation.PilotInput`, so the cyclic and the pedals spring back to centre when
 they are released, the collective does not, and the aircraft is drawn with one
 `glMultMatrixf` of `Simulation.render_matrix` with a `ChaseCamera` for a view.
-The window's caption is the HUD: altitude, vertical speed, airspeed, collective,
-and the trim, on the ground and crashed flags.
+The window's caption is the HUD: altitude, vertical speed, airspeed, the
+collective in per cent and the longitudinal and lateral cyclic and the pedal
+positions in inches, and the trim, on the ground and crashed flags.  The control
+positions are there because the aircraft cannot always show a key by itself: on
+the pad the skids hold it level and still, so the cyclic and the pedals move
+nothing until it is off the ground.
 
 The world is kilometres across because the aircraft is: a 16 km ground plane,
 10 m grid lines within 400 m of the aircraft and 250 m lines out to 8 km, and fog

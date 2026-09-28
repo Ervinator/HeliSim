@@ -45,6 +45,13 @@ that flies the machine: the aircraft starts parked on the pad, so hold W until
 the rotor lifts it.  A crashed aircraft is still flown where it is - the model
 does not stop - until R puts it back in the air.
 
+The window's caption is this sandbox's instrument panel, and it carries all
+four control positions: the collective in per cent, the longitudinal and
+lateral cyclic and the pedals in inches of travel.  They are there because the
+aircraft cannot always show a key on its own - on the pad the skids hold it
+level and still, so the cyclic and the pedals move it by nothing at all until
+it is off the ground.
+
 pygame and PyOpenGL are this file's only third party imports: everything under it
 is standard library only, and numpy is not imported at all.
 """
@@ -660,12 +667,23 @@ def fly_frame(sim, camera, frame_dt, keys, view=VIEW_CHASE):
 
 
 def window_title(sim, view):
-    """The window's caption: what a HUD would show, and the view in use."""
+    """The window's caption: what a HUD would show, and the view in use.
+
+    The four control positions are on it in the model's own units - the
+    collective in per cent of its travel, the two cyclic sticks and the
+    pedals in inches - because this caption is the sandbox's only instrument.
+    The collective alone would leave a key that the aircraft cannot show
+    looking like a key that does nothing: on the pad the skids hold the
+    aircraft level and still, so the cyclic and the pedals move it by nothing
+    at all until it is off the ground.
+    """
     telemetry = sim.telemetry()
     return ("HeliSim - UH-1H | alt %6.1f m %+6.0f fpm | %5.1f kt | coll %3.0f %%"
-            "%s%s%s | %s view"
+            " | cyc %+6.2f/%+6.2f in | ped %+5.2f in%s%s%s | %s view"
             % (telemetry.alt_agl, telemetry.height_rate_fpm,
                telemetry.airspeed_kt, 100.0 * telemetry.collective_fraction,
+               telemetry.long_stick_in, telemetry.lat_stick_in,
+               telemetry.pedal_in,
                " | trim" if telemetry.in_trim else "",
                " | on the ground" if telemetry.on_ground else "",
                " | CRASHED" if telemetry.crashed else "", view))
@@ -894,6 +912,32 @@ def _self_check():
     assert "CRASHED" not in window_title(sim, VIEW_CHASE)
     assert VIEW_CHASE in window_title(sim, VIEW_CHASE)
     assert len(load_scenery(DEFAULT_SCENERY_FILE)) > 0
+
+    # The caption carries the four control positions, and they are read off the
+    # same telemetry the aircraft is flown from.  The case worth asserting is
+    # the pad, where the skids hold the aircraft exactly level and still and a
+    # held key moves nothing but the caption: W ratcheting the collective up,
+    # the right cyclic and D arriving as inches of right stick and right pedal.
+    sim.on_the_pad()
+    parked_x = sim.airframe.state.position.x
+    parked_y = sim.airframe.state.position.y
+    for _ in range(30):
+        fly_frame(sim, camera, SIM_TIME_STEP_S,
+                  {pygame.KSCAN_W: True, pygame.KSCAN_RIGHT: True,
+                   pygame.KSCAN_D: True})
+    assert sim.on_ground and not sim.crashed
+    assert sim.airframe.state.position.x == parked_x     # the skids hold it
+    assert sim.airframe.state.position.y == parked_y
+    assert sim.airframe.state.speed < 1e-9
+    assert abs(sim.airframe.state.rates.x) < 1e-9        # and hold it level
+    pad = sim.telemetry()
+    assert 0.25 < pad.collective_fraction < 0.30         # W ratcheted, 0.55 a s
+    assert pad.long_stick_in == 0.0
+    assert pad.lat_stick_in > 1.0            # Right is a real input, in inches
+    assert pad.pedal_in > 1.0                # and so is D
+    assert ("| coll %3.0f %% | cyc %+6.2f/%+6.2f in | ped %+5.2f in"
+            % (100.0 * pad.collective_fraction, pad.long_stick_in,
+               pad.lat_stick_in, pad.pedal_in)) in window_title(sim, VIEW_CHASE)
 
 
 if __name__ == "__main__":

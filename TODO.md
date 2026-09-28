@@ -25,6 +25,23 @@ These are choices, not oversights: each is stated where it lives.
 
 ## Done
 
+* 2026-09-28 - **the caption carries all four control positions.**  A key the
+  aircraft cannot show looked like a key that did nothing: the caption had the
+  collective on it and nothing else, and on the pad the skids hold the aircraft
+  level and still, so the cyclic and the pedals moved nothing but a `coll %`
+  that was already up.  `window_title` now prints them in the model's own
+  units - `cyc %+6.2f/%+6.2f in` for the longitudinal and lateral stick and
+  `ped %+5.2f in` for the pedals.  They are the same numbers the check reads -
+  `Telemetry.long_stick_in`, `lat_stick_in` and `pedal_in` - so no new
+  plumbing.  The docstring and `README.md` say the same, since the caption is
+  the sandbox's only instrument panel.  Verified: `main.py --check` passing,
+  with the caption asserted on the pad after 30 frames of `W`, `Right` and `D`
+  - 27 per cent of collective, the longitudinal stick at zero, and the right
+  stick and right pedal over an inch, with the position, the speed and the
+  rates still exactly zero - and five deliberately broken copies of the
+  caption, a frozen pedal, a duplicated cyclic field, the collective in inches
+  under a per cent sign, the pilot's axes in place of the stick inches and a
+  check that stopped holding the cyclic.  Every one of them was caught.
 * 2026-09-28 - **`scenery.py` has a test.**  It is the one module whose test
   needs no window and no physics, so `python scenery.py` is the whole of it: it
   lists `sample_scenery.xml`, writes it out again, reads that back, and prints
