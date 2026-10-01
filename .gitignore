@@ -16,3 +16,7 @@ attic/
 # that the physics quotes are NOT ignored - those are small and are the point.
 reference/*.pdf
 reference/fm_pages/
+
+# main.py's key log: the last flight's keystrokes and telemetry, written beside
+# main.py and overwritten by the next run.  main.py --no-log does not write one.
+keylog.txt

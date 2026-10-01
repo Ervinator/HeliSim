@@ -163,7 +163,13 @@ class PilotControls:
 
     Collective runs 0 at the down stop to 11 in at the up stop.  The sticks and
     the pedals are centred at zero and are positive forward, right and right
-    respectively, so their stops are at half their full travel.
+    respectively, so their stops are at half their full travel.  Zero is the
+    *rigging's* centre, and every number here is a control position rather than
+    a deflection from something: :meth:`from_axes` and :meth:`to_axes` are the
+    two ways between these inches and the normalised axes
+    :class:`simulation.PilotInput` holds, and a trim is a position like any
+    other - see :class:`simulation.PilotInput` for why nothing here springs back
+    to it.
     """
 
     collective: float = 0.0     # in, 0 down stop .. 11 up stop
@@ -191,6 +197,47 @@ class PilotControls:
             lat_stick=(0.5 * UH1_LAT_STICK_TRAVEL_IN
                        * clip(lat_stick, -1.0, 1.0)),
             pedal=0.5 * UH1_PEDAL_TRAVEL_IN * clip(pedal, -1.0, 1.0))
+
+    def to_axes(self):
+        """These inches as normalised axes: the inverse of :meth:`from_axes`.
+
+        The collective comes out as a fraction of its travel and the sticks and
+        the pedals as fractions of half theirs, so 0 is the rigging's centre -
+        the down stop, for the collective - and +-1 is a stop.  This is how
+        :meth:`simulation.PilotInput.reset` puts the hands on a stick position
+        and what tells a caller where an axis ought to be.
+        """
+        clipped = self.clipped()
+        return (clipped.collective_fraction,
+                clipped.long_stick / (0.5 * UH1_LONG_STICK_TRAVEL_IN),
+                clipped.lat_stick / (0.5 * UH1_LAT_STICK_TRAVEL_IN),
+                clipped.pedal / (0.5 * UH1_PEDAL_TRAVEL_IN))
+
+    def collective_at(self, fraction):
+        """The cyclic and the pedals alone, with the collective at *fraction*.
+
+        The trim's own cyclic and pedals, which are the positions nobody had to
+        make, and the lever where the caller says it is - a fraction of its
+        travel, 0 for the down stop and 1 for the stop at the top.  This is how a
+        start on the pad names the one control it does not take from the trim:
+        see :meth:`simulation.Simulation.on_the_pad`, whose lever is 75 % of the
+        travel (:data:`simulation.PAD_COLLECTIVE`) rather than on the floor.
+        """
+        return PilotControls(
+            collective=(UH1_COLLECTIVE_TRAVEL_IN
+                        * max(0.0, min(1.0, float(fraction)))),
+            long_stick=self.long_stick, lat_stick=self.lat_stick,
+            pedal=self.pedal)
+
+    def collective_down(self):
+        """The cyclic and the pedals alone, with the collective down.
+
+        :meth:`collective_at` at the down stop, which is where a parked
+        aircraft's lever really is: the cyclic and pedals are the trim's own, and
+        the collective on the floor is the one control a pickup from the pad has
+        to move.
+        """
+        return self.collective_at(0.0)
 
     @property
     def collective_fraction(self):
