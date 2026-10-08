@@ -377,6 +377,24 @@ UH1_TIP_SPEED = UH1_OMEGA * UH1_RADIUS        # m/s, 249.4
 #: against that rotor rather than against a table.
 UH1_ROTOR_INERTIA = 3315.0    # kg m^2, 2 X 1658 about the shaft
 
+#: What a trim's numerical Newton solve takes per unknown: the step a Jacobian
+#: column takes, in that unknown, and the most one correction may move it.  Three
+#: kinds of unknown are mixed in one vector - stick positions in inches,
+#: attitudes in radians, and the rotor speed in rad/s for the trims that solve
+#: for it (see :meth:`Airframe.trim_hover`) - and the sizes differ because the
+#: numbers do.  A rotor speed is a large number whose residual is a torque in the
+#: hundreds of kilonewton metres, so 1e-5 rad/s of it would be lost in the
+#: rounding where 1e-3 is not, and half of the 40 rpm the governor's own droop
+#: band is worth is as far as one step should jump on a state that is a band
+#: rather than an attitude.  The clamps are not there to shape the answer, only
+#: to keep a singular Jacobian from running away.
+TRIM_STICK_STEP_IN = 0.01
+TRIM_ANGLE_STEP_RAD = 1e-5
+TRIM_ROTOR_STEP_RADPS = 1e-3
+TRIM_STICK_CLAMP_IN = 3.0
+TRIM_ANGLE_CLAMP_RAD = 3.0
+TRIM_ROTOR_CLAMP_RADPS = 2.0
+
 
 def _solve_inflow_ratio(thrust_at, mu, wind_along_axis, ground_effect,
                         r7=UH1_ROTOR_R7, r8=UH1_ROTOR_R8,
@@ -1161,6 +1179,22 @@ class FlightState:
                    100.0 * self.rotor_speed / UH1_OMEGA, self.rotor_rpm))
 
 
+def _trim_converged(values, tolerance, torque_tolerance):
+    """Has a trim's residual come inside what it is allowed, all of it?
+
+    The first six are newtons and newton metres - the net force in earth axes and
+    the three body moments of :meth:`Airframe.equilibrium_residual` - and are
+    allowed *tolerance*.  The seventh, which only a trim that solves for the
+    rotor speed has, is a shaft torque in newton metres and is allowed
+    *torque_tolerance*: the two differ by an order of magnitude because the
+    quantities do, and a residual inside a newton metre of a rotor whose own drag
+    is 16 kN m is as closed as a force inside a tenth of a newton.
+    """
+    if max(abs(value) for value in values[:6]) >= tolerance:
+        return False
+    return len(values) < 7 or abs(values[6]) < torque_tolerance
+
+
 @dataclass
 class Airframe:
     """The whole aircraft: control path, aerodynamics and equations of motion.
@@ -1253,6 +1287,20 @@ class Airframe:
     def throttle(self, value):
         if self.engine is not None:
             self.engine.governor.throttle = float(value)
+
+    @property
+    def shaft_driven(self):
+        """Is the rotor speed driven, rather than held where the state put it?
+
+        ``False`` on the report's own aircraft - the default - whose engine holds
+        whatever speed the rotor is doing, so that its rotor speed is a constant
+        and not a state at all.  ``True`` whenever there is something on the
+        other end of the shaft to balance it against: an :attr:`engine`, or a
+        fixed ``engine_torque``.  Two things ask: a trim that should solve for
+        the rotor speed rather than at a named one (:meth:`trim_hover`), and
+        :meth:`shaft_torque`, which has nothing to report when this is ``False``.
+        """
+        return self.engine is not None or self.engine_torque is not None
 
     def command_angles(self, controls):
         """The mixing stage on its own: stick positions in, control angles out."""
@@ -1419,6 +1467,61 @@ class Airframe:
             return 0.0
         return (self.engine_torque - forces.rotor.torque) / self.rotor_inertia
 
+    def shaft_torque(self, rotor_speed, air_density=None):
+        """What is turning the rotor, N m, at *rotor_speed*, rad/s.
+
+        The engine's settled torque when there is one - see
+        :meth:`engine.Engine.settled_torque`, which is its governor's droop curve
+        read as a torque and so a function of the rotor speed alone - or, on an
+        airframe given a fixed ``engine_torque``, simply that number.  This is
+        the ``Q_engine`` of :meth:`rotor_acceleration` for a state that is *not*
+        accelerating, which is what makes it the right thing for a trim to close
+        the shaft on: no lag, no last frame, no state of its own.
+
+        An airframe with neither an engine nor an ``engine_torque`` has no such
+        torque, and no shaft balance to close: that is the report's own aircraft,
+        whose engine holds whatever speed the rotor is doing.  Asking it for a
+        shaft torque raises rather than inventing one.
+        """
+        if not self.shaft_driven:
+            raise ValueError(
+                "this airframe has no engine and no engine_torque, so its rotor "
+                "speed is held rather than driven and there is no shaft balance "
+                "to solve: give it one of the two, or trim at a rotor_speed")
+        if self.engine is not None:
+            # Back into the unit the governor is rigged in, engine rpm of N2
+            # being a gearing away from the rotor's rad/s.
+            return self.engine.settled_torque(
+                rotor_speed * 60.0 / (2.0 * math.pi),
+                self.air_density if air_density is None else air_density)
+        return float(self.engine_torque)
+
+    def shaft_residual(self, controls, state, air_density=None, wind=None,
+                       forces=None):
+        """``Q_engine - Q``, N m at *controls* and *state*: the seventh residual.
+
+        Zero on a rotor that is holding its own speed, which is what a trim that
+        solves for the rotor speed closes, and the same quantity
+        :meth:`rotor_acceleration` divides by the inertia - so positive means the
+        engine is driving the shaft and the rotor is speeding up.  Parallel to
+        :meth:`equilibrium_residual`, which is the other six residuals of the
+        same trim, and it makes the same choices: the forces come from the
+        *commanded* angles rather than from the lags, so this does not depend on
+        whether the lags have been reset.
+
+        *forces* is the body forces a caller has already evaluated for the same
+        controls and state, if it has them - a trim's own residual does - so that
+        the shaft row of its Jacobian costs nothing rather than a second
+        evaluation of the same rotor.  Raises, like :meth:`shaft_torque`, on an
+        airframe whose rotor speed is held rather than driven.
+        """
+        if forces is None:
+            pitch = ControlPitch.from_angles(self.command_angles(controls),
+                                             controls.long_stick, self.twist_deg)
+            forces = self.forces(pitch, state, wind=wind, air_density=air_density)
+        return (self.shaft_torque(state.rotor_speed, air_density)
+                - forces.rotor.torque)
+
     def ground_velocity_of(self, state):
         """The NED velocity of a state, which its position integrates."""
         return apply(direction_cosine_matrix(state.attitude.x, state.attitude.y,
@@ -1506,7 +1609,8 @@ class Airframe:
         return self
 
     def trim_hover(self, weight=None, air_density=None, altitude=200.0,
-                   iterations=40, tolerance=0.1, rotor_speed=UH1_OMEGA):
+                   iterations=40, tolerance=0.1, rotor_speed=UH1_OMEGA,
+                   torque_tolerance=1.0):
         """The stick positions and attitude that hold a still hover.
 
         Six unknowns - collective, pedals, both cyclic sticks and the *pitch and
@@ -1540,15 +1644,34 @@ class Airframe:
         condition and not a curiosity - it is what a pilot sees on the way down
         in an autorotation - so the trim comes back with the state carrying it
         and with the collective raised to make up for the thrust the rotor is no
-        longer making per degree.  The shaft balance is *not* closed here: with
-        an ``engine_torque`` set, a trim at some rotor speed is an equilibrium of
-        the airframe and not of the engine, and the two are closed together only
-        by a rotor speed trim, which is not this.
+        longer making per degree.
+
+        ``rotor_speed=None`` asks for the rotor speed *itself* as a seventh
+        unknown, against a seventh residual: the shaft balance
+        (:meth:`shaft_residual`), which says the rotor's own drag torque is
+        exactly what is turning it.  The aircraft then comes back at the speed
+        its own engine and rotor settle at rather than at one a caller named,
+        which is the point of a hover on a governor having a rotor speed in it at
+        all - and it is the equilibrium of the engine *and* the airframe
+        together, which a trim at a named rotor speed is not: that one comes back
+        with whatever shaft imbalance the named condition has, and
+        :meth:`shaft_residual` is what says how big.  Two kinds of aircraft can
+        answer: one with an :attr:`engine`, which settles where its own droop
+        curve meets the rotor's drag, and one with a fixed ``engine_torque``,
+        which settles where that number does.  The report's own aircraft has
+        neither and cannot answer at all - its engine holds whatever the rotor is
+        doing - so asking it for this raises rather than returning a hover that
+        is not one.  *torque_tolerance* is the shaft imbalance the seventh
+        residual is allowed, in newton metres, in the same spirit as *tolerance*
+        is newtons.
         """
         air_density = self.air_density if air_density is None else air_density
         if weight is None:
             weight = self.mass * GRAVITY
         law = self.law
+        solving = rotor_speed is None          # the shaft is one of the unknowns
+        if solving:
+            rotor_speed = UH1_OMEGA            # the guess, and the first trial
         constants = rotor_constants(rotor_speed)
         per_in = math.degrees(law.collective_per_in)
         # A first guess from equation 1 with no inflow at all: T = R1 theta_0/3,
@@ -1557,9 +1680,13 @@ class Airframe:
         guess_deg = (math.degrees(report_rad) - 0.75 * self.twist_deg)
         collective_in = (guess_deg - law.collective_neutral_deg) / per_in
         # unknowns: collective in, pedal in, long stick in, lat stick in,
-        # pitch rad, roll rad
+        # pitch rad, roll rad - and, when the shaft balance is one of the
+        # equations, the rotor speed itself, rad/s.  That one starts at the
+        # reference, which is where any hover a caller would name starts.
         guess = [collective_in, 0.0, 0.0, 0.0,
                  -math.atan2(-UH1_CG_AHEAD_OF_HUB, UH1_HUB_HEIGHT), 0.0]
+        if solving:
+            guess.append(rotor_speed)
         position = Vector3(0.0, 0.0, -altitude)
 
         def residual(values):
@@ -1568,48 +1695,77 @@ class Airframe:
             attitude = Vector3(values[5], values[4], 0.0)
             trial = FlightState(position=position, velocity=Vector3(),
                                 attitude=attitude, rates=Vector3(),
-                                rotor_speed=rotor_speed)
+                                rotor_speed=values[6] if solving else rotor_speed)
             pitch = ControlPitch.from_angles(law.mix(controls), values[2],
                                              self.twist_deg)
+            # Table 3 is parametric in the rotor speed, so a trim that solves for
+            # one rebuilds the constants at every trial - which is the price of
+            # the seventh unknown, and why the other six are solved with one set
+            # of them.
             forces = body_forces(pitch, Vector3(), Vector3(),
                                  air_density=air_density,
                                  rotor_height=trial.rotor_height,
                                  rotor_time_constant=self.rotor_time_constant,
-                                 constants=constants)
+                                 constants=(rotor_constants(values[6]) if solving
+                                            else constants))
             theta, phi = values[4], values[5]
-            return [forces.force.x - weight * math.sin(theta),
+            rows = [forces.force.x - weight * math.sin(theta),
                     forces.force.y + weight * math.sin(phi) * math.cos(theta),
                     forces.force.z + weight * math.cos(phi) * math.cos(theta),
                     forces.moment.x, forces.moment.y, forces.moment.z]
+            if solving:
+                # Out of the forces just evaluated: the shaft balance is another
+                # question about the same rotor, not another rotor.
+                rows.append(self.shaft_residual(controls, trial,
+                                                air_density=air_density,
+                                                forces=forces))
+            return rows
 
+        count = len(guess)
+        clamps = ([TRIM_STICK_CLAMP_IN] * 4 + [TRIM_ANGLE_CLAMP_RAD] * 2
+                  + ([TRIM_ROTOR_CLAMP_RADPS] if solving else []))
         for _ in range(max(int(iterations), 4)):
             values = residual(guess)
-            if max(abs(value) for value in values) < tolerance:
+            if _trim_converged(values, tolerance, torque_tolerance):
                 break
-            jacobian = [[0.0] * 6 for _ in range(6)]
-            for column in range(6):
-                step = 1e-5 if column >= 4 else 0.01
+            jacobian = [[0.0] * count for _ in range(count)]
+            for column in range(count):
+                step = (TRIM_ROTOR_STEP_RADPS if solving and column == 6
+                        else TRIM_ANGLE_STEP_RAD if column >= 4
+                        else TRIM_STICK_STEP_IN)
+                if solving and column == 6:
+                    # Taken on the side the answer is on.  A governor's droop
+                    # curve has a kink at the rotor speed it is asking for - no
+                    # torque at or above it, an increasing slope below - and a
+                    # rotor speed trim starts exactly on that kink, where a
+                    # difference taken upwards reads the flat side and throws
+                    # its first step away.  The balance is always on the low
+                    # side of it, because an idling free turbine is not a brake
+                    # and there is nothing to balance a rotor running fast.
+                    step = -step
                 shifted = list(guess)
                 shifted[column] += step
                 delta = residual(shifted)
-                for row in range(6):
+                for row in range(count):
                     jacobian[row][column] = (delta[row] - values[row]) / step
             correction = solve_linear(jacobian, [-value for value in values])
             if correction is None:
                 break
-            guess = [guess[index] + max(-3.0, min(3.0, correction[index]))
-                     for index in range(6)]
+            guess = [guess[index] + max(-clamps[index],
+                                        min(clamps[index], correction[index]))
+                     for index in range(count)]
 
         controls = PilotControls(collective=guess[0], pedal=guess[1],
                                  long_stick=guess[2], lat_stick=guess[3])
         state = FlightState(position=position, velocity=Vector3(),
                             attitude=Vector3(guess[5], guess[4], 0.0),
-                            rates=Vector3(), rotor_speed=rotor_speed)
+                            rates=Vector3(),
+                            rotor_speed=guess[6] if solving else rotor_speed)
         return controls, state
 
     def trim_level_flight(self, airspeed, weight=None, air_density=None,
                           altitude=200.0, iterations=40, tolerance=0.1,
-                          rotor_speed=UH1_OMEGA):
+                          rotor_speed=UH1_OMEGA, torque_tolerance=1.0):
         """The stick positions and attitude that hold level flight at *airspeed*.
 
         Level flight is a condition on the *path*, not on the attitude: the
@@ -1646,12 +1802,19 @@ class Airframe:
         trim.
 
         *rotor_speed* is the rotor speed the condition is asked at, rad/s, the
-        same knob :meth:`trim_hover` has and for the same reason.
+        same knob :meth:`trim_hover` has and for the same reason - including
+        ``None``, which solves for the rotor speed as a seventh unknown against
+        the shaft balance, so that a level flight condition comes back at the
+        speed the engine and the rotor settle at as well.  *torque_tolerance* is
+        that seventh residual's own allowance, in newton metres.
         """
         air_density = self.air_density if air_density is None else air_density
         if weight is None:
             weight = self.mass * GRAVITY
         law = self.law
+        solving = rotor_speed is None          # the shaft is one of the unknowns
+        if solving:
+            rotor_speed = UH1_OMEGA            # the guess, and the first trial
         constants = rotor_constants(rotor_speed)
         per_in = math.degrees(law.collective_per_in)
         # A first guess from equation 1 with no inflow at all: the collective
@@ -1662,10 +1825,13 @@ class Airframe:
         guess_deg = (math.degrees(report_rad) - 0.75 * self.twist_deg)
         collective_in = (guess_deg - law.collective_neutral_deg) / per_in
         # unknowns: collective in, pedal in, long stick in, lat stick in,
-        # pitch rad, roll rad - and the attitude starts level, which is a few
-        # degrees from the hover's 4.4 deg and from the trim of any speed, so
+        # pitch rad, roll rad - and the rotor speed, rad/s, when the shaft
+        # balance is one of the equations.  The attitude starts level, which is a
+        # few degrees from the hover's 4.4 deg and from the trim of any speed, so
         # that the first Newton step is short in both of them.
         guess = [collective_in, 0.0, 0.0, 0.0, 0.0, 0.0]
+        if solving:
+            guess.append(rotor_speed)
         position = Vector3(0.0, 0.0, -altitude)
 
         def trial_state(values):
@@ -1675,33 +1841,50 @@ class Airframe:
                 position=position,
                 velocity=apply(transpose(matrix), Vector3(airspeed, 0.0, 0.0)),
                 attitude=Vector3(values[5], values[4], 0.0), rates=Vector3(),
-                rotor_speed=rotor_speed)
+                rotor_speed=values[6] if solving else rotor_speed)
 
         def residual(values):
             controls = PilotControls(collective=values[0], pedal=values[1],
                                      long_stick=values[2], lat_stick=values[3])
+            trial = trial_state(values)
             force, moment = self.equilibrium_residual(
-                controls, trial_state(values), weight=weight,
-                air_density=air_density)
-            return [force.x, force.y, force.z, moment.x, moment.y, moment.z]
+                controls, trial, weight=weight, air_density=air_density)
+            rows = [force.x, force.y, force.z, moment.x, moment.y, moment.z]
+            if solving:
+                # The shaft row out of forces of its own: the flight path balance
+                # and the shaft balance are different questions even though both
+                # come out of the same rotor, and a trim only pays this second
+                # evaluation when it asked for the rotor speed as well.
+                rows.append(self.shaft_residual(controls, trial,
+                                                air_density=air_density))
+            return rows
 
+        count = len(guess)
+        clamps = ([TRIM_STICK_CLAMP_IN] * 4 + [TRIM_ANGLE_CLAMP_RAD] * 2
+                  + ([TRIM_ROTOR_CLAMP_RADPS] if solving else []))
         for _ in range(max(int(iterations), 4)):
             values = residual(guess)
-            if max(abs(value) for value in values) < tolerance:
+            if _trim_converged(values, tolerance, torque_tolerance):
                 break
-            jacobian = [[0.0] * 6 for _ in range(6)]
-            for column in range(6):
-                step = 1e-5 if column >= 4 else 0.01
+            jacobian = [[0.0] * count for _ in range(count)]
+            for column in range(count):
+                step = (TRIM_ROTOR_STEP_RADPS if solving and column == 6
+                        else TRIM_ANGLE_STEP_RAD if column >= 4
+                        else TRIM_STICK_STEP_IN)
+                if solving and column == 6:
+                    # The side the answer is on; see :meth:`trim_hover`.
+                    step = -step
                 shifted = list(guess)
                 shifted[column] += step
                 delta = residual(shifted)
-                for row in range(6):
+                for row in range(count):
                     jacobian[row][column] = (delta[row] - values[row]) / step
             correction = solve_linear(jacobian, [-value for value in values])
             if correction is None:
                 break
-            guess = [guess[index] + max(-3.0, min(3.0, correction[index]))
-                     for index in range(6)]
+            guess = [guess[index] + max(-clamps[index],
+                                        min(clamps[index], correction[index]))
+                     for index in range(count)]
 
         controls = PilotControls(collective=guess[0], pedal=guess[1],
                                  long_stick=guess[2], lat_stick=guess[3])
@@ -2368,6 +2551,101 @@ def _self_test():
         failed.step(1.0 / 60.0, controls)
     assert failed.engine.power < 0.02 * drag * UH1_OMEGA, failed.engine.power
     assert failed.state.rotor_rpm < UH1_RPM_LOW, failed.state.rotor_rpm
+
+    # ---------------------------------------------------------------------
+    # The rotor speed as an unknown: a trim that closes the shaft as well.
+    # ---------------------------------------------------------------------
+
+    # ``rotor_speed=None`` is the seventh unknown, against the shaft balance.
+    # On the 8700 lb aircraft with a T53 on the shaft the answer is the speed
+    # the governor's droop curve and the rotor's drag settle on together, which
+    # is the point of it: the trim lands on the equilibrium the loop above spent
+    # six seconds walking to, so a run that starts from it starts where it would
+    # have ended up.  It is inside the droop band too - 40 rpm of N2 over the
+    # 20.37 gearing is 1.96 rpm of rotor, and the answer is 1.03 below the
+    # reference - and it is a hover of the *engine and the airframe together*,
+    # which a trim at a named rotor speed is not.
+    governed_trim = Airframe(engine=Engine())
+    solved_controls, solved_state = governed_trim.trim_hover(rotor_speed=None)
+    assert abs(solved_state.rotor_rpm - settled) < 0.05, \
+        (solved_state.rotor_rpm, settled)
+    assert UH1_RPM - 2.0 < solved_state.rotor_rpm < UH1_RPM
+    # Both halves of it are closed: the six residuals of the flight path and the
+    # shaft's own seventh.
+    solved_force, solved_moment = governed_trim.equilibrium_residual(
+        solved_controls, solved_state)
+    assert abs(solved_force.x) < 0.1 and abs(solved_force.y) < 0.1
+    assert abs(solved_force.z) < 0.1 and solved_moment.length() < 0.1
+    solved_shaft = governed_trim.shaft_residual(solved_controls, solved_state)
+    assert abs(solved_shaft) < 0.1, solved_shaft
+    # And a hover rather than merely a solution: flown from there it holds, with
+    # no settling transient left in it at all - which the same aircraft trimmed
+    # at 324 rpm does have, since the governor then walks it down to 322.98.
+    governed_trim.reset(solved_state, solved_controls)
+    for _ in range(300):
+        governed_trim.step(1.0 / 60.0, solved_controls)
+    assert abs(governed_trim.state.altitude - solved_state.altitude) < 0.01
+    assert abs(governed_trim.state.rotor_rpm - solved_state.rotor_rpm) < 0.01, \
+        governed_trim.state.rotor_rpm
+
+    # The other kind of driven shaft: a fixed torque, which has no droop curve
+    # and settles where its own number crosses the rotor's drag.  That airframe
+    # is the ``held`` one above - a torque of exactly the 324 rpm trim's own
+    # 16267.8 N m - and the hover it sustains comes back 0.004 rpm *below* the
+    # reference rather than at it, because the drag is a curve and not a
+    # constant.  A governor's answer is a whole rpm under instead, which is what
+    # a droop band is for: the two are the same hover with different engines on
+    # it.  (No torque *above* that drag is checked here: the rotor cannot absorb
+    # one at this thrust without a speed far outside the UH-1's band - the wind
+    # up of the ``surge`` airframe above - so the fixed torque with a hover near
+    # the reference is the reference's own drag.)
+    fixed_controls, fixed_state = held.trim_hover(rotor_speed=None)
+    assert abs(fixed_state.rotor_rpm - 323.9957) < 0.01, fixed_state.rotor_rpm
+    assert UH1_RPM - 2.0 < fixed_state.rotor_rpm < UH1_RPM
+    assert abs(held.shaft_residual(fixed_controls, fixed_state)) < 0.1
+    assert solved_state.rotor_rpm < fixed_state.rotor_rpm < UH1_RPM
+    held.reset(fixed_state, fixed_controls)
+    for _ in range(300):
+        held.step(1.0 / 60.0, fixed_controls)
+    assert abs(held.state.altitude - fixed_state.altitude) < 0.02, held.state
+    assert abs(held.state.rotor_speed - fixed_state.rotor_speed) < 1e-4
+
+    # The same seventh unknown in level flight, which is the report's own 60 kt
+    # condition: less power than the hover needs, so less droop - 323.34 against
+    # 322.98 - and a hover's worth of rotor speed below the nameplate either way.
+    level_driven = Airframe(engine=Engine())
+    driven_controls, driven_state = level_driven.trim_level_flight(
+        60.0 * KNOT, rotor_speed=None)
+    assert driven_state.rotor_speed < UH1_OMEGA      # drooped, like the hover's
+    assert abs(driven_state.speed - 60.0 * KNOT) < 1e-9
+    assert solved_state.rotor_rpm < driven_state.rotor_rpm < UH1_RPM
+    assert abs(level_driven.shaft_residual(driven_controls, driven_state)) < 0.1
+    assert driven_controls.collective < solved_controls.collective - 0.5
+
+    # The shaft balance itself, and what an aircraft with no engine does when it
+    # is asked for one: the report's own aircraft holds its rotor speed, so it
+    # raises rather than inventing a torque to balance.
+    assert not Airframe().shaft_driven and not airframe.shaft_driven
+    assert held.shaft_driven and cut.shaft_driven and governed.shaft_driven
+    try:
+        Airframe().shaft_torque(UH1_OMEGA)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("a held rotor answered for a shaft torque")
+    try:
+        Airframe().trim_hover(rotor_speed=None)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("a held rotor trimmed for a rotor speed")
+    assert abs(Airframe(engine_torque=drag).shaft_torque(UH1_OMEGA)
+               - drag) < 1e-9
+    # Which is the quantity rotor_acceleration divides: nothing turning the
+    # rotor is the whole of the drag, and the trimmed drag is none of it.
+    assert abs(cut.shaft_residual(controls, trim_state) + drag) < 1e-9
+    assert abs(held.shaft_residual(controls, trim_state)) < 1e-9, \
+        held.shaft_residual(controls, trim_state)
 
 
 def _demo():

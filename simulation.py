@@ -941,9 +941,18 @@ class Simulation:
         reference is what :meth:`in_trim` compares against, and - this call's
         being where the run begins - where a later bare :meth:`reset` puts the
         aircraft back.
+
+        An airframe whose shaft is *driven* - an engine, or a fixed
+        ``engine_torque``, see :attr:`airframe.Airframe.shaft_driven` - trims
+        with the rotor speed solved for rather than at the nameplate, so the run
+        begins on the hover its own engine settles at instead of a few rpm above
+        it and sinking towards it.  The report's own aircraft has neither and
+        trims at the 324 rpm reference exactly as it always did.
         """
-        controls, state = self.airframe.trim_hover(altitude=altitude,
-                                                   iterations=iterations)
+        driven = self.airframe.shaft_driven
+        controls, state = self.airframe.trim_hover(
+            altitude=altitude, iterations=iterations,
+            rotor_speed=None if driven else UH1_OMEGA)
         self.trim_controls, self.trim_state = controls, state
         self.reset(state=state, controls=controls)
         return controls, state
@@ -975,7 +984,8 @@ class Simulation:
                         else self.start_altitude)
         controls, state = self.airframe.trim_level_flight(
             airspeed, altitude=altitude, iterations=iterations,
-            tolerance=tolerance)
+            tolerance=tolerance,
+            rotor_speed=None if self.airframe.shaft_driven else UH1_OMEGA)
         self.trim_controls, self.trim_state = controls, state
         self.reset(state=state, controls=controls)
         return controls, state
@@ -1624,20 +1634,24 @@ def _self_test():
     assert blind.rotor_azimuth_deg == 0.0
     assert blind.airframe.state.values() == kept.airframe.state.values()
 
-    # Off a governed rotor the blades turn at the rotor's own speed and not at the
-    # nameplate, which is the whole point of an azimuth that is an integral: a
-    # fresh powered aircraft, whose governor has its 40 rpm of droop to find and
-    # holds 322.9964 rpm after the two seconds, is 12.18 deg behind the fixed
-    # rotor's 288 - of the two integrals, 3888 against 3875.82, and the strobe
-    # error a clock of ``sim_time * UH1_RPM * 6`` would have drawn.
+    # Off a governed rotor the blades turn at the rotor's own speed and not at
+    # the nameplate, which is the whole point of an azimuth that is an integral:
+    # a powered aircraft trims at the speed its own governor settles on -
+    # 322.9752 rpm, see the trim further down - so two seconds of it is 3875.70
+    # deg of clock rather than the fixed rotor's 3888, and the blades are the
+    # 12.3 deg behind that a clock of ``sim_time * UH1_RPM * 6`` draws wrong.
+    # The clock is the speed the rotor actually did, which is what makes it
+    # right on any rotor.
     powered = Simulation(airframe=airframe_preset("simulation", engine=True))
     for _ in range(120):
         powered.step(SIM_TIME_STEP_S)
-    assert abs(powered.airframe.state.rotor_rpm - 322.9964) < 0.001
+    settled_rpm = powered.airframe.state.rotor_rpm
+    assert UH1_RPM - 2.0 < settled_rpm < UH1_RPM, settled_rpm
+    assert abs(powered.rotor_azimuth_deg - settled_rpm * 6.0 * 2.0) < 0.05, \
+        powered.rotor_azimuth_deg
     behind = 288.0 - math.fmod(powered.rotor_azimuth_deg, 360.0)
-    assert abs(behind - 12.18) < 0.01, behind
-    assert behind > 0.0                          # behind, since 322.9964 < UH1_RPM
-    assert UH1_RPM - powered.airframe.state.rotor_rpm < 40.0   # inside its droop band
+    assert 12.0 < behind < 12.6, behind
+    assert UH1_RPM - settled_rpm < 40.0          # inside its droop band
 
     # The same hover with a keyboard nobody is touching, which is what a trim
     # that starts the axes is for: a fresh simulation's hands are put on the
@@ -1839,6 +1853,31 @@ def _self_test():
     panel = emer.telemetry().engine
     assert panel.failed and panel.power < 0.001 * UH1_ENGINE_POWER_W, panel
     assert emer.telemetry().rotor_rpm < UH1_RPM_LOW, emer.telemetry().rotor_rpm
+
+    # A simulation whose shaft is *driven* trims with the rotor speed solved for,
+    # which is the other half of having an engine in the model: the hover a
+    # powered run begins in is the one its own governor and rotor settle on -
+    # 322.98 rpm, a whole rpm under the report's 324 - rather than one three rpm
+    # above it, so the first seconds of a powered run are not a settling
+    # transient.  The report's own aircraft has no engine at all and still trims
+    # at exactly UH1_RPM.
+    powered = Simulation(airframe=airframe_preset(engine=True))
+    assert powered.airframe.shaft_driven and grip.airframe.shaft_driven
+    assert abs(powered.trim_state.rotor_rpm - 322.9752) < 0.05, \
+        powered.trim_state.rotor_rpm
+    assert powered.airframe.state.rotor_speed == powered.trim_state.rotor_speed
+    assert UH1_RPM - 2.0 < powered.airframe.state.rotor_rpm < UH1_RPM
+    assert powered.in_trim()
+    assert 99.6 < powered.telemetry().rotor_percent < 99.7
+    for _ in range(300):
+        powered.step_fixed()
+    assert abs(powered.airframe.state.altitude - 200.0) < 0.01, \
+        powered.telemetry()
+    assert abs(powered.airframe.state.rotor_rpm - 322.9752) < 0.05, \
+        powered.telemetry()
+    assert not powered.crashed and powered.in_trim()
+    assert not sim.airframe.shaft_driven
+    assert abs(sim.airframe.state.rotor_rpm - UH1_RPM) < 1e-9
 
     # The axes are control positions, so a stick that is let go stays where it
     # was: that is the ratchet, and it is the whole difference from the springs

@@ -11,12 +11,8 @@ wiring that flying cannot test.
   the shaft - see `Done` below - so a torque now comes from somewhere: a T53 with
   a twist grip, an N2 governor with the manual's own +-40 rpm droop band, a
   0.6 sec spool, 1125 ft-lb of data plate torque, 50 psi of transmission, 7 psi
-  for EMER and the manual's bleed air numbers.  Four things are still open:
+  for EMER and the manual's bleed air numbers.  Three things are still open:
 
-  * *a trim that solves for the rotor speed.*  `trim_hover` and
-    `trim_level_flight` accept an omega to solve at but do not solve *for* one;
-    closing the shaft balance with the other six unknowns is what a governor's
-    droop curve and an autorotation's steady descent both are;
   * *`trim_autorotation`.*  Descent rate as the unknown, for the case the
     engine's failure path can now be flown into;
   * *main.py's own aircraft.*  It flies the report's fixed rotor, so its
@@ -70,6 +66,87 @@ These are choices, not oversights: each is stated where it lives.
   how long the window took to see the key.
 
 ## Done
+
+* 2026-10-08 - **a trim that solves for the rotor speed, which is the hover the
+  engine is really in.**  The two trims took an omega to solve *at* and left the
+  shaft balance open, so a "trimmed" hover on the 8700 lb aircraft with a T53 on
+  it began at 324 rpm with the governor holding nothing in particular and the
+  rotor walked down to 322.98 over the first seconds: a hover that sinks towards
+  its own trim rather than one that is in it.
+
+  `Engine.settled_torque(rotor_rpm, air_density)` is the engine's half of that
+  balance - ``P / omega`` of what the governor's droop curve is asking for at the
+  speed the rotor is doing, a *function* of that speed rather than the last
+  frame's lagged power, because the gas producer's lag has no meaning in a steady
+  condition.  The self test asserts it is where the loop arrives (an engine
+  settled on it delivers exactly it) and that it is `max_torque` once the whole
+  droop band is used up.  `Airframe.shaft_torque(rotor_speed)` asks the same
+  question of the airframe: the engine's settled torque, or a fixed
+  `engine_torque`, and a `ValueError` on the report's own aircraft - whose engine
+  holds whatever the rotor is doing, so there is no shaft balance to close and
+  asking for one is an error rather than an invented number.
+  `Airframe.shaft_driven` is that predicate, and `Airframe.shaft_residual(controls,
+  state)` is ``Q_shaft - Q_rotor``: the seventh residual, parallel to
+  `equilibrium_residual`'s six and the same quantity `rotor_acceleration` divides
+  by the inertia.
+
+  `trim_hover` and `trim_level_flight` take `rotor_speed=None` as the sentinel
+  for "the rotor speed is an unknown too", and the seventh residual is the shaft
+  balance - so the trim comes back at the equilibrium of the engine *and* the
+  airframe, which no trim at a named rotor speed is, and `torque_tolerance` is
+  that residual's own allowance in newton metres beside `tolerance`'s newtons.
+  Table 3 is rebuilt at every trial, which is the price of the seventh unknown and
+  the reason the other six are still solved with one set of constants.  The solve
+  needs two things the other six did not: the Jacobian's rotor speed column takes
+  a 1e-3 rad/s step and a 2 rad/s clamp - a rotor speed is a large number whose
+  residual is a torque in the hundreds of kilonewton metres, and half the droop
+  band is as far as one step should jump on a state that is a band rather than an
+  attitude - and it is differenced *downwards*.  That last one is not a detail:
+  a governor's droop curve has a kink at the speed it is asking for, no torque at
+  or above it and an increasing slope below, a trim starts *exactly* on that kink,
+  and a forward difference there reads the flat side.  Measured before it was
+  fixed: the first correction came back asking for -72 rad/s, the clamp cut it to
+  -2, and the loop ping-ponged between two clamped corners for all forty
+  iterations with the shaft 8104 N m out.  The low side is the right side for
+  every rotor, because an idling free turbine is not a brake and there is nothing
+  to balance a rotor running fast.
+
+  What it flies: the governed hover comes back at 322.9752 rpm with the shaft
+  closed to 0.006 N m of its 16267.8 - 0.006 rpm off the 322.9816 the frame loop
+  integrates to, and inside the band the manual rigs, 40 rpm of N2 over the 20.37
+  gearing being 1.96 rpm of rotor.  Level flight at the report's 60 kt comes back
+  at 323.34: less power, so less droop, and still a whole rpm under the
+  nameplate.  A *fixed* `engine_torque` of that same 324 rpm trim's drag sustains
+  a hover at 323.9957 rpm - 0.004 under the reference and not at it, because the
+  drag is a curve and not a constant - and no torque above it has a hover near the
+  reference at all, the rotor not being able to absorb one at that thrust without
+  the wind up `surge` already shows.  `Simulation.trim` and `trim_level_flight`
+  pass the sentinel when the shaft is driven and the nameplate otherwise, so a
+  powered run now begins in its own hover with no settling transient in it: five
+  seconds of frames off the trim move neither the altitude nor the rotor speed,
+  where the same aircraft trimmed at 324 rpm is still walking down.
+
+  Verified: all seven module self tests and `main.py --check` passing, with the
+  new assertions written in the same style - the six residuals and the seventh all
+  closed at the solved hover, the solved rotor speed against the loop's own
+  settled 322.98, a fixed torque against the drag it was handed, both kinds of
+  shaft flown for five seconds from the trim they solved, the report's own
+  aircraft raising for a shaft torque and for a rotor speed trim, and the airframe
+  that is *told* a torque balancing it to the last bit.  Four broken copies were
+  flown against those assertions: the settled torque read as the lagged power
+  instead (caught - the shaft cannot close at all before a frame has been flown),
+  the seventh residual's sign reversed (caught by its documented sign, though a
+  consistently negated row is the same equation and the same root), a convergence
+  test that ignores the shaft (not caught, and recorded here as a finding: at
+  these conditions the shaft row comes inside its allowance with the six, so
+  `torque_tolerance` is a stated contract rather than a knob that bites), and a
+  simulation that trims its driven airframe at the nameplate after all (caught:
+  324 rather than 322.98).  And the gate itself, re-run in full on the report's
+  own aircraft, which has no engine and must not have moved: `regression_tm73254.py`
+  printing all 314 lines of its two trims and its eight figures 2 to 9 bit for bit
+  as they were before this, and `_rt_check.py`'s two pilots flying their missions
+  through `main.fly_frame` to a transcript bit for bit identical to the one before
+  it - 304 lines, 0 different.
 
 * 2026-10-08 - **the rotor's azimuth is an integral of the rotor speed, so the
   blades a renderer draws turn with the rotor the aircraft actually has.**  The

@@ -414,6 +414,28 @@ class Engine:
         """What the governor is asking the engine for at this rotor speed, W."""
         return self.governor.power_target(rotor_rpm, air_density)
 
+    def settled_torque(self, rotor_rpm, air_density=RHO_SEA_LEVEL):
+        """The torque the shaft settles at on that rotor speed, N m.
+
+        ``P / omega`` of what the governor is asking for at the speed the rotor
+        is doing: the engine's own half of the shaft balance, and a *function* of
+        the rotor speed rather than the last frame's lagged power.  That is what
+        lets a trim solve *for* the rotor speed - the gas producer's lag has no
+        meaning in a steady condition, so the balance a trim closes is the one
+        the loop is walking towards and not the transient it is inside.
+
+        It is exactly the loop's own equilibrium: :meth:`Governor.droop_engine_rpm`
+        says where a power demand settles and this is that point read as a torque
+        at the rotor, so the rotor speed a trim solves for with it is the one six
+        seconds of frames would have walked to.  The self test asserts the two
+        agree, so the closed form and the integrated loop vouch for each other.
+        A failed engine, or a grip rolled right off, settles on nothing at all.
+        """
+        omega = self.omega_of(rotor_rpm)
+        if omega <= 0.0:
+            return 0.0
+        return self.power_target(rotor_rpm, air_density) / omega
+
     def advance(self, dt, rotor_rpm, air_density=RHO_SEA_LEVEL):
         """One frame of the gas producer's lag, and the torque it leaves.
 
@@ -656,6 +678,35 @@ def _self_test():
     assert abs(Engine().max_torque(UH1_RPM) - UH1_ENGINE_MAIN_TORQUE_NM) < 1e-6
     assert Engine().max_torque(UH1_RPM, 1.1 * RHO_SEA_LEVEL) \
         > UH1_ENGINE_MAIN_TORQUE_NM
+
+    # The settled torque, which is what a rotor speed trim closes the shaft on:
+    # nothing at or above the speed the governor is asking for, since an idling
+    # free turbine is not a brake; more the further the rotor is below it and the
+    # more power that asks for; and the ceiling over omega once the whole droop
+    # band is used up, so it is :meth:`max_torque` there.
+    settled = Engine()
+    assert settled.settled_torque(UH1_RPM) == 0.0
+    assert settled.settled_torque(UH1_RPM + 1.0) == 0.0
+    assert settled.settled_torque(0.0) == 0.0
+    slow = settled.settled_torque(0.99 * UH1_RPM)
+    assert slow > 0.0
+    assert settled.settled_torque(0.95 * UH1_RPM) > slow
+    assert abs(settled.settled_torque(0.9 * UH1_RPM)
+               - settled.max_torque(0.9 * UH1_RPM)) < 1e-6      # clipped
+    assert abs(settled.settled_torque(0.99 * UH1_RPM)
+               - settled.power_target(0.99 * UH1_RPM)
+               / settled.omega_of(0.99 * UH1_RPM)) < 1e-12
+    # Asking is free: it reads the rotor speed and the air and not the engine's
+    # own state, which is the whole point of it being usable inside a trim.
+    assert settled.power == 0.0
+    # And it is where the loop arrives: an engine settled there delivers it.
+    assert settled.settle(0.99 * UH1_RPM) == settled.power
+    assert abs(settled.torque(0.99 * UH1_RPM) - slow) < 1e-9
+    # A failed engine, and one whose grip is rolled off, hold nothing up.
+    assert Engine(governor=Governor(failed=True)).settled_torque(
+        0.9 * UH1_RPM) == 0.0
+    assert Engine(governor=Governor(throttle=0.0)).settled_torque(
+        0.9 * UH1_RPM) == 0.0
 
 
 
