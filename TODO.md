@@ -15,10 +15,12 @@ wiring that flying cannot test.
 
   * *`trim_autorotation`.*  Descent rate as the unknown, for the case the
     engine's failure path can now be flown into;
-  * *main.py's own aircraft.*  It flies the report's fixed rotor, so its
-    throttle is still carried and shown rather than flown, and it has no keys for
-    the twist grip, the GOV AUTO/EMER switch or an engine failure, and no engine
-    lines in the caption - `Telemetry.engine` is what they would read;
+  * *main.py's own aircraft.*  It flies the report's fixed rotor, as it should -
+    every figure in TM-73254 was computed with that - and what is left there is
+    around the engine: the device map names no throttle yet (see the note in
+    `default_controls.xml`), so a joystick or a home made collective cannot fly
+    the grip as the keyboard's Q and E now do, and the caption shows the engine's
+    panel but not the engine's own torque against the transmission limit;
   * *the torque available chart.*  Figure 7.1-2 is the real answer to "how much
     torque is there at this altitude and temperature"; what `engine.py` ships is
     the shape of those charts - a density scaling and a 50 psi full scale - and
@@ -66,6 +68,69 @@ These are choices, not oversights: each is stated where it lives.
   how long the window took to see the key.
 
 ## Done
+
+* 2026-10-08 - **the sandbox flies the engine: fitted live with F, and flown from
+  the keyboard.**  `main.py`'s aircraft was the report's own - no engine, the
+  rotor held at 100 per cent - which is what TM-73254 needs, but it left the
+  twist grip, the GOV AUTO/EMER switch and an engine failure as things only a
+  script could set, and the caption with no gauges on it at all.  The choice made
+  here was the keyboard's, not the command line's: a run still *begins* on the
+  report's aircraft, and F fits the T53 to the shaft it is flying, in the air.
+
+  `Simulation.fit_engine(fitted=True, engine=None)` is how it does it, and it is
+  a re-fit and not a reset: **no bit of the aircraft's state moves** - not the
+  position, the velocity, the attitudes, the rates or the rotor speed - and the
+  run's own start is left where it is, so a later R still comes back to the pad.
+  What moves is the *trim reference* `in_trim` compares against, because a driven
+  shaft has a hover of its own: the reference is solved again at the condition it
+  already describes - a hover, or the same airspeed when the run's reference is a
+  level trim, which it knows by its own speed - and comes back at 323.27 rpm on
+  the 6158 lb aircraft where the report's is 324 (322.98 on the 8700 lb one the
+  default simulation flies).  The engine is settled on the torque the rotor is
+  *absorbing* at the state the aircraft is in, which is what `Airframe.reset`
+  does for a run that begins with one, so the balance starts closed and the
+  governor takes the rotor from where it is rather than spooling up behind a
+  sagging one.  `fitted=False` is its exact inverse, rotor speed included:
+  taking an engine *away* is a switch, and a rotor that winds down because the
+  fuel went away is what the failure key and a closed grip are.
+
+  `main.py`: **F** fits that engine or takes it off, **G** is the GOV AUTO/EMER
+  switch (TM 55-1520-210-10, 9-3) and **X** is an engine failure and then the fuel
+  coming back, each logged by the existing key log with a kind of its own
+  (`fit`/`unfit`, `governor`, `failure`/`recovered`) and each saying so rather
+  than pretending when there is no engine to do it to.  The twist grip, which had
+  been carried and shown and reachable by no key at all, is pilot_keys' fifth
+  position now: **Q** rolls it off and **E** rolls it on, so the flight keys are
+  ten where they were eight (`FLIGHT_SCANCODES`, `KEY_NAMES`, and the count
+  `--check` asserts).  The caption gains the engine's panel - the rotor speed
+  where it is no longer exactly 100 per cent, N2, the torque gauge and the switch,
+  with `FAILED` for an engine that has quit - *only* when there is one to read,
+  so the aircraft of TM-73254's figures is told apart from the T53 by the gauges
+  and by nothing else.
+
+  What is left is named where it lives rather than left to be found: the device
+  map names no throttle yet, so a mapped joystick or a home made collective
+  cannot roll the grip the keyboard now can - `default_controls.xml`'s own note
+  says as much, and which control name to use - and the caption's torque gauge is
+  not read against the 50 psi transmission limit.  See `Next`.
+
+  Verified: `main.py --check` with the new assertions written in the same style -
+  the grip as pilot_keys' fifth control and not one of the four axes, Q and E
+  turning that ratchet by exactly a key's worth and E putting it back on its own
+  stop, F, G and X as command keys that fly nothing on their own, the fitted
+  engine moving no bit of the pad's state, the caption gaining
+  ``| rotor 100.0 % | N2 ... | Q ... | AUTO`` and reading EMER and FAILED as the
+  switches are thrown, and F again putting the reference back on the 324 rpm it
+  started from to the last bit; the seven module self tests, with
+  `simulation.py`'s new block asserting that fitting moves no bit of the state
+  *or* of the run's start, that a hovering run fitted live settles onto the
+  governor's own 323.27 with the report's stick positions still in the pilot's
+  hand - half a metre low five seconds later, which is the 0.025 in of collective
+  nobody has moved yet - that the two switches are exact inverses, and that a run
+  with no trim reference still fits one; and the gate, re-run in full:
+  `regression_tm73254.py`'s 314 lines and `_rt_check.py`'s two missions both bit
+  for bit as they were, 0 different, which is the check that fitting an engine
+  changed nothing at all for the aircraft that has none.
 
 * 2026-10-08 - **a trim that solves for the rotor speed, which is the hover the
   engine is really in.**  The two trims took an omega to solve *at* and left the

@@ -46,13 +46,30 @@ way up its travel, and the keys fly it:
 | key | what it does |
 | --- | --- |
 | `W` / `S` | collective up / down |
+| `Q` / `E` | twist grip rolled off / open, the fifth control |
 | `Up` / `Down` | cyclic forward (nose down) / aft (nose up) |
 | `Left` / `Right` | cyclic left / right |
 | `A` / `D` | pedals: nose left / right, the anti torque control |
 | `R` | reset: back to the state and the stick positions the run began in |
 | `P` | park: skids on the pad, the collective lever at 75 % |
+| `F` | fit the engine this run did not begin with - or take it off again |
+| `G` | the GOV AUTO/EMER switch, which needs an engine to govern |
+| `X` | an engine failure, and `X` again to clear it |
 | `C` | camera: behind the aircraft, or fixed on the pad |
 | `Esc` | quit |
+
+The aircraft of the report's figures has no engine in it, because that is what
+every figure in TM-73254 was computed with - so a run begins on the report's own
+aircraft and `F` fits a T53 to the shaft it is flying, live.  It is a re-fit and
+not a reset (`simulation.Simulation.fit_engine`): nothing of the aircraft moves,
+and what moves is the trim reference the caption's light reads, to the 322.98 rpm
+hover the governor and the rotor settle on together.  From there the twist grip
+is a control that does something, `G` is the GOV AUTO/EMER switch of
+TM 55-1520-210-10 (9-3), and `X` is the fuel going away - the wind down through
+the engine's own lag, which a hovering UH-1 has a couple of seconds of.  The
+caption gains the engine's own panel (rotor speed, N2, the torque gauge and the
+switch) the moment there is one to read, and gives it up again when `F` takes it
+off: the two aircraft are told apart by the gauges and by nothing else.
 
 Every one of those axes is a ratchet: a key slews its control while the key is
 held and a released key moves nothing at all, so every control stays where the

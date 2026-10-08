@@ -1173,6 +1173,61 @@ class Simulation:
             self.set_throttle(throttle)
         return self
 
+    def fit_engine(self, fitted=True, engine=None):
+        """Put an engine on the shaft - or take it off - with the aircraft flying.
+
+        A run of this simulation begins on the report's own aircraft: no engine,
+        the rotor speed held at 100 per cent, because that is what every figure
+        in TM-73254 was computed with and what the regression against them has to
+        reproduce (see :func:`airframe_preset`).  This is the other aircraft,
+        fitted *live* - no restart and nothing on the command line - which is
+        what makes the twist grip, the GOV AUTO/EMER switch and an engine failure
+        things a run can be *flown* rather than scripted.  *engine* is an
+        :class:`engine.Engine` of a caller's own, flown as it comes, or ``None``
+        for a T53 rigged the manual's way.
+
+        It is a re-fit and not a reset.  **Fitting changes no bit of the
+        aircraft's state** - the position, the velocity, the attitudes, the rates
+        and the rotor speed it has are the ones it keeps - and the run's own
+        start, where a bare :meth:`reset` returns to, is left alone as well.  What
+        moves is the *trim reference* :meth:`in_trim` compares against, because a
+        driven shaft has a hover of its own: 322.98 rpm on the 8700 lb aircraft
+        rather than the report's 324.  The reference is solved again at the
+        condition it already describes - a hover, or the same airspeed if that is
+        what the run's reference is - and the engine is settled on the torque the
+        rotor is *absorbing* at the state the aircraft is in, which is what
+        :meth:`airframe.Airframe.reset` does for a run that begins with one: the
+        shaft balance starts closed, and the governor takes the rotor from where
+        it is rather than spooling up behind a sagging one.
+
+        ``fitted=False`` takes the engine off and puts the rotor back on the
+        speed the report's own aircraft holds, so that the two are exact
+        inverses.  That is a switch and not a failure: an engine that is *taken
+        away* leaves a rotor turning at 100 per cent, where a rotor that winds
+        down because the fuel went away is what the failure is - and what a
+        closed twist grip is, and neither is this.  Returns the reference's state,
+        or None when the run has no trim reference to solve (see :meth:`in_trim`).
+        """
+        if fitted:
+            self.airframe.engine = Engine() if engine is None else engine
+        else:
+            self.airframe.engine = None
+            self.airframe.engine_torque = None
+            self.airframe.state.rotor_speed = UH1_OMEGA
+        self.airframe.reset(self.airframe.state, self.controls)
+        if self.trim_state is None:
+            return None
+        speed, altitude = self.trim_state.speed, self.trim_state.altitude
+        solving = None if self.airframe.shaft_driven else UH1_OMEGA
+        if speed > 0.0:
+            controls, state = self.airframe.trim_level_flight(
+                speed, altitude=altitude, rotor_speed=solving)
+        else:
+            controls, state = self.airframe.trim_hover(altitude=altitude,
+                                                       rotor_speed=solving)
+        self.trim_controls, self.trim_state = controls, state
+        return state
+
     def step(self, frame_dt, controls=None):
         """Fly one frame of *frame_dt* seconds with *controls* held.
 
@@ -1878,6 +1933,70 @@ def _self_test():
     assert not powered.crashed and powered.in_trim()
     assert not sim.airframe.shaft_driven
     assert abs(sim.airframe.state.rotor_rpm - UH1_RPM) < 1e-9
+
+    # Fitting an engine to a run that is already flying, which is how the
+    # sandbox gets one: the report's fixed rotor is what a run begins on, and
+    # this is the other aircraft, fitted live, with no restart.  Fitting moves no
+    # bit of the aircraft's own state - it is a re-fit and not a reset - and the
+    # run's own start stays where it was, so a later bare reset still comes back
+    # to the pad; what moves is the *trim reference*, because a driven shaft has
+    # a hover of its own: 323.27 rpm on this 6158 lb aircraft rather than the
+    # report's 324 - and 322.98 on the 8700 lb one the default simulation flies.
+    hovering = Simulation(airframe=airframe_preset("flight test"))
+    assert abs(hovering.trim_state.rotor_rpm - UH1_RPM) < 1e-9
+    assert not hovering.airframe.shaft_driven
+    parked = Simulation(airframe=airframe_preset("flight test"))
+    parked.on_the_pad()
+    started = parked.start_state.values()
+    reference_controls = parked.trim_controls
+    parked_state = parked.airframe.state.values()
+    assert abs(parked.trim_state.rotor_rpm - UH1_RPM) < 1e-9
+    assert parked.fit_engine() is not None
+    assert parked.airframe.shaft_driven and parked.airframe.engine is not None
+    assert parked.airframe.state.values() == parked_state    # not a bit moved
+    assert parked.start_state.values() == started            # nor where R goes
+    assert abs(parked.trim_state.rotor_rpm - 323.2705) < 0.05, \
+        parked.trim_state.rotor_rpm
+
+    # And a hovering run keeps flying it.  The engine is settled on what the
+    # rotor is absorbing, so the shaft balance starts closed and the governor
+    # walks the rotor to its own 322.98; with the *report's* stick positions
+    # still in the pilot's hand that hover is half a metre low five seconds
+    # later - the 0.025 in of collective a governed hover wants and no key has
+    # moved - and the light still reads trim, the reference being inside its own
+    # tolerances of the controls and the attitude.
+    before = hovering.airframe.state.values()
+    assert hovering.fit_engine() is not None
+    assert hovering.airframe.state.values() == before
+    assert abs(hovering.trim_state.rotor_rpm - 323.2705) < 0.05
+    assert hovering.in_trim()
+    for _ in range(300):
+        hovering.step(SIM_TIME_STEP_S)
+    assert abs(hovering.airframe.state.rotor_rpm - 323.2705) < 0.05, \
+        hovering.telemetry()
+    assert abs(hovering.airframe.state.altitude - 200.0) < 1.0, \
+        hovering.telemetry()
+    assert hovering.in_trim() and not hovering.crashed
+
+    # The two switches are exact inverses on an aircraft that did not fly
+    # between them: the report's own reference, to the last bit, and the rotor
+    # back on the 100 per cent its aircraft holds.  Taking an engine *away* is
+    # not an engine failing - a rotor that winds down because the fuel went away
+    # is what the failure and a closed grip are, and neither is this.
+    parked.fit_engine(fitted=False)
+    assert not parked.airframe.shaft_driven
+    assert parked.airframe.engine is None and parked.airframe.engine_torque is None
+    assert parked.airframe.state.values() == parked_state
+    assert parked.start_state.values() == started
+    assert parked.trim_controls == reference_controls
+    assert abs(parked.trim_state.rotor_rpm - UH1_RPM) < 1e-9
+    # A run with no trim reference still fits one: there is nothing for a light
+    # to read, and that is all - see trim_at_start.
+    raw_fit = Simulation(trim_at_start=False)
+    assert raw_fit.trim_state is None
+    assert raw_fit.fit_engine() is None and raw_fit.airframe.shaft_driven
+    assert raw_fit.fit_engine(fitted=False) is None
+    assert not raw_fit.airframe.shaft_driven
 
     # The axes are control positions, so a stick that is let go stays where it
     # was: that is the ratchet, and it is the whole difference from the springs

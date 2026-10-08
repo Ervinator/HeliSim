@@ -38,19 +38,23 @@ Usage::
 Keys:
 
     W / S           collective up / down
+    Q / E           twist grip rolled off / open, the fifth control
     Up / Down       cyclic forward (nose down) / aft (nose up)
     Left / Right    cyclic left / right
     A / D           pedals: nose left / right, the anti torque control
     R               reset: back to the state the run started in, on the pad
     P               park: skids on the pad, the lever at 75 %
+    F               fit the engine this run did not begin with - or take it off
+    G               the GOV AUTO/EMER switch, which needs an engine to govern
+    X               an engine failure, and X again to clear it
     C               camera: cockpit, behind the aircraft, or fixed on the pad
     Esc             quit
 
-All four axes are ratchets: a key slews its control while the key is held and a
-key that is released is no control input at all, so nothing springs back.  The
-cyclic and the pedals stay where the hand leaves them, which is what a UH-1's
-friction and force trim do and what a centring spring would not, and the
-collective stays where it is put.  The collective is the one that flies the
+The four axes and the twist grip are ratchets: a key slews its control while the
+key is held and a key that is released is no control input at all, so nothing
+springs back.  The cyclic and the pedals stay where the hand leaves them, which
+is what a UH-1's friction and force trim do and what a centring spring would not,
+and the collective stays where it is put.  The collective is the one that flies the
 machine: the aircraft starts parked on the pad with the lever three quarters of
 the way up (`simulation.PAD_COLLECTIVE`), which is where a pickup begins rather
 than seven seconds of winding, so hold W for a moment and the rotor lifts it.  A
@@ -65,14 +69,30 @@ not a state a reset is obliged to jump to, and handing a pilot the hover's
 9.09 in of collective is a control position they never made.  W may be tapped as
 well as held: the frame loop takes its keys from the events, so a press and
 release that both happen inside one frame still turn the ratchet.  The keys are
-deliberately fine: `PilotInput`'s three step granularities - a quarter by
-default, `simulation.COLLECTIVE_STEP_GRANULARITY` and its two neighbours - scale
-each control's rate down for the keyboard alone, so a key is worth a quarter of
+deliberately fine: `PilotInput`'s four step granularities - a quarter by
+default, `simulation.COLLECTIVE_STEP_GRANULARITY` and its three neighbours -
+scale each control's rate down for the keyboard alone, so a key is worth a
+quarter of
 the travel a full rate frame is and a control takes four times the presses, and
 four times as long on the key, to cross the same ground.  That is what makes a
 stick placeable rather than something only thrown from one stop to the other; a
 joystick or a script is not scaled, since a position that is told where to be
 has no keypress to step.
+
+**The engine is fitted in flight, not at startup.**  A run begins on the report's
+own aircraft - no engine, the rotor held at 100 per cent - because that is what
+every figure in TM-73254 was computed with, and it is what the regression against
+those figures has to reproduce.  `F` fits a T53 to the shaft it is flying: see
+:meth:`simulation.Simulation.fit_engine`, which is a re-fit and not a reset -
+nothing of the aircraft moves, and what moves is the trim reference the caption's
+light reads, to the hover the governor settles at (322.98 rpm on the 8700 lb
+aircraft rather than the report's 324).  From there `Q` and `E` roll the twist
+grip, `G` is the GOV AUTO/EMER switch of TM 55-1520-210-10 (9-3), and `X` is the
+fuel going away - the wind down through the engine's own lag, which a hovering
+UH-1 has a couple of seconds of.  The caption gains the engine's panel the moment
+there is one to read and gives it up again when `F` takes it off, so the aircraft
+of the report's figures is told apart from the T53 by the gauges and by nothing
+else.
 
 **The controls are read from a device map.**  `controls.py` and its
 `default_controls.xml` say which physical control flies which - the cyclic up
@@ -86,11 +106,12 @@ map; `--no-controls` flies on the built-in mapping without reading a file at
 all.  An *absolute* control - a joystick axis, or a hat - is a position and is
 put where it is read, at the hand's own rate and without the keyboard's step
 granularity, which is the "not scaled" above; a *ratchet* control is two keys or
-two buttons and turns exactly as the eight keys do.  A device that is not
+two buttons and turns exactly as the ten keys do.  A device that is not
 plugged in reads as no input at all, so half a panel still flies, and a joystick
-plugged in while the window is open is picked up as it appears.  The throttle is
-mapped like the rest and flies nothing: the model holds 100 per cent rotor speed
-and has no engine in it, so its position is carried and shown and no more.
+plugged in while the window is open is picked up as it appears.  The map this
+file ships names no throttle yet - it was left out while the model had no engine
+for one to fly, and the keyboard's `Q` and `E` are what roll the grip today - so
+naming it is what the first home made collective will want.
 
 The window's caption is this sandbox's instrument panel, and it carries all
 four control positions: the collective in per cent, the longitudinal and
@@ -1805,7 +1826,11 @@ def pilot_keys(keys):
     bottom of this file.  pygame 2 indexes ``pygame.key.get_pressed()`` by
     *scancode*, so the keys below are read as the KSCAN_* constants - the
     physical key positions - which also means that a keyboard whose layout
-    moves the letters does not move the controls.
+    moves the letters does not move the controls.  The twist grip is the last of
+    them and not one of the four axes: Q rolls it off and E rolls it on, the two
+    keys either side of the collective's own, because the grip is a lever on the
+    collective and is read as :meth:`simulation.PilotInput.step`'s fifth
+    position.
     """
     return {
         "collective": _held(keys, pygame.KSCAN_W)
@@ -1815,6 +1840,7 @@ def pilot_keys(keys):
         "lat_stick": _held(keys, pygame.KSCAN_RIGHT)
                      - _held(keys, pygame.KSCAN_LEFT),
         "pedal": _held(keys, pygame.KSCAN_D) - _held(keys, pygame.KSCAN_A),
+        "throttle": _held(keys, pygame.KSCAN_E) - _held(keys, pygame.KSCAN_Q),
     }
 
 
@@ -1826,21 +1852,25 @@ def _held(keys, key):
         return 0.0
 
 
-#: The eight keys the aircraft is flown from, by scancode: the keys
+#: The ten keys the aircraft is flown from, by scancode: the keys
 #: :func:`pilot_keys` reads, and so the keys a frame's own event handling has to
-#: keep track of.
+#: keep track of.  Eight of them are the four axes; the last two are the twist
+#: grip, which is a lever on the collective rather than an axis and reaches the
+#: engine as :meth:`simulation.PilotInput.step`'s own ``throttle``.
 FLIGHT_SCANCODES = (pygame.KSCAN_W, pygame.KSCAN_S,
                     pygame.KSCAN_UP, pygame.KSCAN_DOWN,
                     pygame.KSCAN_LEFT, pygame.KSCAN_RIGHT,
-                    pygame.KSCAN_A, pygame.KSCAN_D)
+                    pygame.KSCAN_A, pygame.KSCAN_D,
+                    pygame.KSCAN_Q, pygame.KSCAN_E)
 
-#: What the key log calls each of the eight flight keys: the physical key's own
+#: What the key log calls each of the ten flight keys: the physical key's own
 #: name, since that is the position the four axes are read from, so that a
 #: keyboard whose layout moves the letters does not move the names in the log.
 KEY_NAMES = {pygame.KSCAN_W: "W", pygame.KSCAN_S: "S",
              pygame.KSCAN_UP: "UP", pygame.KSCAN_DOWN: "DOWN",
              pygame.KSCAN_LEFT: "LEFT", pygame.KSCAN_RIGHT: "RIGHT",
-             pygame.KSCAN_A: "A", pygame.KSCAN_D: "D"}
+             pygame.KSCAN_A: "A", pygame.KSCAN_D: "D",
+             pygame.KSCAN_Q: "Q", pygame.KSCAN_E: "E"}
 
 
 def frame_keys(pressed, tapped):
@@ -2176,16 +2206,31 @@ def window_title(sim, view, focused=True):
     is cheaper than answering it, and it names the cure - a click.  It goes
     next to the aircraft's name, at the front of the caption, because a title
     bar is as long as the window and the end of the line can be cut off.
+
+    The engine's own panel is on it only when there is an engine to read: the
+    rotor speed where it is not exactly 100 per cent, the N2 tachometer, the
+    torque gauge as a percentage of the data plate, and which way the GOV switch
+    is thrown - with ``FAILED`` for an engine that has quit, which is not the
+    same as one that was never fitted.  A run of this sandbox begins on the
+    report's own aircraft, which has no engine and no gauges (see
+    :meth:`simulation.Simulation.fit_engine`), so the words appear the moment F
+    fits one and go again the moment F takes it off: the caption of the aircraft
+    TM-73254's figures were computed with reads exactly as it always did.
     """
     telemetry = sim.telemetry()
+    panel = telemetry.engine
+    engine = ("" if not panel.has_engine else
+              " | rotor %5.1f %% | N2 %4.0f rpm | Q %3.0f %% | %s"
+              % (telemetry.rotor_percent, panel.rpm, panel.torque_percent,
+                 "FAILED" if panel.failed else "EMER" if panel.emer else "AUTO"))
     return ("HeliSim - UH-1H%s | alt %6.1f m %+6.0f fpm | %5.1f kt"
-            " | coll %3.0f %% | cyc %+6.2f/%+6.2f in | ped %+5.2f in%s%s%s"
+            " | coll %3.0f %% | cyc %+6.2f/%+6.2f in | ped %+5.2f in%s%s%s%s"
             " | %s view"
             % ("" if focused else " | no keyboard: click the window",
                telemetry.alt_agl, telemetry.height_rate_fpm,
                telemetry.airspeed_kt, 100.0 * telemetry.collective_fraction,
                telemetry.long_stick_in, telemetry.lat_stick_in,
-               telemetry.pedal_in,
+               telemetry.pedal_in, engine,
                " | trim" if telemetry.in_trim else "",
                " | on the ground" if telemetry.on_ground else "",
                (" | " + telemetry.crash_message) if telemetry.crashed else "",
@@ -2254,6 +2299,9 @@ class KeyLog:
     ``down`` / ``up``      a key the aircraft is flown from, or any other
     ``reset`` / ``park``   the R and P keys, logged once their state is in
     ``view`` / ``quit``    the C and Esc keys
+    ``fit`` / ``unfit``    the F key, and which way it left the engine
+    ``governor``           the G key, the GOV AUTO/EMER switch
+    ``failure`` / ``recovered``   the X key, an engine failed and cleared again
     ``focus`` / ``blur``   the window gaining and losing the keyboard
     ``sample``             the flight itself, ``rate_hz`` times a second
 
@@ -2299,8 +2347,9 @@ class KeyLog:
             "# t_s is time.perf_counter seconds since this log was opened,"
             " monotonic; wall_ms is the same instant as time.time milliseconds."
             "  Both to a millisecond.\n"
-            "# kind is down/up for a key, reset/park/view/quit for the four"
-            " command keys, focus/blur for the keyboard, sample for the flight;"
+            "# kind is down/up for a key, reset/park/view/quit/fit/unfit/"
+            "governor/failure/recovered for the command keys, focus/blur for"
+            " the keyboard, sample for the flight;"
             " key is the key itself or - on a sample.\n"
             "# held is the flight keys down at that instant.  Velocity is m/s"
             " (airspeed, then north/east/down over the ground), attitude is"
@@ -2552,6 +2601,49 @@ def main():
                     camera.reset()
                     log_key(log, sim, "view", event, keyboard)
                     print("  view: %s" % (view,))
+                elif event.key == pygame.K_f:
+                    # F fits the engine this run did not begin with.  The report's
+                    # own aircraft - no engine, the rotor held at 100 per cent -
+                    # is what a run starts on, because that is what TM-73254's
+                    # figures were computed with; this is the other aircraft,
+                    # fitted live, which is what makes the twist grip, the GOV
+                    # switch and a failure things a pilot can *fly* rather than
+                    # things a script sets up.  A re-fit and not a reset: the
+                    # aircraft itself does not move, and what moves is the trim
+                    # reference the caption's light reads.
+                    fitted = not sim.airframe.shaft_driven
+                    sim.fit_engine(fitted=fitted)
+                    log_key(log, sim, "fit" if fitted else "unfit", event,
+                            keyboard)
+                    print("  engine %s: %s"
+                          % ("fitted" if fitted else "taken off",
+                             sim.telemetry()))
+                elif event.key == pygame.K_g:
+                    # G is the GOV AUTO/EMER switch, the manual's own (9-3):
+                    # EMER takes the governor out of the loop and leaves the
+                    # twist grip as the fuel control.  The report's own aircraft
+                    # has nothing to govern and says so, rather than pretending.
+                    if sim.airframe.engine is None:
+                        print("  no engine to govern: F fits one")
+                    else:
+                        emer = not sim.airframe.engine.governor.emer
+                        sim.set_governor(emer=emer)
+                        log_key(log, sim, "governor", event, keyboard)
+                        print("  governor: %s" % ("EMER" if emer else "AUTO",))
+                elif event.key == pygame.K_x:
+                    # X is an engine failure, and X again is the fuel coming
+                    # back: the torque goes away through the lag and the rotor
+                    # winds down on its own inertia, which a hovering UH-1 has
+                    # about two seconds of.
+                    if sim.airframe.engine is None:
+                        print("  no engine to fail: F fits one")
+                    else:
+                        failed = not sim.airframe.engine.governor.failed
+                        sim.set_governor(failed=failed)
+                        log_key(log, sim, "failure" if failed else "recovered",
+                                event, keyboard)
+                        print("  engine: %s"
+                              % ("FAILED" if failed else "running again",))
                 else:
                     keyboard[event.scancode] = True
                     tapped.add(event.scancode)
@@ -2626,10 +2718,11 @@ def _self_check():
     ``python main.py --check`` runs.
     """
     # The keyboard: W and S are the collective, the up and down arrows cyclic fore
-    # and aft, left and right cyclic sideways, A and D the pedals - and opposite
-    # keys cancel, which is what a pilot's other hand does.
+    # and aft, left and right cyclic sideways, A and D the pedals, and Q and E
+    # the twist grip - and opposite keys cancel, which is what a pilot's other
+    # hand does.
     assert pilot_keys({}) == {"collective": 0.0, "long_stick": 0.0,
-                              "lat_stick": 0.0, "pedal": 0.0}
+                              "lat_stick": 0.0, "pedal": 0.0, "throttle": 0.0}
     assert pilot_keys({pygame.KSCAN_W: True})["collective"] == 1.0
     assert pilot_keys({pygame.KSCAN_S: True})["collective"] == -1.0
     assert pilot_keys({pygame.KSCAN_W: True,
@@ -2640,20 +2733,35 @@ def _self_check():
     assert pilot_keys({pygame.KSCAN_LEFT: True})["lat_stick"] == -1.0
     assert pilot_keys({pygame.KSCAN_D: True})["pedal"] == 1.0     # nose right
     assert pilot_keys({pygame.KSCAN_A: True})["pedal"] == -1.0
+    assert pilot_keys({pygame.KSCAN_E: True})["throttle"] == 1.0   # grip open
+    assert pilot_keys({pygame.KSCAN_Q: True})["throttle"] == -1.0  # grip rolled off
 
-    # A frame's keys: the eight keys of the four axes, the ones the events leave
-    # down, and a tap that was over before the frame's state could be sampled.
-    # Both are the same shape to pilot_keys - scancodes to 1.0 and 0.0 - and a
-    # tap has to count for its frame, or the collective ratchet loses it.
-    assert len(FLIGHT_SCANCODES) == 8
+    # A frame's keys: the ten the aircraft is flown from - the eight of the four
+    # axes and the twist grip's two - the ones the events leave down, and a tap
+    # that was over before the frame's state could be sampled.  Both are the same
+    # shape to pilot_keys - scancodes to 1.0 and 0.0 - and a tap has to count for
+    # its frame, or the collective ratchet loses it.
+    assert len(FLIGHT_SCANCODES) == 10 and len(KEY_NAMES) == 10
     for scancode in FLIGHT_SCANCODES:
         assert pilot_keys(frame_keys({}, {scancode})) != pilot_keys({})
     assert pilot_keys(frame_keys({}, {pygame.KSCAN_W}))["collective"] == 1.0
     assert pilot_keys(frame_keys({pygame.KSCAN_S: True},
                                  {pygame.KSCAN_W}))["collective"] == 0.0
     assert pilot_keys(frame_keys({}, set())) == pilot_keys({})
-    # R is a command key, not a flight key: tapping one flies nothing.
-    assert pilot_keys(frame_keys({}, {pygame.KSCAN_R})) == pilot_keys({})
+    # The grip is the fifth of them and not one of the four axes: E rolls it
+    # open, Q rolls it off, and it comes out as PilotInput.step's own throttle
+    # rather than as anything the mixing stage of rotor_control sees.
+    assert pilot_keys(frame_keys({}, {pygame.KSCAN_E}))["throttle"] == 1.0
+    assert pilot_keys(frame_keys({}, {pygame.KSCAN_Q}))["throttle"] == -1.0
+    assert pilot_keys(frame_keys({pygame.KSCAN_Q: True},
+                                 {pygame.KSCAN_E}))["throttle"] == 0.0
+    assert sorted(pilot_keys({})) == ["collective", "lat_stick", "long_stick",
+                                      "pedal", "throttle"]
+    # R, F, G and X are command keys, not flight keys: tapping one flies nothing.
+    for scancode in (pygame.KSCAN_R, pygame.KSCAN_F, pygame.KSCAN_G,
+                     pygame.KSCAN_X):
+        assert scancode not in FLIGHT_SCANCODES
+        assert pilot_keys(frame_keys({}, {scancode})) == pilot_keys({})
     assert pilot_keys(frame_keys({pygame.KSCAN_RIGHT: True},
                                  {pygame.KSCAN_W}))["lat_stick"] == 1.0
 
@@ -2749,6 +2857,57 @@ def _self_check():
     settled = sim.pilot.axes()
     assert settled == sim.controls.to_axes()
     assert settled[0] == PAD_COLLECTIVE
+    # The twist grip, which is a ratchet like the four axes and is the pilot's
+    # own grip whether or not there is an engine to read it: Q rolls it off by a
+    # key's worth and E rolls it back on, and neither is one of the four axes.
+    grip = sim.pilot.throttle()
+    assert grip == 1.0
+    grip_key = sim.pilot.key_rates()[3]
+    sim.pilot.step(SIM_TIME_STEP_S, **pilot_keys({pygame.KSCAN_Q: True}))
+    assert abs(sim.pilot.throttle()
+               - (grip - grip_key * SIM_TIME_STEP_S)) < 1e-12
+    sim.pilot.step(SIM_TIME_STEP_S, **pilot_keys({pygame.KSCAN_E: True}))
+    assert sim.pilot.throttle() == grip          # back on its own stop
+
+    # F fits the engine the sandbox does not begin with, which is the whole of
+    # how a run gets one: the report's own aircraft is what a run starts on, and
+    # this is the other one, fitted live.  No bit of the aircraft moves - it is a
+    # re-fit and not a reset - and the caption gains the panel it never had: the
+    # rotor speed where it is no longer exactly 100 per cent, N2, the torque
+    # gauge and the GOV switch, which is the one place the two aircraft are told
+    # apart without a word.
+    assert not sim.airframe.shaft_driven
+    assert not sim.telemetry().engine.has_engine
+    assert "| rotor" not in window_title(sim, VIEW_CHASE)
+    sim.fit_engine()
+    assert sim.airframe.shaft_driven and sim.telemetry().engine.has_engine
+    assert sim.airframe.state.values() == pad_start          # not a bit moved
+    caption = window_title(sim, VIEW_CHASE)
+    assert "| rotor 100.0 %" in caption, caption             # held, on the pad
+    assert "| N2 " in caption and "| Q " in caption and "| AUTO" in caption
+    assert sim.telemetry().engine.rpm > 0.0
+
+    # G is the GOV AUTO/EMER switch and X is an engine failure, and both read
+    # back off the caption: those two words are the switch's own, and neither is
+    # the same as no engine at all, which is what the panel's absence says.
+    sim.set_governor(emer=True)
+    assert "| EMER" in window_title(sim, VIEW_CHASE)
+    sim.set_governor(emer=False, failed=True)
+    assert "| FAILED" in window_title(sim, VIEW_CHASE)
+    sim.set_governor(failed=False)
+    assert "| AUTO" in window_title(sim, VIEW_CHASE)
+
+    # And F again takes it off exactly: the report's own aircraft back, the trim
+    # reference at the 100 per cent its rotor is held at, and the caption back to
+    # the words it has always had.
+    sim.fit_engine(fitted=False)
+    assert not sim.airframe.shaft_driven
+    assert not sim.telemetry().engine.has_engine
+    assert sim.airframe.state.values() == pad_start
+    assert sim.trim_controls is not None
+    assert abs(sim.trim_state.rotor_rpm - UH1_RPM) < 1e-9
+    assert "| rotor" not in window_title(sim, VIEW_CHASE)
+
     # Hands off from there it stays where the run started: the skids hold it and
     # no axis moves, so a pilot who presses R and lets go gets their pad back
     # rather than a helicopter leaving a hover they never asked for.
@@ -3467,13 +3626,28 @@ def _self_check():
             continue
         raise AssertionError("a key name pygame has no key for was accepted: %r"
                              % (name,))
-    # Nothing on the built-in map is absolute: a keyboard has no positions.
+    # Nothing on the built-in map is absolute: a keyboard has no positions.  The
+    # map's four axes and pilot_keys' fifth control are two different things
+    # here, and deliberately so: the map this project ships names no throttle yet
+    # (see the note in default_controls.xml), so a keyboard flies the grip and a
+    # mapped device does not - until the map has a throttle to point somewhere,
+    # which is the next thing a home made collective will want.
+    def mapped_axes(keys):
+        """pilot_keys without the twist grip: the four controls the map names."""
+        return dict((name, value) for name, value in pilot_keys(keys).items()
+                    if name != "throttle")
+
+    axes_only = {"collective": 0.0, "long_stick": 0.0, "lat_stick": 0.0,
+                 "pedal": 0.0}
     absolute, ratchet, throttle = board.read({}, set())
     assert absolute == {} and throttle is None
-    assert ratchet == pilot_keys({})
-    for code in FLIGHT_SCANCODES:
+    assert ratchet == axes_only == mapped_axes({})
+    for code in FLIGHT_SCANCODES[:8]:
         _absolute, mapped, _throttle = board.read({}, {code})
-        assert mapped == pilot_keys(frame_keys({}, {code})), code
+        assert mapped == mapped_axes(frame_keys({}, {code})), code
+    for code in FLIGHT_SCANCODES[8:]:
+        _absolute, mapped, _throttle = board.read({}, {code})
+        assert mapped == axes_only and _throttle is None, code
     # And a tap counts for its frame here too, or the collective ratchet loses
     # it exactly as it would through the keys themselves.
     _absolute, tapped, _throttle = board.read({}, {pygame.KSCAN_W})
