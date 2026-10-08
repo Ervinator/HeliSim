@@ -570,13 +570,19 @@ def draw_rotor_disc(radius, segments=48, alpha=0.20):
 def rotor_azimuth_deg(sim, ratio=1.0):
     """A rotor's azimuth, degrees, from the simulation's own clock.
 
-    The model holds 100 per cent rotor speed whatever the aircraft is doing -
-    it has no engine and no rotor speed dynamics in it - so the blades turn at
-    UH1_RPM.  *ratio* is how many revolutions a rotor makes in one of the main
-    rotor's, which is 1 for the main rotor and table 2's 5.56 for the tail.
-    A rotor seen through a 60 Hz renderer strobes; so does one on film.
+    The clock is the rotor's own: :attr:`Simulation.rotor_azimuth_deg` is the
+    integral of the shaft speed the frames flew, so the blades turn at the speed
+    the aircraft actually has - the nameplate UH1_RPM for the report's fixed
+    rotor, the 323 a governor settles on, whatever a rotor winding down is doing
+    - and not at a rate this function assumes.  *ratio* is how many revolutions a
+    rotor makes in one of the main rotor's, which is 1 for the main rotor and
+    table 2's 5.56 for the tail.  The wrap into a circle is here, at the last
+    moment, because the clock is unwrapped and has to be: the tail's 5.56 is not
+    an integer, so what its revolutions leave over a circle is not 5.56 times
+    what the main rotor's remainder leaves.  A rotor seen through a 60 Hz
+    renderer strobes; so does one on film.
     """
-    return math.fmod(sim.sim_time * UH1_RPM * 6.0 * ratio, 360.0)
+    return math.fmod(sim.rotor_azimuth_deg * ratio, 360.0)
 
 
 def draw_main_rotor(azimuth_deg):
@@ -2815,13 +2821,25 @@ def _self_check():
     assert abs(matrix[14] - position.z) < 1e-12
     assert len((GLfloat * 16)(*matrix)) == 16
 
-    # The rotors turn at 100 per cent whatever the aircraft does - the model has
-    # no engine and no rotor speed dynamics - at an azimuth taken from its own
-    # clock: two seconds at 324 rpm is 10.8 revolutions, which leaves 288 deg,
-    # and the tail rotor is that same clock at table 2's 5.56 times the speed.
+    # The rotors turn at an azimuth taken from the simulation's own clock, which
+    # is the integral of the shaft speed the frames flew and not a rate of
+    # turning: this aircraft has no engine in it - the report's fixed rotor - so
+    # the shaft is at exactly 100 per cent and two seconds at UH1_RPM is 10.8
+    # revolutions, i.e. 3888 deg of that clock, whose remainder over a circle is
+    # the 288 below.  The tail rotor is the same clock at table 2's 5.56 times
+    # the speed, and the wrap has to come after that scaling: the clock is
+    # unwrapped, so it is not the main rotor's own remainder that is scaled.
+    assert abs(sim.airframe.state.rotor_rpm - UH1_RPM) < 1e-9
+    assert abs(sim.rotor_azimuth_deg - 2.0 * UH1_RPM * 6.0) < 1e-6   # 1 rpm = 6 deg/s
     assert abs(rotor_azimuth_deg(sim) - 288.0) < 1e-6
     assert 0.0 <= rotor_azimuth_deg(sim) < 360.0
     assert abs(rotor_azimuth_deg(sim, UH1_TAIL_MAIN_RATIO) - 17.28) < 1e-6
+    # Which is this, and not the 161.28 a wrap applied to the remainder first
+    # would give: the two differ by 144 deg because 5.56 is not an integer.
+    assert rotor_azimuth_deg(sim, UH1_TAIL_MAIN_RATIO) == math.fmod(
+        UH1_TAIL_MAIN_RATIO * sim.rotor_azimuth_deg, 360.0)
+    wrapped_first = math.fmod(UH1_TAIL_MAIN_RATIO * rotor_azimuth_deg(sim), 360.0)
+    assert abs(wrapped_first - 161.28) < 1e-6
 
     # The world's own scale, since it is a flying world and not a field to walk
     # around: the far grid is coarser than the near one and stays on the plane,

@@ -118,8 +118,8 @@ from aerodynamics import (GRAVITY, UH1_COLLECTIVE_TRAVEL_IN,
                           UH1_RPM, UH1_RPM_LOW, UH1_ROTOR_TIME_CONSTANT_SIM_S,
                           Vector3)
 from airframe import (FOOT, KNOT, POUND, Airframe, BodyForces, FlightState,
-                      UH1_HUB_HEIGHT, UH1_SIM_MASS, UH1_TEST_MASS, apply,
-                      direction_cosine_matrix, transpose)
+                      UH1_HUB_HEIGHT, UH1_OMEGA, UH1_SIM_MASS, UH1_TEST_MASS,
+                      apply, direction_cosine_matrix, transpose)
 from engine import Engine, UH1_ENGINE_POWER_W
 from rotor_control import PilotControls
 
@@ -176,12 +176,12 @@ GROUND_CLEARANCE_M = 0.02
 # ---------------------------------------------------------------------------
 
 #: Altitude, m, speed, m/s and rate, rad/s, beyond which the frame that produced
-#: a state is refused rather than passed on.  The model has no engine and no rotor
-#: speed dynamics, so a violent hands-off case can grow without bound - a dive
-#: with the collective at the down stop ends in 10^11 m of altitude and then in a
-#: NaN - and a wrapper that hands a renderer that has failed whatever the
-#: arithmetic said.  The three numbers are this project's own and sit far outside
-#: any UH-1 flight: 30 km up, 200 m/s, 300 deg/s.
+#: a state is refused rather than passed on.  With the rotor speed a free state -
+#: a failed engine, or the collective at the down stop in a dive - a violent
+#: hands-off case can grow without bound, so a wrapper must not hand a renderer
+#: whatever the arithmetic said: a dive with the collective at the down stop ends
+#: in 10^11 m of altitude and then in a NaN.  The three numbers are this project's
+#: own and sit far outside any UH-1 flight: 30 km up, 200 m/s, 300 deg/s.
 UH1_ENVELOPE_CEILING_M = 30000.0
 UH1_ENVELOPE_CEILING_MPS = 200.0
 UH1_ENVELOPE_CEILING_RADPS = math.radians(300.0)
@@ -863,6 +863,15 @@ class Simulation:
 
     Nothing here reads a clock, so two runs on the same frame times are
     bit-identical: the self test asserts exactly that.
+
+    :attr:`rotor_azimuth_deg` is the clock's other half and the only place the
+    rotor's *angle* is held: it is the integral of the shaft speed the frames
+    flew, so the blades a renderer draws turn with the rotor the aircraft really
+    has rather than at a rate :func:`main.rotor_azimuth_deg` assumes.  Nothing in
+    the model reads it - the rotor's own loads come out of a harmonic balance
+    over a revolution and not out of where the blades happen to be - which is why
+    the self test can throw it away every frame and fly the same flight bit for
+    bit.
     """
 
     airframe: Airframe = field(default_factory=airframe_preset)
@@ -879,6 +888,16 @@ class Simulation:
     steps: int = 0
     dropped_steps: int = 0
     frame_carry: float = 0.0
+    #: The rotor's azimuth, degrees, and *unwrapped*: it is the integral of the
+    #: shaft speed the frames flew and it keeps counting up, so ten turns of a
+    #: blade and a bit over read as 3888 and not as 288.  A rendering clock and
+    #: not a state - nothing in the model reads an absolute azimuth - and
+    #: advanced on the accepted steps only, at the mean of the step's two ends.
+    #: :func:`main.rotor_azimuth_deg` is the one place it becomes an angle, and
+    #: the wrap belongs there rather than here: the tail rotor's 5.56 is not an
+    #: integer, so the two rotors do not share a whole number of revolutions.
+    #: See :meth:`_advance` and :meth:`reset`.
+    rotor_azimuth_deg: float = 0.0
     controls: PilotControls = field(default_factory=PilotControls)
     forces: Optional[BodyForces] = None
     on_ground: bool = False
@@ -1066,6 +1085,7 @@ class Simulation:
         self.steps = 0
         self.dropped_steps = 0
         self.frame_carry = 0.0
+        self.rotor_azimuth_deg = 0.0
         self.crashed = False
         self.crash_reason = None
         self.ground_position = None
@@ -1209,7 +1229,10 @@ class Simulation:
         the aircraft never made - see :meth:`_ground` for that one, and
         :attr:`Telemetry.crash_message` for what each is shown as.  Nothing about
         the flight ends here: the state stands still, the clock and the controls
-        go on, and only :meth:`reset` clears the flag.
+        go on, and only :meth:`reset` clears the flag.  The rotor's azimuth is
+        the one thing that does not: a refused step turned no blades, so
+        :attr:`rotor_azimuth_deg` is advanced after this check rather than with
+        the clock above it.
         """
         before = self.airframe.state
         descent = before.ground_velocity().z
@@ -1223,6 +1246,13 @@ class Simulation:
             self.crashed = True
             self.crash_reason = CRASH_OUT_OF_ENVELOPE
             return
+        # The blades turn, by the rotor speed the step actually held: the mean of
+        # its two ends, which is the trapezoid a rotor that is speeding up or
+        # slowing down wants and the exact speed when it is not.  It is after the
+        # envelope check on purpose - a refused step flew no aircraft, so it turns
+        # no blades, even though the clock above has already counted it.
+        self.rotor_azimuth_deg += math.degrees(
+            0.5 * (before.rotor_speed + self.airframe.state.rotor_speed) * dt)
         self._ground(dt, descent, before.position)
 
     def _ground(self, dt, descent, touchdown):
@@ -1522,6 +1552,92 @@ def _self_test():
     assert abs(state.altitude - 200.0) < 0.01
     assert abs(state.position.x) < 0.01 and abs(state.position.y) < 0.01
     assert state.speed < 0.01
+
+    # The rotor's azimuth, which is a clock and not a state: the integral of the
+    # shaft speed the frames flew, taken at the mean of each step's two ends.
+    # This aircraft has no engine and no engine torque - the report's fixed rotor
+    # - so the shaft never moves and two seconds of frames is exactly the speed
+    # times the time: 10.8 revolutions, i.e. 3888 deg of clock.
+    turning = Simulation()
+    for _ in range(120):
+        turning.step(SIM_TIME_STEP_S)
+    assert abs(turning.rotor_azimuth_deg
+               - 2.0 * UH1_OMEGA * 180.0 / math.pi) < 1e-6, turning.rotor_azimuth_deg
+    assert abs(turning.rotor_azimuth_deg - 3888.0) < 1e-6
+    assert turning.rotor_azimuth_deg > 360.0     # unwrapped: ten turns and then some
+
+    # And the one frame identity it is built out of: a step adds the speed the
+    # rotor was doing over it, which is 32.4 deg of a 324 rpm rotor in a frame.
+    first = Simulation()
+    first.step(SIM_TIME_STEP_S)
+    assert first.frames == 1 and first.steps == 1
+    assert abs(first.rotor_azimuth_deg
+               - UH1_OMEGA * SIM_TIME_STEP_S * 180.0 / math.pi) < 1e-12
+    assert abs(first.rotor_azimuth_deg - 32.4) < 1e-12
+
+    # Half a rotor speed turns the blades half as far, and either setting of the
+    # shaft is held there, since nothing on this aircraft can change it.
+    half = Simulation()
+    half.airframe.state.rotor_speed = 0.5 * UH1_OMEGA
+    for _ in range(120):
+        half.step(SIM_TIME_STEP_S)
+    assert abs(half.rotor_azimuth_deg - 0.5 * turning.rotor_azimuth_deg) < 1e-6
+    assert abs(half.airframe.state.rotor_speed - 0.5 * UH1_OMEGA) < 1e-12
+    assert abs(math.fmod(half.rotor_azimuth_deg, 360.0) - 144.0) < 1e-6
+
+    # The mean is the trapezoid a rotor that is speeding up or slowing down wants,
+    # and not one of the two ends: a rotor with nothing turning it drags down, and
+    # the clock is that history's own trapezoid rather than its last sample.
+    coasting = Simulation(airframe=airframe_preset("simulation",
+                                                   engine_torque=0.0))
+    expected = 0.0
+    for _ in range(60):
+        speed = coasting.airframe.state.rotor_speed
+        coasting.step(SIM_TIME_STEP_S)
+        expected += math.degrees(
+            0.5 * (speed + coasting.airframe.state.rotor_speed) * SIM_TIME_STEP_S)
+    assert abs(coasting.rotor_azimuth_deg - expected) < 1e-9, coasting.rotor_azimuth_deg
+    assert coasting.airframe.state.rotor_speed < UH1_OMEGA   # and it did drag down
+
+    # A reset puts the azimuth back with the rest of the aircraft, and a refused
+    # step turns no blades even though the clock has already counted it: the
+    # azimuth advances on the accepted steps only.
+    turning.reset()
+    assert turning.rotor_azimuth_deg == 0.0 and turning.sim_time == 0.0
+    refused = Simulation()
+    refused.airframe.state.velocity = Vector3(0.0, 0.0,
+                                              -2.0 * UH1_ENVELOPE_CEILING_MPS)
+    refused.step(SIM_TIME_STEP_S)
+    assert refused.crashed and refused.crash_reason == CRASH_OUT_OF_ENVELOPE
+    assert refused.rotor_azimuth_deg == 0.0
+    assert abs(refused.sim_time - SIM_TIME_STEP_S) < 1e-12
+
+    # Nothing reads it: the same frames with the azimuth thrown away every frame
+    # leave the aircraft bit-identical, which is the same statement as "no line in
+    # the model asks where the blades are".
+    blind, kept = Simulation(), Simulation()
+    for _ in range(120):
+        blind.step(SIM_TIME_STEP_S)
+        blind.rotor_azimuth_deg = 0.0
+        kept.step(SIM_TIME_STEP_S)
+    assert abs(kept.rotor_azimuth_deg - 3888.0) < 1e-6
+    assert blind.rotor_azimuth_deg == 0.0
+    assert blind.airframe.state.values() == kept.airframe.state.values()
+
+    # Off a governed rotor the blades turn at the rotor's own speed and not at the
+    # nameplate, which is the whole point of an azimuth that is an integral: a
+    # fresh powered aircraft, whose governor has its 40 rpm of droop to find and
+    # holds 322.9964 rpm after the two seconds, is 12.18 deg behind the fixed
+    # rotor's 288 - of the two integrals, 3888 against 3875.82, and the strobe
+    # error a clock of ``sim_time * UH1_RPM * 6`` would have drawn.
+    powered = Simulation(airframe=airframe_preset("simulation", engine=True))
+    for _ in range(120):
+        powered.step(SIM_TIME_STEP_S)
+    assert abs(powered.airframe.state.rotor_rpm - 322.9964) < 0.001
+    behind = 288.0 - math.fmod(powered.rotor_azimuth_deg, 360.0)
+    assert abs(behind - 12.18) < 0.01, behind
+    assert behind > 0.0                          # behind, since 322.9964 < UH1_RPM
+    assert UH1_RPM - powered.airframe.state.rotor_rpm < 40.0   # inside its droop band
 
     # The same hover with a keyboard nobody is touching, which is what a trim
     # that starts the axes is for: a fresh simulation's hands are put on the

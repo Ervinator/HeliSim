@@ -11,13 +11,8 @@ wiring that flying cannot test.
   the shaft - see `Done` below - so a torque now comes from somewhere: a T53 with
   a twist grip, an N2 governor with the manual's own +-40 rpm droop band, a
   0.6 sec spool, 1125 ft-lb of data plate torque, 50 psi of transmission, 7 psi
-  for EMER and the manual's bleed air numbers.  Five things are still open:
+  for EMER and the manual's bleed air numbers.  Four things are still open:
 
-  * *the rotor azimuth clock.*  `main.py`'s `rotor_azimuth_deg` is still the
-    constant clock `sim_time * UH1_RPM * 6`, so with an engine aboard the visible
-    blades mis-strobe off a rotor that is no longer at exactly 100 per cent, and
-    the `--check` assertion written against that constant has to become an
-    assertion about an *integrated* azimuth;
   * *a trim that solves for the rotor speed.*  `trim_hover` and
     `trim_level_flight` accept an omega to solve at but do not solve *for* one;
     closing the shaft balance with the other six unknowns is what a governor's
@@ -75,6 +70,63 @@ These are choices, not oversights: each is stated where it lives.
   how long the window took to see the key.
 
 ## Done
+
+* 2026-10-08 - **the rotor's azimuth is an integral of the rotor speed, so the
+  blades a renderer draws turn with the rotor the aircraft actually has.**  The
+  last thing of the engine's level: `main.py`'s `rotor_azimuth_deg` was the
+  constant clock `sim_time * UH1_RPM * 6`, which is right only while the rotor
+  speed is held at exactly 100 per cent - so with a T53 aboard, and a governor
+  that settles at 322.97 rpm (322.9964 of it after the first two seconds), the
+  visible blades strobed 12.18 deg off the rotor they were meant to be drawn on,
+  and further off for every second after that.
+
+  The clock is the rotor's own now.  `Simulation.rotor_azimuth_deg` is a new
+  field, in degrees, advanced in `_advance` by
+  `degrees(0.5 * (omega started + omega ended) * dt)` - the trapezoid a rotor
+  speeding up or slowing down wants, and exactly omega * dt when it is not - and
+  advanced *after* the envelope check, so a refused step, which flew no aircraft,
+  turns no blades.  `reset` clears it with the rest of the counter block.  It is
+  a clock and not a state: nothing in the model reads it, because the rotor's own
+  loads come out of a harmonic balance over a revolution and not out of where the
+  blades happen to be - which is why the self test can zero it every frame and
+  fly a flight bit-identical to the one that kept it.  And it is kept
+  *unwrapped*: ten turns of a blade and a bit over read as 3888 deg and not as
+  288, because the tail rotor's 5.56 : 1 is not an integer.  `main.rotor_azimuth_deg`
+  is `fmod(sim.rotor_azimuth_deg * ratio, 360.0)` - the one place the clock
+  becomes an angle - and that wrap is deliberately there rather than in the
+  model: the main rotor's own remainder is 288 where the clock is 3888, and 5.56
+  times 288 is 161.28 deg, which is not where the tail rotor is, while 5.56 times
+  3888 leaves the 17.28 it is at.  The two are 144 deg apart for no better reason
+  than that 5.56 is not an integer, which is the whole of why the clock has to
+  count revolutions rather than degrees.
+
+  `main.py`'s `--check` keeps its 288 and 17.28 assertions untouched - a default
+  aircraft has no engine and no engine torque, so its shaft is still exactly
+  `UH1_RPM` and two seconds is still 10.8 revolutions - and gains the properties
+  behind them: that the clock is 3888 deg and the shaft is at `UH1_RPM` to the
+  last bit, that the tail's angle is the remainder of `ratio` times that 3888,
+  and that a wrap applied first would have given the other number.
+
+  Verified: `python simulation.py`, `python airframe.py`, `python engine.py`,
+  `python rotor_control.py`, `python aerodynamics.py`, `python controls.py`,
+  `python scenery.py` and `main.py --check` all passing, with the new assertions
+  written in the same style - that two seconds of the fixed rotor is 3888 deg of
+  clock and 288 of angle and one frame is 32.4 of it, that half a rotor speed is
+  half the azimuth (144 deg) and that a rotor dragging down under no torque at
+  all is its own trapezoid rather than its last sample, that a reset clears the
+  azimuth and a refused step leaves it while the clock goes on, that a governed
+  rotor is 12.18 deg behind the nameplate after the same two seconds, and that
+  zeroing the azimuth every frame changes no bit of the flight.  Three broken
+  copies were flown against those assertions and all three were caught: the clock
+  driven by the start of the frame's rotor speed alone (by the coasting
+  trapezoid), the wrap forgotten (by the range check) and the wrap applied before
+  the tail ratio (by the 17.28).  And the gate itself, re-run in full for the
+  first time since the engine landed: `regression_tm73254.py`'s `_self_test`
+  passing and its demo printing the two trims and all eight of figures 2 to 9
+  exactly as its own transcript records them, and `_rt_check.py`'s two pilots
+  flying their missions through `main.fly_frame` to a transcript bit for bit
+  identical to the one the engine's entry was verified against - 304 lines, 0
+  different.
 
 * 2026-10-08 - **the engine: a T53 with its governor, so the torque comes from
   somewhere.**  The level before this one made the rotor speed a state and left
