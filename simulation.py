@@ -107,7 +107,7 @@ from typing import Optional
 from aerodynamics import (GRAVITY, UH1_COLLECTIVE_TRAVEL_IN,
                           UH1_HUB_WATERLINE_M, UH1_LAT_STICK_TRAVEL_IN,
                           UH1_LONG_STICK_TRAVEL_IN, UH1_PEDAL_TRAVEL_IN,
-                          UH1_ROTOR_TIME_CONSTANT_SIM_S, Vector3)
+                          UH1_RPM, UH1_ROTOR_TIME_CONSTANT_SIM_S, Vector3)
 from airframe import (FOOT, KNOT, POUND, Airframe, BodyForces, FlightState,
                       UH1_HUB_HEIGHT, UH1_SIM_MASS, UH1_TEST_MASS, apply,
                       direction_cosine_matrix, transpose)
@@ -298,6 +298,9 @@ class Telemetry:
     control_tilt_deg: float   # deg, commanded tip path plane tilt
     thrust: float             # N, main rotor T
     torque: float             # N m, main rotor shaft torque Q
+    rotor_speed: float        # rad/s, main rotor
+    rotor_rpm: float          # rpm, main rotor
+    rotor_percent: float      # %, of the 324 rpm reference
     h_force: float            # N, main rotor H
     y_force: float            # N, main rotor Y
     tail_thrust: float        # N, starboard positive
@@ -341,12 +344,12 @@ class Telemetry:
 
     def __str__(self):
         return ("t %6.2f s | alt %6.1f m %+7.0f fpm | %5.1f kt | roll %+6.1f"
-                " pitch %+6.1f yaw %+6.1f deg | coll %5.2f in (%4.1f %%), long"
-                " %+5.2f lat %+5.2f pedal %+5.2f in | T %6.0f N, Q %+7.0f N m,"
-                " tail %+6.0f N |%s%s%s"
+                " pitch %+6.1f yaw %+6.1f deg | rotor %3.0f %% | coll %5.2f in"
+                " (%4.1f %%), long %+5.2f lat %+5.2f pedal %+5.2f in | T %6.0f N,"
+                " Q %+7.0f N m, tail %+6.0f N |%s%s%s"
                 % (self.sim_time, self.alt_agl, self.height_rate_fpm,
                    self.airspeed_kt, self.roll_deg, self.pitch_deg,
-                   self.yaw_deg, self.collective_in,
+                   self.yaw_deg, self.rotor_percent, self.collective_in,
                    100.0 * self.collective_fraction, self.long_stick_in,
                    self.lat_stick_in, self.pedal_in, self.thrust, self.torque,
                    self.tail_thrust,
@@ -1239,6 +1242,8 @@ class Simulation:
             control_tilt_deg=angles.control_tilt_deg,
             thrust=rotor.thrust, torque=rotor.torque, h_force=rotor.h_force,
             y_force=rotor.y_force, tail_thrust=forces.tail_thrust,
+            rotor_speed=state.rotor_speed, rotor_rpm=state.rotor_rpm,
+            rotor_percent=100.0 * state.rotor_rpm / UH1_RPM,
             lift=forces.lift, ground_effect=rotor.ground_effect,
             inflow_ratio=rotor.inflow_ratio,
             advance_ratio=rotor.advance_ratio,

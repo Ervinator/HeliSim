@@ -82,13 +82,15 @@ Standard library only, so it runs and tests headless.
 
 import math
 from dataclasses import dataclass, field
-from typing import Tuple
+from typing import Optional, Tuple
 
 from aerodynamics import (GRAVITY, RHO_SEA_LEVEL, Vector3,
                           glauert_induced_velocity, UH1_RADIUS, UH1_RPM,
+                          UH1_RPM_LOW,
                           UH1_TAIL_RADIUS, UH1_TWIST_DEG,
                           UH1_ROTOR_TIME_CONSTANT_SIM_S)
 from rotor_control import (ControlLags, MixingLaw, PilotControls,
+                           UH1_COLLECTIVE_TRAVEL_IN,
                            UH1_ROTOR_TIME_CONSTANT_S, solve_linear)
 
 # ---------------------------------------------------------------------------
@@ -360,8 +362,20 @@ def report_collective_rad(root_collective_deg, twist_deg=UH1_TWIST_DEG):
 UH1_OMEGA = UH1_RPM * 2.0 * math.pi / 60.0    # rad/s, 33.93
 UH1_TIP_SPEED = UH1_OMEGA * UH1_RADIUS        # m/s, 249.4
 
+#: Polar inertia of the two bladed rotor about the shaft, kg m^2.
+#:
+#: This is the one number in a rotor speed equation that neither report gives.
+#: It does not have to be mined from anywhere, though: the UH-1's teetering
+#: hinge sits *on* the shaft, so a blade's flap inertia about the hinge is also
+#: its polar inertia about the shaft, and :mod:`rotor_control` already derives
+#: and asserts one blade's 1658 kg m^2 from two 92 kg blades spread evenly along
+#: the span.  The pair is therefore 3315 kg m^2, and the self test checks this
+#: against that rotor rather than against a table.
+UH1_ROTOR_INERTIA = 3315.0    # kg m^2, 2 X 1658 about the shaft
+
 
 def _solve_inflow_ratio(thrust_at, mu, wind_along_axis, ground_effect,
+                        r7=UH1_ROTOR_R7, r8=UH1_ROTOR_R8,
                         tolerance=1e-10, iterations=80):
     """Solve the report's inflow ratio, equation 10, for a rotor disc.
 
@@ -381,7 +395,10 @@ def _solve_inflow_ratio(thrust_at, mu, wind_along_axis, ground_effect,
     returns the thrust equation 1 gives when the inflow ratio is -x, in N.  A
     bisection is used, so it cannot oscillate the way the report's fixed point
     iteration would: that iteration's own derivative at a UH-1H hover is about
-    -40, which diverges.  Returns ``(inflow_ratio, evaluations, converged)`` and
+    -40, which diverges.  ``r7`` and ``r8`` are table 3's two inflow constants,
+    both closed forms in the rotor speed, so a rotor that is not at 100 per cent
+    solves its own equation rather than the reference one.  Returns
+    ``(inflow_ratio, evaluations, converged)`` and
     reports the answer as unconverged rather than guessing when no bracket can
     be found, which is what a windmill brake state looks like from here.
     """
@@ -389,8 +406,8 @@ def _solve_inflow_ratio(thrust_at, mu, wind_along_axis, ground_effect,
     evaluations = 0
 
     def residual(x):
-        return (x - UH1_ROTOR_R7 * wind_along_axis
-                - UH1_ROTOR_R8 * ground_effect * thrust_at(x)
+        return (x - r7 * wind_along_axis
+                - r8 * ground_effect * thrust_at(x)
                 / math.sqrt(mu * mu + x * x))
 
     for _ in range(60):
@@ -466,9 +483,74 @@ class RotorHubForces:
         return self.wind_u / speed, self.wind_v / speed
 
 
+@dataclass(frozen=True)
+class RotorConstants:
+    """TM-73254 table 3's rotor constants at one rotor speed.
+
+    The table is written for one rotor speed and every one of its nine constants
+    is a closed form in omega, so the whole set moves with the rotor: ``R1`` and
+    ``R9`` go as ``omega ** 2``, ``R2``, ``R4``, ``R7`` and the tail rotor's
+    ``T1`` as ``1 / omega``, ``R8`` as ``1 / omega ** 2``, and ``R3`` and ``R5``
+    (which carry only the lift curve slope) do not move at all.  ``tip_speed`` is
+    ``omega R`` and is what the report calls ``omega R`` throughout.
+
+    The tabulated numbers *are* the 100 per cent values, so
+    :func:`rotor_constants` scales them and at :data:`UH1_OMEGA` returns exactly
+    the transcribed table, to the last bit.  That is deliberate: the closed forms
+    in the rotor's geometry are checked once, where the table is transcribed (see
+    :func:`_self_test`), and what is checked here is the scaling, which is the
+    part that a rotor speed dynamics gets wrong quietly.
+    """
+
+    r1: float            # N,     sigma a / 2 rho A (omega R)^2
+    r2: float            # s,     1 / (4 omega)
+    r3: float            # s,     1 / (2 a)
+    r4: float            # s,     1 / omega
+    r5: float            # s,     1 / (4 a)
+    r6: float            # s,     16 / (gamma omega), the flapping lag
+    r7: float            # s/m,   1 / (omega R)
+    r8: float            # 1/N,   1 / (2 rho A (omega R)^2)
+    r9: float            # J,     R1 R, the constant in the torque, equation 4
+    tip_speed: float     # m/s,   omega R
+    tail_t1: float       # s/m,   1 / (2 (omega R)_TR)
+    omega: float         # rad/s, the rotor speed these belong to
+    rpm: float           # rpm,   the same, in the units a gauge is marked in
+
+
+def rotor_constants(omega=UH1_OMEGA):
+    """Table 3's rotor constants at a rotor speed *omega*, rad/s.
+
+    At the default - the 324 rpm reference of :data:`UH1_OMEGA` - this is the
+    table itself, unchanged; anywhere else it is the table scaled by the closed
+    forms in :class:`RotorConstants`.  ``R6`` is carried here for the table's
+    sake from the physical 0.072 sec reading of it, which is ``16 / (gamma
+    omega)`` and so moves with the rotor like the rest; the force model takes the
+    flapping lag from :attr:`Airframe.rotor_time_constant` instead, where the
+    choice between the table's two readings is made.
+    """
+    if omega <= 0.0:
+        raise ValueError("the rotor has to be turning")
+    speed = omega / UH1_OMEGA
+    return RotorConstants(
+        r1=UH1_ROTOR_R1 * speed * speed,
+        r2=UH1_ROTOR_R2 / speed,
+        r3=UH1_ROTOR_R3,
+        r4=UH1_ROTOR_R4 / speed,
+        r5=UH1_ROTOR_R5,
+        r6=UH1_ROTOR_TIME_CONSTANT_S / speed,
+        r7=UH1_ROTOR_R7 / speed,
+        r8=UH1_ROTOR_R8 / (speed * speed),
+        r9=UH1_ROTOR_R9 * speed * speed,
+        tip_speed=UH1_TIP_SPEED * speed,
+        tail_t1=UH1_TAIL_T1 / speed,
+        omega=omega,
+        rpm=omega * 60.0 / (2.0 * math.pi))
+
+
 def main_rotor_forces(controls, body_velocity, body_rates,
                       air_density=RHO_SEA_LEVEL, rotor_height=1000.0,
-                      rotor_time_constant=UH1_ROTOR_TIME_CONSTANT_S):
+                      rotor_time_constant=UH1_ROTOR_TIME_CONSTANT_S,
+                      omega=UH1_OMEGA, constants=None):
     """TM-73254 equations 1 to 10: the main rotor's force at the hub.
 
     ``controls`` is a :class:`ControlPitch`, ``body_velocity`` the aircraft's
@@ -477,6 +559,14 @@ def main_rotor_forces(controls, body_velocity, body_rates,
     effect factor of equation 10a; the default is high enough to be out of it.
     ``air_density`` reaches only the momentum theory behind the inflow, since
     the report's own constants are frozen at sea level.
+
+    ``omega`` is the rotor speed the table 3 constants are taken at, rad/s, and
+    defaults to the 324 rpm reference; ``constants`` is the whole
+    :class:`RotorConstants` set put in place of it, for a caller that has built
+    them once - a trim, or an integrator evaluating the same frame four times.
+    Note that *air_density* does not scale them: the report's constants carry
+    sea level density inside them, exactly as they carry omega, and moving them
+    with the rotor speed is the one of those two the model can honestly do.
 
     ``rotor_time_constant`` is R6 of table 3 where it appears in the flapping
     coefficients, equations 6 and 7.  Flip it to
@@ -490,6 +580,8 @@ def main_rotor_forces(controls, body_velocity, body_rates,
     company as the disc tilts, because the closed form is a first harmonic
     approximation.
     """
+    if constants is None:
+        constants = rotor_constants(omega)
     collective = controls.collective_rad
     b1s = controls.control_axis_long_rad
     a1s = controls.control_axis_lat_rad
@@ -507,7 +599,7 @@ def main_rotor_forces(controls, body_velocity, body_rates,
            + a1s * (v_b + p_b * hub))
 
     in_plane = math.hypot(u_c, v_c)
-    mu = in_plane * UH1_ROTOR_R7                             # (8)
+    mu = in_plane * constants.r7                             # (8)
     # Direction cosines of the in-plane wind.  A hover has none, and the
     # report's equations 35 and 36 then give p_C = q_C = 0 rather than dividing
     # by zero, which is their limit and the state the constants were tuned in.
@@ -518,30 +610,31 @@ def main_rotor_forces(controls, body_velocity, body_rates,
     p_c = -p_b * cos_c - q_b * sin_c                         # (35)
     q_c = -q_b * cos_c + p_b * sin_c                         # (36)
 
-    shape = collective * (1.0 / 3.0 + 0.5 * mu * mu) + UH1_ROTOR_R2 * mu * p_c
+    shape = collective * (1.0 / 3.0 + 0.5 * mu * mu) + constants.r2 * mu * p_c
 
     def thrust_at(inflow):
         """Equation 1 with lambda = *inflow*."""
-        return UH1_ROTOR_R1 * (shape + 0.5 * inflow)
+        return constants.r1 * (shape + 0.5 * inflow)
 
     ground_effect = ground_effect_factor(rotor_height)
     inflow, evaluations, converged = _solve_inflow_ratio(
-        lambda x: thrust_at(-x), mu, w_c, ground_effect)
-    induced = -inflow * UH1_TIP_SPEED - w_c
+        lambda x: thrust_at(-x), mu, w_c, ground_effect,
+        r7=constants.r7, r8=constants.r8)
+    induced = -inflow * constants.tip_speed - w_c
 
     # Flapping coefficients, equations 5 to 7, about the report's fixed cone
     # angle.  R6 is the rotor time constant: 0.072 sec from one blade's inertia,
     # or the 0.144 sec the simulation flew.
     a0 = UH1_ROTOR_A0
-    r4, r6 = UH1_ROTOR_R4, rotor_time_constant
+    r4, r6 = constants.r4, rotor_time_constant
     a1 = (mu * (8.0 * collective / 3.0 + 2.0 * inflow) + r4 * p_c
           - r6 * q_c) / (1.0 - 0.5 * mu * mu)                # (6)
     b1 = (4.0 * mu * a0 / 3.0 - r4 * q_c - r6 * p_c) / (1.0 + 0.5 * mu * mu)
 
     thrust = thrust_at(inflow)                               # (1)
     delta = UH1_ROTOR_DELTA0 + UH1_ROTOR_DELTA2 * thrust * thrust   # (9)
-    r1, r3, r5, r9 = (UH1_ROTOR_R1, UH1_ROTOR_R3, UH1_ROTOR_R5,
-                      UH1_ROTOR_R9)
+    r1, r3, r5, r9 = (constants.r1, constants.r3, constants.r5,
+                      constants.r9)
 
     h_force = r1 * (                                         # (2)
         r3 * delta * mu
@@ -582,7 +675,7 @@ def main_rotor_forces(controls, body_velocity, body_rates,
         converged=converged)
 
 
-def tail_rotor_thrust(collective_rad, u_b, v_t):
+def tail_rotor_thrust(collective_rad, u_b, v_t, tail_t1=UH1_TAIL_T1):
     """TM-73254 equation 37: the tail rotor's thrust, N, starboard positive.
 
     ``collective_rad`` is theta_TR from the pedals, ``u_b`` the forward speed,
@@ -598,6 +691,12 @@ def tail_rotor_thrust(collective_rad, u_b, v_t):
     the collective in place of a blade element integral, and the two further
     factors are the inflow it makes (through T1, the reciprocal of twice the
     tail rotor's tip speed) and the side wash's damping (through T4).
+
+    ``tail_t1`` is T1 of table 3, the reciprocal of twice the tail rotor's tip
+    speed, and is a parameter because the tail rotor's speed is the main rotor's
+    through a fixed drive ratio: at 90 per cent of the reference it is 1 / 0.9
+    times as large, and a rotor that is slowing down cannot go on pushing the
+    same thrust per degree of pedal.
     """
     magnitude = abs(collective_rad)
     # theta_2 of equation 37: the collective the inflow factor is divided by,
@@ -606,7 +705,7 @@ def tail_rotor_thrust(collective_rad, u_b, v_t):
     sign = 1.0 if collective_rad >= 0.0 else -1.0
     root = math.sqrt(UH1_TAIL_T2 * UH1_TAIL_T2 + UH1_TAIL_T3 * magnitude)
     standstill = (root - UH1_TAIL_T2) ** 2
-    inflow = 1.0 + UH1_TAIL_T1 * u_b / theta2
+    inflow = 1.0 + tail_t1 * u_b / theta2
     damping = UH1_TAIL_T4 + UH1_TAIL_T5 * abs(u_b)
     return sign * standstill * max(inflow, 0.0) - damping * v_t
 
@@ -792,12 +891,16 @@ class BodyForces:
 
 def body_forces(controls, body_velocity, body_rates, air_density=RHO_SEA_LEVEL,
                 rotor_height=1000.0,
-                rotor_time_constant=UH1_ROTOR_TIME_CONSTANT_S):
+                rotor_time_constant=UH1_ROTOR_TIME_CONSTANT_S,
+                omega=UH1_OMEGA, constants=None):
     """The whole aircraft's force and moment, TM-73254 equations 11 to 66.
 
     ``controls`` is a :class:`ControlPitch`, ``body_velocity`` the aircraft's
     velocity in body axes, m/s, ``body_rates`` its (p, q, r), rad/s, and
     ``rotor_height`` the hub's height above the ground for the ground effect.
+    ``omega`` is the rotor speed both rotors are turning at, the main rotor's
+    directly and the tail rotor's through the drive ratio, and ``constants`` the
+    table 3 set built once for it.
 
     The order is the report's.  The main rotor's T, H and Y are resolved into
     the control axis - wind system (equations 14 to 16), then into body axes
@@ -812,10 +915,13 @@ def body_forces(controls, body_velocity, body_rates, air_density=RHO_SEA_LEVEL,
     ``r cross F`` rather than as the printed forms, and the self test asserts
     the two agree, which is what makes the signs of those six lines checkable.
     """
+    if constants is None:
+        constants = rotor_constants(omega)
     rotor = main_rotor_forces(controls, body_velocity, body_rates,
                               air_density=air_density,
                               rotor_height=rotor_height,
-                              rotor_time_constant=rotor_time_constant)
+                              rotor_time_constant=rotor_time_constant,
+                              constants=constants)
     u_b, v_b = body_velocity.x, body_velocity.y
     p_b, r_b = body_rates.x, body_rates.z
     b1s = controls.control_axis_long_rad
@@ -840,7 +946,7 @@ def body_forces(controls, body_velocity, body_rates, air_density=RHO_SEA_LEVEL,
     # moment it makes about the c.g. (39 to 41).
     side_wash = v_b - r_b * UH1_TAIL_ARM + p_b * UH1_TAIL_HEIGHT    # (38)
     tail_thrust = tail_rotor_thrust(controls.tail_collective_rad, u_b,
-                                    side_wash)
+                                    side_wash, tail_t1=constants.tail_t1)
     tail_force = Vector3(0.0, tail_thrust, 0.0)                     # (39)
     tail_position = Vector3(-UH1_TAIL_ARM, 0.0, -UH1_TAIL_HEIGHT)
     tail_moment = tail_position.cross(tail_force)                   # (40, 41)
@@ -946,30 +1052,45 @@ class FlightState:
     Both frames appear in one object because that is how the equations of
     motion are written: forces are summed in body axes, where the airframe is
     fixed, and the position is integrated in NED, where the ground is.
+
+    ``rotor_speed`` is the main rotor's angular velocity, rad/s, and is the
+    thirteenth state variable: a rotor is a flywheel, and its speed is as much
+    a part of where the aircraft is as its pitch rate is.  It is the last field
+    so that every state that does not care about it - which is every state until
+    a torque balance is flown - gets the 324 rpm reference and the fixed rotor of
+    the report's model with it.
     """
 
     position: Vector3 = field(default_factory=Vector3)
     velocity: Vector3 = field(default_factory=Vector3)
     attitude: Vector3 = field(default_factory=Vector3)
     rates: Vector3 = field(default_factory=Vector3)
+    rotor_speed: float = UH1_OMEGA
 
     def copy(self):
         """A copy, so that a trim or an integrator can shuffle states about."""
         return FlightState(self.position, self.velocity, self.attitude,
-                           self.rates)
+                           self.rates, self.rotor_speed)
 
     def values(self):
-        """The twelve state variables as a tuple, for a Runge-Kutta step."""
+        """The thirteen state variables as a tuple, for a Runge-Kutta step."""
         return (self.position.x, self.position.y, self.position.z,
                 self.velocity.x, self.velocity.y, self.velocity.z,
                 self.attitude.x, self.attitude.y, self.attitude.z,
-                self.rates.x, self.rates.y, self.rates.z)
+                self.rates.x, self.rates.y, self.rates.z,
+                self.rotor_speed)
 
     @classmethod
     def from_values(cls, values):
         """Rebuild a state from :meth:`values`."""
         return cls(Vector3(*values[0:3]), Vector3(*values[3:6]),
-                   Vector3(*values[6:9]), Vector3(*values[9:12]))
+                   Vector3(*values[6:9]), Vector3(*values[9:12]),
+                   values[12])
+
+    @property
+    def rotor_rpm(self):
+        """The main rotor's speed in rpm, the unit its gauge is marked in."""
+        return self.rotor_speed * 60.0 / (2.0 * math.pi)
 
     @property
     def altitude(self):
@@ -1028,10 +1149,12 @@ class FlightState:
     def __str__(self):
         return ("N %+8.1f m, E %+8.1f m, alt %6.1f m | body u %+6.1f, v %+6.1f,"
                 " w %+6.1f m/s | roll %+6.1f, pitch %+6.1f, yaw %+6.1f deg |"
-                " p %+6.1f, q %+6.1f, r %+6.1f deg/s"
+                " p %+6.1f, q %+6.1f, r %+6.1f deg/s | rotor %3.0f %% (%4.0f"
+                " rpm)"
                 % (self.position.x, self.position.y, self.altitude,
                    self.velocity.x, self.velocity.y, self.velocity.z,
-                   *self.attitude_deg.as_tuple(), *self.rates_deg.as_tuple()))
+                   *self.attitude_deg.as_tuple(), *self.rates_deg.as_tuple(),
+                   100.0 * self.rotor_speed / UH1_OMEGA, self.rotor_rpm))
 
 
 @dataclass
@@ -1063,6 +1186,17 @@ class Airframe:
     the physical 0.072 sec from one blade's inertia by default, with the 0.144
     sec of the report's simulation available for reproducing its step
     responses.  ``ground_effect`` can be turned off to fly out of the cushion.
+
+    ``rotor_inertia`` and ``engine_torque`` are what make the rotor speed a
+    state rather than a constant, and by default they do not: ``engine_torque``
+    is ``None``, which means the engine holds whatever the rotor is doing, so
+    :attr:`FlightState.rotor_speed` never changes and this is exactly the
+    report's fixed rotor.  Give it a number in N m and a shaft balance appears
+    in :meth:`derivatives`: the rotor accelerates at ``(Q_engine - Q_drag) /
+    I``, with ``Q_drag`` the torque equation 4 of the report gives it.  What
+    turns the rotor is then the collective in the pilot's hand, which is the
+    physics of an engine failure, of a governor that lags, and of nothing at
+    all once the torque is set to zero and the rotor is left to windmill.
     """
 
     mass: float = UH1_SIM_MASS
@@ -1075,6 +1209,8 @@ class Airframe:
     twist_deg: float = UH1_TWIST_DEG
     rotor_time_constant: float = UH1_ROTOR_TIME_CONSTANT_S
     ground_effect: bool = True
+    rotor_inertia: float = UH1_ROTOR_INERTIA
+    engine_torque: Optional[float] = None
 
     def command_angles(self, controls):
         """The mixing stage on its own: stick positions in, control angles out."""
@@ -1112,7 +1248,10 @@ class Airframe:
         """The report's forces and moments for one instant, in body axes.
 
         *air_density* defaults to the airframe's own; a trim at some other
-        density is what asks for another.
+        density is what asks for another.  The table 3 constants are taken at
+        the state's own rotor speed, so a rotor that is turning slower makes
+        less thrust for the collective in the pilot's hand, which is the whole
+        of what the rotor speed state does to the airframe.
         """
         state = self.state if state is None else state
         return body_forces(
@@ -1122,7 +1261,8 @@ class Airframe:
                          else air_density),
             rotor_height=(state.rotor_height if self.ground_effect
                           else 10.0 * 2.0 * UH1_RADIUS),
-            rotor_time_constant=self.rotor_time_constant)
+            rotor_time_constant=self.rotor_time_constant,
+            omega=state.rotor_speed)
 
     def air_relative_velocity(self, state, wind=None):
         """The aircraft's velocity relative to the air, in body axes, m/s.
@@ -1178,7 +1318,8 @@ class Airframe:
 
         Returns ``(FlightState, BodyForces)``: the derivative as a state of the
         same shape, and the forces behind it, which is what a caller watching a
-        transient wants to see.
+        transient wants to see.  The thirteenth derivative is the rotor's own,
+        from :meth:`rotor_acceleration`.
         """
         forces = self.forces(control_pitch, state, wind=wind)
         mass = self.mass
@@ -1196,8 +1337,29 @@ class Airframe:
             position=self.ground_velocity_of(state),
             velocity=acceleration,
             attitude=euler_rates(state.attitude, state.rates),
-            rates=self.angular_acceleration(forces.moment, state.rates)),
+            rates=self.angular_acceleration(forces.moment, state.rates),
+            rotor_speed=self.rotor_acceleration(forces, state)),
             forces)
+
+    def rotor_acceleration(self, forces, state):
+        """``omega_dot``, rad/s^2: the shaft balance, ``(Q_engine - Q) / I``.
+
+        ``Q`` is the torque the report's equation 4 says the rotor is absorbing
+        - positive in normal flight, since the engine has to drive it - so with
+        an engine torque smaller than it the rotor slows down, which is what an
+        autorotation is, and with a larger one it speeds up, which is what
+        raising the collective with a fixed throttle setting does.
+
+        The default ``engine_torque`` of ``None`` means there is no such balance
+        to fly: the engine is taken to hold the rotor at whatever speed the
+        state has it at, so this is zero and the model is the report's fixed
+        rotor to the last bit.  That is deliberate - every figure in TM-73254
+        was computed with the rotor speed held constant, and the simulator this
+        came from has to be able to reproduce them.
+        """
+        if self.engine_torque is None:
+            return 0.0
+        return (self.engine_torque - forces.rotor.torque) / self.rotor_inertia
 
     def ground_velocity_of(self, state):
         """The NED velocity of a state, which its position integrates."""
@@ -1220,6 +1382,7 @@ class Airframe:
             return self.forces(control_pitch, wind=wind)
         state = self.state
         initial = state.values()
+        count = len(initial)
 
         def slope(values):
             derivative, _ = self.derivatives(FlightState.from_values(values),
@@ -1227,12 +1390,12 @@ class Airframe:
             return derivative.values()
 
         k1 = slope(initial)
-        k2 = slope(tuple(initial[i] + 0.5 * dt * k1[i] for i in range(12)))
-        k3 = slope(tuple(initial[i] + 0.5 * dt * k2[i] for i in range(12)))
-        k4 = slope(tuple(initial[i] + dt * k3[i] for i in range(12)))
+        k2 = slope(tuple(initial[i] + 0.5 * dt * k1[i] for i in range(count)))
+        k3 = slope(tuple(initial[i] + 0.5 * dt * k2[i] for i in range(count)))
+        k4 = slope(tuple(initial[i] + dt * k3[i] for i in range(count)))
         self.state = FlightState.from_values(
             tuple(initial[i] + dt * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i]
-                                     + k4[i]) / 6.0 for i in range(12)))
+                                     + k4[i]) / 6.0 for i in range(count)))
         return self.forces(control_pitch, wind=wind)
 
     def reset(self, state=None, controls=None):
@@ -1250,7 +1413,7 @@ class Airframe:
         return self
 
     def trim_hover(self, weight=None, air_density=None, altitude=200.0,
-                   iterations=40, tolerance=0.1):
+                   iterations=40, tolerance=0.1, rotor_speed=UH1_OMEGA):
         """The stick positions and attitude that hold a still hover.
 
         Six unknowns - collective, pedals, both cyclic sticks and the *pitch and
@@ -1278,15 +1441,26 @@ class Airframe:
         Returns ``(PilotControls, FlightState)``: what to hold, and the state it
         holds.  Feed both to :meth:`reset` and the next ``step`` starts from a
         trimmed hover rather than dropping onto it.
+
+        *rotor_speed* is the rotor speed the trim is asked for, rad/s, and
+        defaults to the 324 rpm reference.  A hover on a slowing rotor is a real
+        condition and not a curiosity - it is what a pilot sees on the way down
+        in an autorotation - so the trim comes back with the state carrying it
+        and with the collective raised to make up for the thrust the rotor is no
+        longer making per degree.  The shaft balance is *not* closed here: with
+        an ``engine_torque`` set, a trim at some rotor speed is an equilibrium of
+        the airframe and not of the engine, and the two are closed together only
+        by a rotor speed trim, which is not this.
         """
         air_density = self.air_density if air_density is None else air_density
         if weight is None:
             weight = self.mass * GRAVITY
         law = self.law
+        constants = rotor_constants(rotor_speed)
         per_in = math.degrees(law.collective_per_in)
         # A first guess from equation 1 with no inflow at all: T = R1 theta_0/3,
         # turned back into a root collective and then into inches.
-        report_rad = 3.0 * weight / UH1_ROTOR_R1
+        report_rad = 3.0 * weight / constants.r1
         guess_deg = (math.degrees(report_rad) - 0.75 * self.twist_deg)
         collective_in = (guess_deg - law.collective_neutral_deg) / per_in
         # unknowns: collective in, pedal in, long stick in, lat stick in,
@@ -1300,13 +1474,15 @@ class Airframe:
                                      long_stick=values[2], lat_stick=values[3])
             attitude = Vector3(values[5], values[4], 0.0)
             trial = FlightState(position=position, velocity=Vector3(),
-                                attitude=attitude, rates=Vector3())
+                                attitude=attitude, rates=Vector3(),
+                                rotor_speed=rotor_speed)
             pitch = ControlPitch.from_angles(law.mix(controls), values[2],
                                              self.twist_deg)
             forces = body_forces(pitch, Vector3(), Vector3(),
                                  air_density=air_density,
                                  rotor_height=trial.rotor_height,
-                                 rotor_time_constant=self.rotor_time_constant)
+                                 rotor_time_constant=self.rotor_time_constant,
+                                 constants=constants)
             theta, phi = values[4], values[5]
             return [forces.force.x - weight * math.sin(theta),
                     forces.force.y + weight * math.sin(phi) * math.cos(theta),
@@ -1335,11 +1511,12 @@ class Airframe:
                                  long_stick=guess[2], lat_stick=guess[3])
         state = FlightState(position=position, velocity=Vector3(),
                             attitude=Vector3(guess[5], guess[4], 0.0),
-                            rates=Vector3())
+                            rates=Vector3(), rotor_speed=rotor_speed)
         return controls, state
 
     def trim_level_flight(self, airspeed, weight=None, air_density=None,
-                          altitude=200.0, iterations=40, tolerance=0.1):
+                          altitude=200.0, iterations=40, tolerance=0.1,
+                          rotor_speed=UH1_OMEGA):
         """The stick positions and attitude that hold level flight at *airspeed*.
 
         Level flight is a condition on the *path*, not on the attitude: the
@@ -1374,17 +1551,21 @@ class Airframe:
         the model cannot hold does not raise: the solve returns whatever its last
         step left, and :meth:`equilibrium_residual` says how far that is from a
         trim.
+
+        *rotor_speed* is the rotor speed the condition is asked at, rad/s, the
+        same knob :meth:`trim_hover` has and for the same reason.
         """
         air_density = self.air_density if air_density is None else air_density
         if weight is None:
             weight = self.mass * GRAVITY
         law = self.law
+        constants = rotor_constants(rotor_speed)
         per_in = math.degrees(law.collective_per_in)
         # A first guess from equation 1 with no inflow at all: the collective
         # that carries the weight in a hover.  At 60 kt that is within a per
         # cent of the thrust actually needed there, because the drag is a couple
         # of hundredths of the weight and the rotor carries it by leaning.
-        report_rad = 3.0 * weight / UH1_ROTOR_R1
+        report_rad = 3.0 * weight / constants.r1
         guess_deg = (math.degrees(report_rad) - 0.75 * self.twist_deg)
         collective_in = (guess_deg - law.collective_neutral_deg) / per_in
         # unknowns: collective in, pedal in, long stick in, lat stick in,
@@ -1400,7 +1581,8 @@ class Airframe:
             return FlightState(
                 position=position,
                 velocity=apply(transpose(matrix), Vector3(airspeed, 0.0, 0.0)),
-                attitude=Vector3(values[5], values[4], 0.0), rates=Vector3())
+                attitude=Vector3(values[5], values[4], 0.0), rates=Vector3(),
+                rotor_speed=rotor_speed)
 
         def residual(values):
             controls = PilotControls(collective=values[0], pedal=values[1],
@@ -1482,7 +1664,11 @@ def _self_test():
     model's own lines agree with each other (the moment arms against the
     printed equations, the inflow against the implicit equation), and that the
     aircraft does what an aircraft does (a trimmed hover stays put, and each
-    control moves it the way the stick points).
+    control moves it the way the stick points).  A fourth is the rotor speed as
+    a state: that table 3's constants move with it the way their closed forms
+    say, that the drag torque slows a rotor and settles it, and that an engine
+    torque equal to that drag leaves the whole thing exactly where the report
+    left it.
     """
     from aerodynamics import Rotor
     from rotor_control import RotorControlModel
@@ -1831,6 +2017,214 @@ def _self_test():
     assert sim_time.rotor_time_constant == UH1_ROTOR_TIME_CONSTANT_SIM_S
     assert sim_time.rotor_time_constant > airframe.rotor_time_constant
 
+    # ---------------------------------------------------------------------
+    # The rotor speed as a state, and the table 3 constants as functions of it.
+    # ---------------------------------------------------------------------
+
+    # The polar inertia neither report gives, derived rather than mined: the
+    # teetering hinge sits on the shaft, so a blade's flap inertia about the
+    # hinge is also its polar inertia about the shaft, and rotor_control's own
+    # rotor already carries one blade's, asserted there against a blade mass.
+    assert abs(UH1_ROTOR_INERTIA
+               - rotor.blade_count * rotor.flap_inertia) \
+        < 0.005 * UH1_ROTOR_INERTIA, rotor.flap_inertia
+    # The same inertia is behind the flapping time constant: R6 is 16 / (gamma
+    # omega), so table 3's 0.072 sec and the rotor's 6.55 lock number are the
+    # same statement about the same blades.
+    assert abs(UH1_ROTOR_TIME_CONSTANT_S
+               - 16.0 / (rotor.lock_number * UH1_OMEGA)) < 1e-4
+    assert airframe.engine_torque is None              # the report's fixed rotor
+    assert airframe.rotor_inertia == UH1_ROTOR_INERTIA
+
+    # At the reference speed the table's constants are the table itself, to the
+    # last bit: the scaling is the identity there, or the whole idea is wrong.
+    reference = rotor_constants()
+    assert reference.omega == UH1_OMEGA
+    assert reference.rpm == UH1_RPM
+    assert reference.tip_speed == UH1_TIP_SPEED
+    for scaled, tabulated in ((reference.r1, UH1_ROTOR_R1),
+                              (reference.r2, UH1_ROTOR_R2),
+                              (reference.r3, UH1_ROTOR_R3),
+                              (reference.r4, UH1_ROTOR_R4),
+                              (reference.r5, UH1_ROTOR_R5),
+                              (reference.r6, UH1_ROTOR_TIME_CONSTANT_S),
+                              (reference.r7, UH1_ROTOR_R7),
+                              (reference.r8, UH1_ROTOR_R8),
+                              (reference.r9, UH1_ROTOR_R9),
+                              (reference.tail_t1, UH1_TAIL_T1)):
+        assert scaled == tabulated, (scaled, tabulated)
+
+    # And away from it each one moves the way its own closed form says, rebuilt
+    # at that speed rather than scaled from the table - which is the same check
+    # the constants above get at 100 per cent, asked at 90.
+    slow = rotor_constants(0.9 * UH1_OMEGA)
+    for scaled, rebuilt in ((slow.r1, 0.5 * solidity * slope * RHO_SEA_LEVEL
+                             * area * slow.tip_speed ** 2),
+                            (slow.r2, 1.0 / (4.0 * slow.omega)),
+                            (slow.r3, 1.0 / (2.0 * slope)),
+                            (slow.r4, 1.0 / slow.omega),
+                            (slow.r5, 1.0 / (4.0 * slope)),
+                            (slow.r6, 16.0 / (rotor.lock_number * slow.omega)),
+                            (slow.r7, 1.0 / slow.tip_speed),
+                            (slow.r8, 1.0 / (2.0 * RHO_SEA_LEVEL * area
+                                             * slow.tip_speed ** 2)),
+                            (slow.r9, slow.r1 * radius)):
+        assert abs(scaled - rebuilt) < 0.03 * scaled, (scaled, rebuilt)
+    assert abs(slow.r1 - 0.81 * UH1_ROTOR_R1) < 1e-12 * UH1_ROTOR_R1
+    assert abs(slow.r3 - UH1_ROTOR_R3) < 1e-15
+    assert abs(slow.r5 - UH1_ROTOR_R5) < 1e-15
+    assert abs(slow.r4 - UH1_ROTOR_R4 / 0.9) < 1e-12 * UH1_ROTOR_R4
+    assert abs(slow.r7 - UH1_ROTOR_R7 / 0.9) < 1e-12 * UH1_ROTOR_R7
+    assert abs(slow.r8 - UH1_ROTOR_R8 / 0.81) < 1e-12 * UH1_ROTOR_R8
+    assert abs(slow.r9 - 0.81 * UH1_ROTOR_R9) < 1e-12 * UH1_ROTOR_R9
+    assert abs(slow.tip_speed - 0.9 * UH1_TIP_SPEED) < 1e-12 * UH1_TIP_SPEED
+    assert abs(slow.tail_t1 - UH1_TAIL_T1 / 0.9) < 1e-12 * UH1_TAIL_T1
+    assert abs(slow.rpm - 0.9 * UH1_RPM) < 1e-9
+    try:
+        rotor_constants(0.0)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("a stopped rotor was accepted")
+
+    # Threading the constants into the force model changes nothing when they are
+    # the reference ones: the report's own rotor is reproduced to the last bit,
+    # which is what every figure in TM-73254 is drawn against.
+    argued = main_rotor_forces(hover, Vector3(), Vector3(),
+                               rotor_height=state.rotor_height)
+    threaded = main_rotor_forces(hover, Vector3(), Vector3(),
+                                 rotor_height=state.rotor_height,
+                                 constants=rotor_constants())
+    assert argued.thrust == threaded.thrust
+    assert argued.torque == threaded.torque
+    assert argued.inflow_ratio == threaded.inflow_ratio
+    # The tail rotor's T1 is 1 / 2 (omega R) there, through the drive ratio the
+    # report's two tip speeds share.  Nothing at all in a hover, where equation
+    # 37 carries no tip speed, and more thrust per degree of pedal once the
+    # aircraft is moving, because the same wash over a slower rotor is a larger
+    # advance ratio and, with it, a larger thrust coefficient.
+    pedal = math.radians(7.74)
+    assert tail_rotor_thrust(pedal, 0.0, 0.0, tail_t1=slow.tail_t1) \
+        == tail_rotor_thrust(pedal, 0.0, 0.0)
+    assert tail_rotor_thrust(pedal, 40.0, 0.0, tail_t1=slow.tail_t1) \
+        > tail_rotor_thrust(pedal, 40.0, 0.0)
+    assert tail_rotor_thrust(pedal, 40.0, 5.0) == tail_rotor_thrust(
+        pedal, 40.0, 5.0, tail_t1=reference.tail_t1)
+
+    # Equation 1 at a fixed collective, on rotors that are turning slower: the
+    # thrust goes as the square of the speed and the inflow ratio does not move
+    # at all.  The second one is neither a coincidence nor a bug - in a hover
+    # equation 10 has R7 w_C = 0 and R8 T, and T's omega squared from R1 cancels
+    # R8's reciprocal of it from (omega R) ** 2 - so lambda is a function of the
+    # collective alone.  The torque is another matter: it falls a little faster
+    # than omega squared, because the profile drag's delta grows with the thrust
+    # that is still going.
+    upright = FlightState(position=Vector3(0.0, 0.0, -trim_state.altitude))
+    base = airframe.forces(pitch, upright)
+    for fraction in (0.95, 0.9, 0.8):
+        turning = rotor_constants(fraction * UH1_OMEGA)
+        slower = airframe.forces(pitch, FlightState(
+            position=upright.position, rotor_speed=turning.omega))
+        assert abs(slower.rotor.thrust
+                   - fraction * fraction * base.rotor.thrust) \
+            < 1e-9 * base.rotor.thrust, fraction
+        assert abs(slower.rotor.inflow_ratio - base.rotor.inflow_ratio) < 1e-9
+        assert slower.rotor.torque < fraction * fraction * base.rotor.torque
+
+    # A hover trimmed on a rotor that is not at the reference speed: the same
+    # weight, and the collective has to come up because R1 has come down as the
+    # square of the speed.  The 8700 lb aircraft cannot do it at all below about
+    # 97 per cent - its stick already sits at 93 per cent of the travel - so the
+    # 6158 lb one is the one to ask, which is the difference between an aircraft
+    # with collective in hand and one without.
+    light = Airframe(mass=UH1_TEST_MASS)
+    light_controls, light_state = light.trim_hover()
+    light_weight = light.mass * GRAVITY
+    previous = light_controls.collective
+    for fraction in (0.95, 0.9):
+        turning = rotor_constants(fraction * UH1_OMEGA)
+        slow_controls, slow_state = light.trim_hover(rotor_speed=turning.omega)
+        assert slow_state.rotor_speed == turning.omega
+        slow_pitch = ControlPitch.from_angles(
+            light.command_angles(slow_controls), slow_controls.long_stick)
+        slow_trimmed = light.forces(slow_pitch, slow_state)
+        slow_roll = slow_state.attitude.x
+        slow_theta = slow_state.attitude.y
+        assert abs(slow_trimmed.force.x
+                   - light_weight * math.sin(slow_theta)) < 1.0
+        assert abs(slow_trimmed.force.y + light_weight * math.sin(slow_roll)
+                   * math.cos(slow_theta)) < 1.0
+        assert abs(slow_trimmed.force.z + light_weight * math.cos(slow_roll)
+                   * math.cos(slow_theta)) < 1.0
+        assert abs(slow_trimmed.moment.x) < 1.0
+        assert abs(slow_trimmed.moment.y) < 1.0
+        assert abs(slow_trimmed.moment.z) < 1.0
+        assert abs(slow_trimmed.rotor.thrust - light_weight) \
+            < 0.01 * light_weight
+        assert slow_controls.collective > previous
+        previous = slow_controls.collective
+        assert slow_controls.collective < UH1_COLLECTIVE_TRAVEL_IN
+    assert abs(previous - light_controls.collective - 0.66) < 0.02, previous
+
+    # The shaft balance, which is what the thirteenth state variable integrates.
+    # With the engine's torque set to what the trimmed rotor is absorbing, the
+    # balance is exactly zero and the aircraft is the report's fixed rotor
+    # again: three seconds of frames leave the rotor at 100 per cent and the
+    # altitude unmoved, which is the check that this has changed nothing.
+    drag = trimmed.rotor.torque
+    held = Airframe(engine_torque=drag)
+    assert abs(held.rotor_acceleration(trimmed, trim_state)) < 1e-12
+    held.reset(trim_state, controls)
+    for _ in range(180):
+        held.step(1.0 / 60.0, controls)
+    assert abs(held.state.rotor_speed - UH1_OMEGA) < 1e-3, held.state.rotor_speed
+    assert abs(held.state.altitude - trim_state.altitude) < 0.002
+
+    # Take the engine's torque away and it winds down at the rate Q / I: a
+    # seventh of the speed in the first second, and then it settles, because the
+    # collective is still at the hover setting and what it settles at is a rotor
+    # turning the air over rather than one carrying an aircraft.  Twice the drag
+    # instead and it winds up, by the same arithmetic.
+    cut = Airframe(engine_torque=0.0)
+    assert abs(cut.rotor_acceleration(trimmed, trim_state)
+               + drag / cut.rotor_inertia) < 1e-12
+    cut.reset(trim_state, controls)
+    previous = UH1_OMEGA
+    for _ in range(6):
+        for _ in range(60):
+            cut.step(1.0 / 60.0, controls)
+        assert cut.state.rotor_speed < previous
+        previous = cut.state.rotor_speed
+    assert 0.5 * UH1_OMEGA < cut.state.rotor_speed < 0.65 * UH1_OMEGA
+    assert cut.state.rotor_rpm < UH1_RPM_LOW      # out of the green arc with it
+    surge = Airframe(engine_torque=2.0 * drag)
+    assert abs(surge.rotor_acceleration(trimmed, trim_state)
+               - drag / surge.rotor_inertia) < 1e-12
+    # And the frame integrates it: ten frames of a slow rotor are about three
+    # quarters of a rad/s, the balance's own rate over that sixth of a second.
+    short = Airframe(engine_torque=0.0)
+    short.reset(trim_state, controls)
+    for _ in range(10):
+        short.step(1.0 / 60.0, controls)
+    assert UH1_OMEGA - 1.5 < short.state.rotor_speed < UH1_OMEGA - 0.5
+
+    # The state variable itself: thirteen of them, and the new one round trips
+    # through the integration's own tuple and through a copy.
+    assert len(FlightState().values()) == 13
+    assert FlightState().rotor_speed == UH1_OMEGA
+    assert abs(FlightState().rotor_rpm - UH1_RPM) < 1e-9
+    assert FlightState.from_values(trim_state.values()) == trim_state
+    assert trim_state.copy() == trim_state
+    crawling = FlightState(rotor_speed=0.8 * UH1_OMEGA)
+    assert crawling.copy().rotor_speed == 0.8 * UH1_OMEGA
+    assert FlightState.from_values(crawling.values()).rotor_speed \
+        == 0.8 * UH1_OMEGA
+    assert crawling.rotor_rpm < UH1_RPM_LOW
+    # A fixed rotor has no rotor speed derivative at all, which is the whole of
+    # what the default engine torque means.
+    spinning_down, _ = airframe.derivatives(trim_state, pitch)
+    assert spinning_down.rotor_speed == 0.0
+
 
 def _demo():
     """Print what the airframe does: constants, a hover, and four steps.
@@ -1875,6 +2269,25 @@ def _demo():
     print("       (this project's tail rotor runs at %.1f m/s, the 324 rpm"
           " reference, so 1 / 2 omega R there is %.3e)"
           % (tail.tip_speed, 1.0 / (2.0 * tail.tip_speed)))
+    print("  and the whole set is parametric in the rotor speed, each one of them"
+          " being a")
+    slow = rotor_constants(0.9 * UH1_OMEGA)
+    print("  closed form in omega.  At 100 %%: R1 %8.2e N, R7 %8.3e s/m, R6"
+          " %.4f s," % (UH1_ROTOR_R1, UH1_ROTOR_R7,
+                        UH1_ROTOR_TIME_CONSTANT_S))
+    print("    T1 %8.3e s/m, tip %.1f m/s.  At 90 %%: R1 %8.2e N, R7 %8.3e s/m,"
+          " R6 %.4f s," % (UH1_TAIL_T1, UH1_TIP_SPEED, slow.r1, slow.r7,
+                           slow.r6))
+    print("    T1 %8.3e s/m, tip %.1f m/s - R1 down 19 %% as the square of the"
+          " speed, the" % (slow.tail_t1, slow.tip_speed))
+    print("    reciprocals up a ninth, the tail rotor's through its drive ratio,"
+          " and R3")
+    print("    and R5 not moving at all.  The flywheel this moves is %.0f kg m^2,"
+          % UH1_ROTOR_INERTIA)
+    print("    the pair of %.0f kg m^2 blades rotor_control derives - their"
+          " teetering" % rotor.flap_inertia)
+    print("    hinge being on the shaft - and the hover below turns on its"
+          " balance.")
 
     airframe = Airframe()
     controls, trim_state = airframe.trim_hover()
@@ -1897,6 +2310,19 @@ def _demo():
     print("  rotor   T %7.0f N, H %+8.0f, Y %+7.0f, Q %+8.0f N m"
           % (forces.rotor.thrust, forces.rotor.h_force,
              forces.rotor.y_force, forces.rotor.torque))
+    print("          %.1f rpm (%.2f rad/s), so the shaft balance on %.0f kg m^2"
+          " is (Q_eng" % (trim_state.rotor_rpm, trim_state.rotor_speed,
+                          airframe.rotor_inertia))
+    print("          - %.0f) / I = %.3f rad/s^2 with nothing turning it, and the"
+          " %.1f s of" % (forces.rotor.torque,
+                          -forces.rotor.torque / airframe.rotor_inertia,
+                          airframe.rotor_inertia * trim_state.rotor_speed
+                          / forces.rotor.torque))
+    print("          I omega / Q it would take to stop if the torque stayed put,"
+          " against the")
+    print("          eighth of its speed the first second takes with the torque"
+          " falling as")
+    print("          it turns.")
     print("  tail    %7.0f N at %.2f m aft and %.2f m above the c.g. ->"
           " %+8.0f N m of yaw"
           % (forces.tail_thrust, UH1_TAIL_ARM, UH1_TAIL_HEIGHT,
