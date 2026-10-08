@@ -20,3 +20,14 @@ reference/fm_pages/
 # main.py's key log: the last flight's keystrokes and telemetry, written beside
 # main.py and overwritten by the next run.  main.py --no-log does not write one.
 keylog.txt
+
+# What the scripted pilot scribbles: the console transcripts, compile dumps,
+# probe output and main.py excerpts that accumulated in the root while the four
+# _rt_ modules were being worked out - _rt_log.txt and _rt_demo_log.txt are
+# written by those runs themselves, and sim_demo.txt is simulation.py's own
+# demo.  The modules are NOT ignored - _rt_pilot.py, _rt_check.py, _rt_demo.py
+# and _rt_probe.py are the harness and are tracked; only what a run prints on
+# its way through is not.
+_m*.txt
+_rt_*.txt
+sim_demo.txt
