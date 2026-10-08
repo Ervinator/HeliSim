@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  HeliSim's control map: which physical control flies which.
+
+  This is the project's own default, and it is the mapping the sandbox has
+  always been flown from: W and S for the collective, the up and down arrows for
+  the longitudinal cyclic, left and right for the lateral one, and A and D for
+  the pedals.  main.py reads it unless the command line names another file, and
+  controls.py's own self test flies it.
+
+  Every control may be moved to another device on its own, so a home made panel
+  can arrive one axis at a time: name a <device> and point a <control> at it,
+  and leave the rest as they are.  A control this file does not mention keeps
+  the keyboard mapping above.
+
+  An Arduino Leonardo sent as a generic USB HID game controller reports a name
+  beginning "Arduino", so its device is found by match rather than by index: an
+  index moves the day another controller is plugged in.  To fly the cyclic and
+  the pedals from one, add its device and swap those four controls onto it:
+
+      <device name="huey" kind="joystick" match="Arduino" />
+      <control name="cyclic-long" source="huey" axis="1" deadzone="0.03" />
+      <control name="cyclic-lat"  source="huey" axis="0" deadzone="0.03" />
+      <control name="pedals"      source="huey" axis="3" deadzone="0.05" />
+
+  axis is the joystick's own axis number, counting from zero in the order the
+  device reports them.  invert="true" turns a sense over, deadzone is how far
+  from its rest the device has to read before it is believed, and minimum and
+  maximum calibrate a lever that does not reach the ends of its own range.
+
+  The throttle is deliberately absent: the model holds 100 per cent rotor speed
+  and has no engine in it (see main.py), so a throttle position has nothing to
+  fly yet.  The control to name when it does is "throttle".
+-->
+<controls version="1.0">
+    <device name="keyboard" kind="keyboard" />
+
+    <control name="cyclic-long" source="keyboard" increase="up" decrease="down" />
+    <control name="cyclic-lat" source="keyboard" increase="right" decrease="left" />
+    <control name="pedals" source="keyboard" increase="d" decrease="a" />
+    <control name="collective" source="keyboard" increase="w" decrease="s" />
+</controls>

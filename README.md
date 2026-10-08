@@ -21,7 +21,8 @@ Layered, each one importing only what sits below it:
 | `simulation.py` | 2055 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the trims, and what a renderer or a HUD asks for |
 | `regression_tm73254.py` | 661 | the report's figures 2 to 9 reflown: eight step inputs from 60 kt and from the hover, laid next to its published responses |
 | `scenery.py` | 603 | the XML scenery format and its loader - no pygame, no OpenGL, and the one module whose test needs no window and no physics |
-| `main.py` | 2596 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, the aircraft of `simulation.py` flown from the keyboard, drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it |
+| `controls.py` | 1083 | the device map: which physical control flies which - keyboard or joystick, per control, with deadzone, invert and calibration - read from the XML of `default_controls.xml`, and likewise stdlib only |
+| `main.py` | 3568 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, the aircraft of `simulation.py` flown from its device map - keyboard, joystick or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it |
 
 Only `main.py` imports anything outside the standard library.
 
@@ -29,6 +30,7 @@ Only `main.py` imports anything outside the standard library.
 
     pip install -r requirements.txt
     python main.py [scenery.xml] [--log FILE | --no-log]
+                   [--controls FILE | --no-controls]
     python main.py --check          # the wiring, headless, no window
 
 `sample_scenery.xml` is used when no path is given.  The scenery file lists
@@ -62,6 +64,34 @@ feel gives it and the same travel takes four times the presses, and four times a
 long on the key.  That is what makes a stick placeable rather than something only
 thrown from one stop to the other.  A joystick or a script is not scaled:
 `set_axes` is absolute and has no keypress to step.
+
+## The pilot's devices
+
+Which physical control flies which is a file, not this program: `controls.py`
+reads `default_controls.xml`, and each of the five controls - the cyclic up and
+down, the cyclic left and right, the anti torque pedals, the collective and the
+throttle - names its own device on its own line.  A control on the keyboard is a
+ratchet and names two keys; a control on a joystick is either an *absolute* axis
+(or a hat), which is read straight through at the hand's own rate, or a ratchet
+turned by a pair of buttons.  `invert`, `deadzone` and a raw `minimum` and
+`maximum` are there for a stick that reads backwards, jitters about its centre,
+or does not reach the ends of its own travel.
+
+The map this project ships is the keyboard mapping above, so a run that says
+nothing about devices flies exactly as it always has - and the point of it is
+that the switching is *per control*: an Arduino Leonardo sent as a generic USB
+HID game controller (a name beginning `"Arduino"`, which is why a device is
+found by `match` rather than by an index that moves when something else is
+plugged in) can take the cyclic and the pedals while `W` keeps the collective.
+A device that is not plugged in reads as no input at all rather than as a fault,
+and one plugged in while the window is open is picked up as it appears.
+`--controls FILE` reads another map and `--no-controls` flies on the built-in
+mapping with no file at all; `python controls.py` prints the map, the
+descriptions it refuses and its own self test.
+
+The throttle is mapped like the rest and flies nothing yet: the model holds 100
+per cent rotor speed and has no engine in it (see `simulation.py`), so a
+throttle position is carried, shown beside the telemetry, and no more.
 
 
 `R` is where the *run* began, not where the trim says the aircraft belongs: this

@@ -2,16 +2,18 @@
 
 ## Next
 
-Nothing outstanding.  Every module has a demo that asserts as it prints - the
-six below and `scenery.py` - and `main.py` has `--check` for the wiring that
-flying cannot test.
+Nothing outstanding.  Every module has a demo that asserts as it prints -
+`scenery.py` and `controls.py` among them - and `main.py` has `--check` for the
+wiring that flying cannot test.
 
 ## Known limitations, from the modules themselves
 
 These are choices, not oversights: each is stated where it lives.
 
 * **Rotor speed is fixed.**  There is no engine and no rotor speed dynamics, so
-  the rotor turns at 100 per cent whatever the aircraft does.
+  the rotor turns at 100 per cent whatever the aircraft does.  `controls.py`
+  maps a `throttle` all the same, so the hardware for one can be built and named
+  now; its position is carried and shown and flies nothing until this changes.
 * **The ground is a floor, not a contact model.**  `simulation.py` holds the
   c.g. on the skid line, takes the descent out of the velocity, and levels roll
   and pitch; the skids do not flex, slide or spring.
@@ -40,6 +42,49 @@ These are choices, not oversights: each is stated where it lives.
 
 ## Done
 
+* 2026-10-08 - **which physical control flies which is a file, so the aircraft
+  can be flown from a keyboard, a joystick, or a mixture of the two.**  The
+  sandbox read eight keys and nothing else, and the next thing this project
+  needs is home made hardware - an Arduino Leonardo sent as a generic USB HID
+  game controller - arriving one axis at a time.  `controls.py` is the map: an
+  XML file in the style of `scenery.py` (stdlib `ElementTree`, unknown
+  attributes refused, a round trip and a self test of its own), naming the
+  devices and then each of the five controls - `cyclic-long`, `cyclic-lat`,
+  `pedals`, `collective`, `throttle` - on one of them.  A control on the
+  keyboard is a ratchet and names two keys; one on a joystick is either
+  absolute (an `axis`, or a `hat`), read straight through at the hand's own
+  rate, or a ratchet turned by two buttons - and both take `invert`, `deadzone`
+  and a raw `minimum`/`maximum` for a stick that reads backwards, jitters about
+  its centre, or does not reach its own stops.  A device is found by `match`, a
+  piece of its name, or by `index`, and one that is not plugged in reads as no
+  input at all rather than as a fault.  `default_controls.xml` ships the mapping
+  the sandbox already had, so a run that says nothing about devices flies
+  exactly as before, and a control a file leaves out keeps that default: the
+  switching is per control, which is the whole point.
+  `main.py` gained the reader: `SCANCODES` and `key_scancode` resolve a key
+  *name* through pygame's own `KSCAN_*` constants, so the map keeps the
+  layout-independent scancode the eight keys were always read by (pygame 2.6.1
+  has no `get_scancode_from_key`, and `pygame.key.name` answers keycodes rather
+  than scancodes); `Devices` holds the map, resolves its keys once, and reads a
+  frame as `(absolute, ratchet, throttle)` - the two shapes `PilotInput` already
+  took, since `set_axes` and `step` each touch only the axes they are given and
+  a control is one or the other; `fly_frame_axes` puts the positions and turns
+  the ratchets; and `fly_frame` is untouched, so the scripted pilot and
+  `--check` keep the entry point they had.  `--controls FILE` and
+  `--no-controls` join `--log`/`--no-log` on the command line, joysticks are
+  re-found on `JOYDEVICEADDED`/`JOYDEVICEREMOVED` while the window is open, and
+  the `throttle` is mapped, carried and printed beside the telemetry while
+  flying nothing: the model still holds 100 per cent rotor speed.
+  Verified: `python controls.py` passing - the shipped file round-tripping byte
+  for byte, a map naming one control leaving the rest to the keyboard, and 23
+  descriptions written to be refused all refused; `main.py --check` passing,
+  including that the shipped map read one key at a time returns exactly
+  `pilot_keys(frame_keys(...))`, that 120 frames through `fly_frame` and through
+  `fly_frame_axes` leave bit-identical aircraft, and a stand-in joystick driving
+  absolute axes - inverted, deadzoned, clipped and calibrated - a button ratchet
+  and a hat with no hardware present; `py_compile` clean on all eight modules;
+  and the scripted pilot's imports still binding (`fly_frame`'s five arguments,
+  `KEY_NAMES`, `FLIGHT_SCANCODES`).
 * 2026-10-01 - **every keystroke is logged, with the flight it was made in.**  The
   caption and the panels show one instant and forget it, so a flight that went
   wrong was gone by the time anybody read it.  `main.py` now writes

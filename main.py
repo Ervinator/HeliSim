@@ -32,6 +32,7 @@ the camera: the envelopes of simulation.py are the limits.
 Usage::
 
     python main.py [scenery.xml] [--log FILE | --no-log]
+                   [--controls FILE | --no-controls]
     python main.py --check          # the wiring, headless, no window
 
 Keys:
@@ -72,6 +73,24 @@ four times as long on the key, to cross the same ground.  That is what makes a
 stick placeable rather than something only thrown from one stop to the other; a
 joystick or a script is not scaled, since a position that is told where to be
 has no keypress to step.
+
+**The controls are read from a device map.**  `controls.py` and its
+`default_controls.xml` say which physical control flies which - the cyclic up
+and down, the cyclic left and right, the anti torque pedals, the collective and
+the throttle - and each of the five names its own device on its own line: the
+keyboard, or a joystick by its name or its index.  The map this file ships is the
+keyboard mapping above, so a run that says nothing about devices flies exactly
+as it always has, and a home made panel can arrive one axis at a time: swap the
+cyclic onto it and leave the collective on `W`.  `--controls FILE` reads another
+map; `--no-controls` flies on the built-in mapping without reading a file at
+all.  An *absolute* control - a joystick axis, or a hat - is a position and is
+put where it is read, at the hand's own rate and without the keyboard's step
+granularity, which is the "not scaled" above; a *ratchet* control is two keys or
+two buttons and turns exactly as the eight keys do.  A device that is not
+plugged in reads as no input at all, so half a panel still flies, and a joystick
+plugged in while the window is open is picked up as it appears.  The throttle is
+mapped like the rest and flies nothing: the model holds 100 per cent rotor speed
+and has no engine in it, so its position is carried and shown and no more.
 
 The window's caption is this sandbox's instrument panel, and it carries all
 four control positions: the collective in per cent, the longitudinal and
@@ -126,6 +145,7 @@ from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
+import controls
 import scenery
 from aerodynamics import (UH1_BLADE_COUNT, UH1_CHORD, UH1_COLLECTIVE_TRAVEL_IN,
                           UH1_PRECONE_DEG, UH1_RADIUS, UH1_RPM,
@@ -149,6 +169,13 @@ DEFAULT_SCENERY_FILE = os.path.join(
 #: without one.
 DEFAULT_KEYLOG_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "keylog.txt")
+
+#: Which physical control flies which, where a run is flown from more than the
+#: keyboard: the device map of ``controls.py``, beside this file.  It is read
+#: unless ``--no-controls`` is given, and ``--controls FILE`` names another.
+#: The map it ships is the keyboard mapping this sandbox has always had, so a
+#: run that changes nothing flies no differently.
+DEFAULT_CONTROLS_FILE = controls.DEFAULT_CONTROLS_FILE
 
 #: The key log's sample rate, Hz: how often the flight itself is written down
 #: between the keystrokes.  Sixty hertz would be one line per frame and a log
@@ -1914,6 +1941,211 @@ def fly_frame(sim, camera, frame_dt, keys, view=VIEW_CHASE):
     return sim
 
 
+# ---------------------------------------------------------------------------
+# The pilot's devices: the keyboard, and whatever the map names beside it.
+# ---------------------------------------------------------------------------
+
+#: Every key name pygame knows, as a scancode: ``{"w": 26, "up": 82, ...}``.
+#: pygame names a key *by position* in its ``KSCAN_*`` constants, which is the
+#: physical key rather than the letter printed on it, so a control a map names
+#: as ``"w"`` is the key in that position whatever the keyboard's layout does
+#: with the letters - the same property :func:`pilot_keys` reads the eight
+#: flight keys for.  Built from pygame itself rather than written down, so every
+#: key pygame has a constant for is nameable in a map.
+SCANCODES = dict((name[len("KSCAN_"):].lower(), getattr(pygame, name))
+                 for name in dir(pygame) if name.startswith("KSCAN_"))
+
+
+def key_scancode(name):
+    """The scancode of the key *name*, as :mod:`controls` names one.
+
+    Raises :class:`controls.ControlsError` for a name pygame has no key for, so
+    a typo in a map is reported when the map is read rather than quietly read as
+    no key at all for every frame of the run.
+    """
+    if name not in SCANCODES:
+        raise controls.ControlsError("no key named %r" % (name,))
+    return SCANCODES[name]
+
+
+def load_controls(path):
+    """Read a device map, reporting problems on stderr.
+
+    The map's own key names are resolved here as well as read, so a name pygame
+    has no key for is reported with the file it came from rather than at the
+    first frame that reads it.  Returns the map, or None for a caller to give up
+    on, which is :func:`load_scenery`'s own two outcomes.
+    """
+    try:
+        control_map = controls.ControlMap.load(path)
+        for name in control_map.key_names():
+            key_scancode(name)
+    except OSError as error:
+        print("error: cannot read controls %s: %s" % (path, error),
+              file=sys.stderr)
+    except controls.ControlsError as error:
+        print("error: invalid controls %s: %s" % (path, error), file=sys.stderr)
+    else:
+        return control_map
+    return None
+
+
+class Devices:
+    """The pilot's devices: the keyboard, and the joysticks a map names.
+
+    A map is turned once into the two things a frame needs - the scancode of
+    every key the keyboard half reads, and the joystick each device names - so
+    that reading a frame is lookups and arithmetic rather than a search.  What
+    it answers for a frame is :meth:`read`: the two shapes
+    :class:`simulation.PilotInput` takes, the positions for
+    :meth:`~simulation.PilotInput.set_axes` and the -1/0/+1 commands for
+    :meth:`~simulation.PilotInput.step`.
+
+    A device that is not plugged in is not an error.  Its controls read as no
+    input at all, so a run whose panel is half built flies on whatever else is
+    mapped, and :meth:`refresh` picks the hardware up the moment it appears -
+    which is what a Leonardo plugged in after the window opened needs.
+    """
+
+    def __init__(self, control_map):
+        self.control_map = control_map
+        self.scancodes = dict((name, key_scancode(name))
+                              for name in control_map.key_names())
+        self.joysticks = {}
+        self.refresh()
+
+    def refresh(self):
+        """Find every joystick the map names, opening each by name or index."""
+        pygame.joystick.init()
+        for name, device in self.control_map.devices.items():
+            if device.kind == controls.JOYSTICK:
+                self.joysticks[name] = self._find(device)
+
+    def _find(self, device):
+        """The pygame joystick *device* names, or None if it is not plugged in.
+
+        A device that names a ``match`` is found by its own name, wherever it
+        sits in pygame's list; one that names only an index is opened there.  A
+        device that names both is found by its name first, which is what lets a
+        map say "the Leonardo, else whatever is first".
+        """
+        count = pygame.joystick.get_count()
+        order = list(range(count))
+        if device.match is None and device.index is not None:
+            order = [device.index] if device.index < count else []
+        for index in order:
+            joystick = pygame.joystick.Joystick(index)
+            joystick.init()
+            name = joystick.get_name() or ""
+            if device.match is None or device.match.lower() in name.lower():
+                return joystick
+        return None
+
+    def joystick_name(self, name):
+        """What the device called *name* is, in pygame's own words, or None."""
+        joystick = self.joysticks.get(name)
+        if joystick is None or not joystick.get_init():
+            return None
+        return joystick.get_name()
+
+    def read(self, keyboard, tapped):
+        """One frame of every device, in ``PilotInput``'s own two shapes.
+
+        Answers ``(absolute, ratchet, throttle)``: the positions for
+        :meth:`simulation.PilotInput.set_axes`, the commands for
+        :meth:`simulation.PilotInput.step`, and the throttle position, which is
+        carried for a caller to show and flies nothing yet - the model holds 100
+        per cent rotor speed and has no engine in it.  A ratcheted throttle has
+        no position to carry, so only an absolute one reaches the third.  An
+        axis no device is mapped to is in neither dictionary, and that absence
+        is what leaves it where the last frame put it: each of the two calls
+        touches only the axes it was given.
+        """
+        def held(key_name):
+            """Is the key the map names *key_name* down this frame?"""
+            code = self.scancodes.get(key_name)
+            return bool(code in tapped) or bool(_held(keyboard, code))
+
+        absolute, ratchet = {}, {}
+        throttle = None
+        for name in controls.CONTROL_NAMES:
+            control = self.control_map.control(name)
+            if control is None:
+                continue
+            axis = controls.AXIS_FOR_CONTROL.get(name)
+            device = self.control_map.device_for(control)
+            if device.kind == controls.KEYBOARD:
+                if axis is not None:
+                    ratchet[axis] = controls.key_command(control, held)
+                continue
+            joystick = self.joysticks.get(device.name)
+            if joystick is None or not joystick.get_init():
+                continue                        # unplugged: no input at all
+            if control.absolute:
+                value = self._absolute(joystick, control)
+                if axis is None:
+                    throttle = value
+                else:
+                    absolute[axis] = value
+            elif axis is not None:
+                ratchet[axis] = controls.button_command(
+                    control, lambda index: bool(joystick.get_button(index)))
+        return absolute, ratchet, throttle
+
+    def _absolute(self, joystick, control):
+        """One absolute control's reading, from the joystick it sits on."""
+        if control.axis is not None:
+            return controls.axis_value(control, joystick.get_axis(control.axis))
+        hat = joystick.get_hat(control.hat)
+        return controls.hat_value(
+            control, hat[0] if control.hat_axis == "x" else hat[1])
+
+    def describe(self):
+        """The map as it was read, with each device's own name from pygame.
+
+        The map says how a device is *found* and this says what was found by it,
+        which is the difference a person needs when the hardware is not being
+        picked up: a ``match`` that misspells the Arduino's name looks exactly
+        like a device that is not plugged in until both are printed.
+        """
+        lines = []
+        for name in sorted(self.control_map.devices):
+            device = self.control_map.devices[name]
+            if device.kind == controls.KEYBOARD:
+                lines.append("  %-10s keyboard" % (name,))
+                continue
+            joystick = self.joysticks.get(name)
+            if joystick is None or not joystick.get_init():
+                found = "not plugged in"
+            else:
+                found = joystick.get_name()
+            lines.append("  %-10s %s - %s" % (name, device.describe(), found))
+        return "\n".join(lines)
+
+
+def fly_frame_axes(sim, camera, frame_dt, absolute, ratchet,
+                   view=VIEW_COCKPIT):
+    """One frame with the mapped controls: the positions, then the ratchets.
+
+    The same frame :func:`fly_frame` flies, with the map in place of the keyboard
+    alone: :meth:`simulation.PilotInput.set_axes` puts the absolute controls
+    where their devices are, :meth:`simulation.PilotInput.step` turns the
+    ratchets, and the frame is then flown exactly as the keyboard path flies it.
+
+    The two calls touch different axes - a control is one or the other, and each
+    call leaves every axis it was not given alone - so a run with one axis on a
+    joystick and the rest on the keyboard needs nothing here but the two
+    dictionaries the map produced.  With the project's own map there is nothing
+    absolute to set, and this is :func:`fly_frame` with an empty first call in
+    front of it.
+    """
+    if absolute:
+        sim.pilot.set_axes(dt=frame_dt, **absolute)
+    sim.step(frame_dt, sim.pilot.step(frame_dt, **ratchet))
+    camera.update(frame_dt, sim.render_position(), sim.render_basis())
+    return sim
+
+
 def window_title(sim, view, focused=True):
     """The window's caption: what a HUD would show, the view, the keyboard.
 
@@ -2127,20 +2359,28 @@ def log_key(log, sim, kind, event, keyboard):
 
 
 def command_line(args):
-    """``(scenery path, key log path)`` from the command line.
+    """``(scenery path, key log path, controls path)`` from the command line.
 
     The scenery file is the one bare argument, ``sample_scenery.xml`` when there
-    is none, exactly as it always was; the key log has two options of its own:
-    ``--log FILE`` writes it to *FILE* and ``--no-log`` flies without one, which
-    leaves the second half of the pair None.  ``--log`` with no file after it
-    names nothing, so the default stands, and a file named beats ``--no-log``,
-    since it is the option that says where the log goes.
+    is none, exactly as it always was.  The other two halves each have two
+    options of their own:
+
+    * the key log: ``--log FILE`` writes it to *FILE* and ``--no-log`` flies
+      without one, which leaves its half of the triple None;
+    * the controls: ``--controls FILE`` reads the device map from *FILE* and
+      ``--no-controls`` flies on the built-in keyboard mapping without reading a
+      file at all, which likewise leaves its half None.
+
+    ``--log`` or ``--controls`` with no file after it names nothing, so the
+    default stands, and a file named beats the ``--no-`` option beside it, since
+    it is the option that says where the thing comes from.
 
     ``--check`` never reaches here: it is read at the bottom of the file, before
     ``main()`` is called at all.
     """
     args = list(args)
     log_path = DEFAULT_KEYLOG_FILE
+    controls_path = DEFAULT_CONTROLS_FILE
     if "--no-log" in args:
         args.remove("--no-log")
         log_path = None
@@ -2151,17 +2391,43 @@ def command_line(args):
             del args[index:index + 2]
         else:
             del args[index]
-    return (args[0] if args else DEFAULT_SCENERY_FILE), log_path
+    if "--no-controls" in args:
+        args.remove("--no-controls")
+        controls_path = None
+    if "--controls" in args:
+        index = args.index("--controls")
+        if index + 1 < len(args):
+            controls_path = args[index + 1]
+            del args[index:index + 2]
+        else:
+            del args[index]
+    return ((args[0] if args else DEFAULT_SCENERY_FILE), log_path,
+            controls_path)
 
 
 def main():
     global SCENERY
 
-    path, log_path = command_line(sys.argv[1:])
+    path, log_path, controls_path = command_line(sys.argv[1:])
     loaded = load_scenery(path)
     if loaded is None:
         sys.exit(2)
     SCENERY = loaded
+
+    # The pilot's devices, before there is a window: the map is read and its key
+    # names resolved here, so a map that is malformed, or that names a key pygame
+    # has no key for, is reported before anything is drawn.  ``--no-controls``
+    # flies on the built-in keyboard mapping, which is the map this file ships,
+    # so a run that says nothing about devices flies as it always did.
+    if controls_path is None:
+        control_map = controls.default_control_map()
+        print("controls: the built-in keyboard mapping (--no-controls)")
+    else:
+        control_map = load_controls(controls_path)
+        if control_map is None:
+            sys.exit(2)
+        print("controls: %s" % (controls_path,))
+    print(control_map.describe())
 
     print("scenery: %d object(s) loaded from %s" % (len(SCENERY), path))
     for obj in SCENERY:
@@ -2184,6 +2450,10 @@ def main():
           % (2.0 * GROUND_HALF_M / 1000.0,))
     print("keys: W/S collective, arrows cyclic, A/D pedals, R reset, P park,"
           " C camera, Esc quit")
+    print("  those are the built-in mapping, which the controls above name when"
+          " this run")
+    print("  reads no device map of its own; a control moved to a stick is read"
+          " from it")
     print("  the view begins in the cockpit, looking out over the nose with the")
     print("  rotor over it and the aircraft's own cabin left out of the frame;"
           " C cycles")
@@ -2221,6 +2491,14 @@ def main():
     resize(WIDTH, HEIGHT)
     init_gl()
     pygame.display.set_caption(window_title(sim, view))
+
+    # The map's joysticks, now that there is a window: each is found by the name
+    # or the index the map gives it, and what was found is printed, since a
+    # device that is not plugged in and a match that misspells its name look
+    # exactly alike until both are written down.
+    devices = Devices(control_map)
+    print("devices found:")
+    print(devices.describe())
 
     clock = pygame.time.Clock()
     running = True
@@ -2278,6 +2556,13 @@ def main():
             elif event.type == KEYUP:
                 keyboard[event.scancode] = False
                 log_key(log, sim, "up", event, keyboard)
+            elif event.type in (JOYDEVICEADDED, JOYDEVICEREMOVED):
+                # A panel plugged in - or pulled out - while the window is open
+                # is picked up here rather than at the next run, so a control on
+                # it starts, or stops, reading the moment it is connected.
+                devices.refresh()
+                print("devices found:")
+                print(devices.describe())
 
         # The frame's own time, whatever it turned out to be: the physics inside
         # Simulation.step is always 1/60 s steps, so a dragged window is a longer
@@ -2293,7 +2578,8 @@ def main():
             print("  keyboard: %s" % ("the window has it" if focused
                                       else "click the window, it has not"))
             keyboard_was = focused
-        fly_frame(sim, camera, frame_dt, frame_keys(keyboard, tapped), view)
+        absolute, ratchet, throttle = devices.read(keyboard, tapped)
+        fly_frame_axes(sim, camera, frame_dt, absolute, ratchet, view)
         draw_scene(sim, camera, view)
         pygame.display.flip()
 
@@ -2309,7 +2595,9 @@ def main():
         if sim.frames % 15 == 0:
             pygame.display.set_caption(window_title(sim, view, focused))
         if sim.frames % 60 == 0:
-            print("  " + str(sim.telemetry()))
+            print("  " + str(sim.telemetry())
+                  + ("" if throttle is None
+                     else " | throttle %3.0f %%" % (100.0 * throttle,)))
 
     if log is not None:
         log.close()
@@ -3048,19 +3336,31 @@ def _self_check():
             ) in window_title(sim, VIEW_CHASE)
 
 
-    # The key log: the command line that names it, the names it gives a key, the
-    # columns of a line, the two clocks on it and the rate that keeps the flight
-    # sampled rather than written every frame.
-    assert command_line([]) == (DEFAULT_SCENERY_FILE, DEFAULT_KEYLOG_FILE)
-    assert command_line(["scene.xml"]) == ("scene.xml", DEFAULT_KEYLOG_FILE)
-    assert command_line(["scene.xml", "--log", "run.csv"]) == ("scene.xml",
-                                                              "run.csv")
-    assert command_line(["--log", "run.csv"]) == (DEFAULT_SCENERY_FILE,
-                                                  "run.csv")
+    # The key log and the device map: the command line that names each of them,
+    # the name a key is given, the columns of a log line, the two clocks on it
+    # and the rate that keeps the flight sampled rather than written every frame.
+    assert command_line([]) == (DEFAULT_SCENERY_FILE, DEFAULT_KEYLOG_FILE,
+                                DEFAULT_CONTROLS_FILE)
+    assert command_line(["scene.xml"]) == ("scene.xml", DEFAULT_KEYLOG_FILE,
+                                           DEFAULT_CONTROLS_FILE)
+    assert command_line(["scene.xml", "--log", "run.csv"]) == (
+        "scene.xml", "run.csv", DEFAULT_CONTROLS_FILE)
+    assert command_line(["--log", "run.csv"]) == (
+        DEFAULT_SCENERY_FILE, "run.csv", DEFAULT_CONTROLS_FILE)
     assert command_line(["--no-log"])[1] is None
-    assert command_line(["scene.xml", "--no-log"]) == ("scene.xml", None)
+    assert command_line(["scene.xml", "--no-log"]) == ("scene.xml", None,
+                                                       DEFAULT_CONTROLS_FILE)
     assert command_line(["--log"])[1] == DEFAULT_KEYLOG_FILE  # no file named
     assert command_line(["--no-log", "--log", "run.csv"])[1] == "run.csv"
+    # The device map has the same two options, and the same rule that a file
+    # named beats the --no- beside it.
+    assert command_line(["--no-controls"])[2] is None
+    assert command_line(["scene.xml", "--no-controls"])[2] is None
+    assert command_line(["--no-controls"])[0] == DEFAULT_SCENERY_FILE
+    assert command_line(["--controls", "panel.xml"])[2] == "panel.xml"
+    assert command_line(["--controls"])[2] == DEFAULT_CONTROLS_FILE
+    assert command_line(["--no-controls", "--controls", "panel.xml"])[2] == \
+        "panel.xml"
 
     # A flight key is named by the position the controls read it from, and every
     # other key - the four command keys among them - by pygame's own name.
@@ -3120,6 +3420,144 @@ def _self_check():
     log_key(log, sim, "blur", None, {})
     line = last_line(log)
     assert line["kind"] == "blur" and line["key"] == "-" and line["held"] == "-"
+
+    # The devices: the map this project ships is the keyboard mapping this file
+    # has always read, so a control read through the map and a key read through
+    # pilot_keys have to come out the same - which is the whole of what a device
+    # map must not change about a run that names no hardware at all.
+    board_map = controls.default_control_map()
+    board = Devices(board_map)
+    assert board_map.mapped_names() == [controls.CYCLIC_LONG,
+                                        controls.CYCLIC_LAT,
+                                        controls.PEDALS, controls.COLLECTIVE]
+    # A key is resolved by its physical position, from pygame's own constants.
+    assert key_scancode("w") == pygame.KSCAN_W
+    assert key_scancode("s") == pygame.KSCAN_S
+    assert key_scancode("a") == pygame.KSCAN_A
+    assert key_scancode("d") == pygame.KSCAN_D
+    assert key_scancode("up") == pygame.KSCAN_UP
+    assert key_scancode("down") == pygame.KSCAN_DOWN
+    assert key_scancode("left") == pygame.KSCAN_LEFT
+    assert key_scancode("right") == pygame.KSCAN_RIGHT
+    assert len(SCANCODES) > 100                        # the whole keyboard
+    # A name pygame has no key for is refused when the map is read, rather than
+    # read as a key that is never down for the whole run.
+    for name in ("wibble", "", "KSCAN_W"):
+        try:
+            key_scancode(name)
+        except controls.ControlsError:
+            continue
+        raise AssertionError("a key name pygame has no key for was accepted: %r"
+                             % (name,))
+    # Nothing on the built-in map is absolute: a keyboard has no positions.
+    absolute, ratchet, throttle = board.read({}, set())
+    assert absolute == {} and throttle is None
+    assert ratchet == pilot_keys({})
+    for code in FLIGHT_SCANCODES:
+        _absolute, mapped, _throttle = board.read({}, {code})
+        assert mapped == pilot_keys(frame_keys({}, {code})), code
+    # And a tap counts for its frame here too, or the collective ratchet loses
+    # it exactly as it would through the keys themselves.
+    _absolute, tapped, _throttle = board.read({}, {pygame.KSCAN_W})
+    assert tapped["collective"] == 1.0
+    _absolute, mapped, _throttle = board.read({pygame.KSCAN_W: True,
+                                               pygame.KSCAN_S: True}, set())
+    assert mapped["collective"] == 0.0                 # the two cancel
+
+    # The two frame paths fly the same flight: the same keys through fly_frame
+    # and through the map this project ships, on two aircraft that began
+    # identically, are the same aircraft to the last bit.
+    by_keys = Simulation(airframe=airframe_preset(AIRFRAME_PRESET))
+    by_map = Simulation(airframe=airframe_preset(AIRFRAME_PRESET))
+    keys_camera = ChaseCamera()
+    map_camera = ChaseCamera()
+    for _ in range(120):
+        held = {pygame.KSCAN_W: True}
+        fly_frame(by_keys, keys_camera, SIM_TIME_STEP_S,
+                  frame_keys(held, set()))
+        _absolute, mapped, _throttle = board.read(held, set())
+        fly_frame_axes(by_map, map_camera, SIM_TIME_STEP_S, _absolute, mapped)
+    assert by_keys.airframe.state.values() == by_map.airframe.state.values()
+    assert by_keys.frames == by_map.frames == 120
+    assert by_keys.pilot.axes() == by_map.pilot.axes()
+
+    # A joystick, without a joystick: a stand-in answers what pygame's own would,
+    # so the routing and the axis arithmetic are checked with no hardware - which
+    # is the only way a check that runs anywhere can look at a stick at all.
+    class StandIn:
+        """Just enough of a pygame joystick for Devices to read one."""
+
+        def __init__(self, axes=None, buttons=(), hat=(0, 0)):
+            self.axes = dict(axes or {})
+            self.buttons = set(buttons)
+            self.hat = hat
+
+        def get_init(self):
+            return True
+
+        def get_axis(self, index):
+            return self.axes[index]
+
+        def get_button(self, index):
+            return 1 if index in self.buttons else 0
+
+        def get_hat(self, index):
+            return self.hat
+
+    # Two controls on the stick and two left on the keyboard: the whole point of
+    # the map, which is that a panel arrives one axis at a time.
+    stick_map = controls.ControlMap.from_xml_string(
+        '<controls version="1.0">'
+        '<device name="huey" kind="joystick" index="0" match="Arduino"/>'
+        '<control name="cyclic-long" source="huey" axis="1" deadzone="0.05"/>'
+        '<control name="cyclic-lat" source="huey" axis="0" invert="true"/>'
+        '</controls>')
+    stick = Devices(stick_map)
+    assert stick.joysticks["huey"] is None             # nothing is plugged in
+    stick.joysticks["huey"] = StandIn({0: 0.5, 1: -1.0})
+    absolute, ratchet, throttle = stick.read({}, set())
+    assert absolute["lat_stick"] == -0.5               # inverted
+    assert absolute["long_stick"] == -1.0
+    assert throttle is None
+    assert "collective" not in absolute and "pedal" not in absolute
+    assert ratchet["collective"] == 0.0                # still the keyboard's
+    assert ratchet["pedal"] == 0.0
+    _absolute, ratchet, _throttle = stick.read({}, {pygame.KSCAN_D})
+    assert ratchet["pedal"] == 1.0                     # a key on the same frame
+    # A deadzone is taken out about the centre of a bipolar control...
+    stick.joysticks["huey"] = StandIn({0: 0.0, 1: 0.04})
+    absolute, _ratchet, _throttle = stick.read({}, set())
+    assert absolute["long_stick"] == 0.0
+    # ...and a button pair turns a ratchet, for a build whose lever is switches.
+    button_map = controls.ControlMap.from_xml_string(
+        '<controls version="1.0">'
+        '<device name="huey" kind="joystick" index="0"/>'
+        '<control name="collective" source="huey" mode="ratchet"'
+        ' button-increase="2" button-decrease="3"/>'
+        '</controls>')
+    buttons = Devices(button_map)
+    buttons.joysticks["huey"] = StandIn(buttons=(2,))
+    _absolute, ratchet, _throttle = buttons.read({}, set())
+    assert ratchet["collective"] == 1.0
+    buttons.joysticks["huey"] = StandIn(buttons=(2, 3))
+    _absolute, ratchet, _throttle = buttons.read({}, set())
+    assert ratchet["collective"] == 0.0                # the two cancel
+    buttons.joysticks["huey"] = None
+    _absolute, ratchet, _throttle = buttons.read({}, set())
+    assert "collective" not in ratchet                 # unplugged: no input
+    # A hat is a trim's own shape, and a throttle is carried and flies nothing.
+    hat_map = controls.ControlMap.from_xml_string(
+        '<controls version="1.0">'
+        '<device name="huey" kind="joystick" index="0"/>'
+        '<control name="cyclic-lat" source="huey" hat="0"/>'
+        '<control name="throttle" source="huey" axis="2"/>'
+        '</controls>')
+    hat = Devices(hat_map)
+    assert hat.read({}, set())[2] is None              # no hardware, no throttle
+    hat.joysticks["huey"] = StandIn({2: 1.0}, hat=(1, 0))
+    absolute, _ratchet, throttle = hat.read({}, set())
+    assert absolute["lat_stick"] == 1.0
+    assert throttle == 1.0                             # carried, and no more
 
 
 if __name__ == "__main__":
