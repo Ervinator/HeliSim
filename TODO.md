@@ -6,6 +6,62 @@ Nothing outstanding.  Every module has a demo that asserts as it prints -
 `scenery.py` and `controls.py` among them - and `main.py` has `--check` for the
 wiring that flying cannot test.
 
+* **Rotor speed, so that the air drag on the rotor can change it.**  Autorotation,
+  rotor droop and the needle split - the first limitation below, and the one place
+  where the model is energetically incomplete: it computes the torque that opposes
+  the shaft and then throws the balance away.  Investigated on 2026-10-08 and it is
+  smaller than it looks, because the aerodynamic half is already written.
+
+  *The drag torque is free.*  `RotorHubForces.torque` in `airframe.py` is
+  TM-73254 equation 4, the torque the engine has to beat, and
+  `RotorLoads.shaft_torque` and its `.power` in `aerodynamics.py` are the same
+  number out of the blade element rotor.  Both are already functions of omega -
+  `Rotor.omega` is a property off the settable `rpm`, so moving the speed re-solves
+  the whole blade - and `Telemetry` already carries the torque to the panel.  What
+  is missing is the other side of the ledger, and it is three things: a rotor pole
+  inertia, a rotor speed state, and an engine or governor torque to balance the
+  drag against.  The arithmetic checks out: at a fixed collective the blade element
+  torque scales as the square of the rotor speed, and at a fixed thrust it is
+  nearly independent of it, so the power follows the speed - which is precisely
+  the mechanic an autorotation needs.
+
+  *The airframe's constants have to become parametric in rotor speed.*
+  `airframe.py` bakes omega into tabulated numbers: R1 as omega squared; R2, R4,
+  R6 (the rotor time constant), R7 and the tail rotor's T1 as 1 / omega; R8 as
+  1 / omega squared; R9 as omega squared; and `UH1_TIP_SPEED` as omega R.  R3 and
+  R5 do not depend on it.  The derivation already exists and is asserted, in that
+  module's own self test, which rebuilds every one of them from `rotor.omega` - so
+  this is a move out of the test into a function the force model calls, and a
+  deletion from the test rather than an addition to it.
+
+  *The state is one line*: `d omega / dt = (Q_engine - Q_aero) / I_rotor`, with
+  `Q_aero` the negative of the hub torque already computed.  The time constant is
+  `I omega / P`, about 0.17 s at the hover - slower than the flapping lag the model
+  already carries and far slower than a frame - so it integrates at the
+  simulation's own step with no special integrator.
+
+  *The one number neither report has* is the rotor's polar inertia.  Two 92 kg
+  blades spread evenly along the span, 1658 kg m^2 of flap inertia each - which
+  `rotor_control.py`'s self test already asserts - and because the UH-1's teetering
+  hinge sits on the shaft, that flap inertia is each blade's polar inertia about it
+  as well: 3315 kg m^2 for the pair.  Take that, or mine a blade mass out of
+  TM 55-1520-210-10.
+
+  *The engine and the governor*: `controls.py` already maps a `throttle` and
+  `main.py` already carries and shows its position, so the input exists and
+  nothing consumes it.  The 294 to 339 rpm band a governor would hold is already
+  tabulated as `UH1_RPM_LOW`, `UH1_RPM_100` and `UH1_RPM_MAX`, and is unused.
+
+  *Three things that assume 100 per cent.*  `main.py`'s `rotor_azimuth_deg` is a
+  constant clock, `sim_time * UH1_RPM * 6`, so the visible blades would mis-strobe
+  off the nominal speed, and one assertion in `--check` is written against that
+  same constant.  And trim is defined at 100 per cent, so it needs either a rotor
+  speed in the search or an explicit hold while trimming.
+
+  *Which of the two rotors drives the speed.*  The closed form is the one the
+  equations of motion see, so fly omega from that and assert the blade element
+  agrees at the hover - the cross check the thrust already has.
+
 ## Known limitations, from the modules themselves
 
 These are choices, not oversights: each is stated where it lives.
@@ -14,6 +70,7 @@ These are choices, not oversights: each is stated where it lives.
   the rotor turns at 100 per cent whatever the aircraft does.  `controls.py`
   maps a `throttle` all the same, so the hardware for one can be built and named
   now; its position is carried and shown and flies nothing until this changes.
+  `Next` records what it would take.
 * **The ground is a floor, not a contact model.**  `simulation.py` holds the
   c.g. on the skid line, takes the descent out of the velocity, and levels roll
   and pitch; the skids do not flex, slide or spring.
