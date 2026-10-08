@@ -6,45 +6,48 @@ Nothing outstanding.  Every module has a demo that asserts as it prints -
 `scenery.py` and `controls.py` among them - and `main.py` has `--check` for the
 wiring that flying cannot test.
 
-* **The engine and the governor, on top of the rotor speed that now exists.**
-  The first two thirds of this landed on 2026-10-08 - see `Done` below: the
-  airframe's constants are parametric in omega, `FlightState` carries the rotor
-  speed as a thirteenth state variable, and `Airframe(engine_torque=...)` closes
-  the shaft against the report's own equation 4.  What is left is the other side
-  of the ledger: a torque that comes from somewhere rather than one a caller
-  passes in.
+* **The engine is in; what is left of the level is around it.**  `engine.py`
+  landed on 2026-10-08 with the airframe and simulation wiring that lets it drive
+  the shaft - see `Done` below - so a torque now comes from somewhere: a T53 with
+  a twist grip, an N2 governor with the manual's own +-40 rpm droop band, a
+  0.6 sec spool, 1125 ft-lb of data plate torque, 50 psi of transmission, 7 psi
+  for EMER and the manual's bleed air numbers.  Five things are still open:
 
-  *The input already exists.*  `controls.py` maps a `throttle` and `main.py`
-  carries and shows its position, and nothing consumes it.  The 294 to 339 rpm
-  band a governor would hold is tabulated as `UH1_RPM_LOW`, `UH1_RPM_100` and
-  `UH1_RPM_MAX`, and is unused; a free turbine's torque would fall away with the
-  rotor speed, which is what makes an engine failure and a needle split different
-  events rather than one.
-
-  *Three things still assume 100 per cent.*  `main.py`'s `rotor_azimuth_deg` is a
-  constant clock, `sim_time * UH1_RPM * 6`, so the visible blades would mis-strobe
-  off the nominal speed, and one assertion in `--check` is written against that
-  same constant.  And the two trims now *accept* a rotor speed to solve at but do
-  not solve *for* one: a rotor speed trim would close the shaft balance with the
-  other six, which is what an autorotation's steady descent and a governor's droop
-  curve both are.
-
-  *Which of the two rotors drives the speed.*  The closed form is the one the
-  equations of motion see, so fly omega from that and assert the blade element
-  agrees at the hover - the cross check the thrust already has.
+  * *the rotor azimuth clock.*  `main.py`'s `rotor_azimuth_deg` is still the
+    constant clock `sim_time * UH1_RPM * 6`, so with an engine aboard the visible
+    blades mis-strobe off a rotor that is no longer at exactly 100 per cent, and
+    the `--check` assertion written against that constant has to become an
+    assertion about an *integrated* azimuth;
+  * *a trim that solves for the rotor speed.*  `trim_hover` and
+    `trim_level_flight` accept an omega to solve at but do not solve *for* one;
+    closing the shaft balance with the other six unknowns is what a governor's
+    droop curve and an autorotation's steady descent both are;
+  * *`trim_autorotation`.*  Descent rate as the unknown, for the case the
+    engine's failure path can now be flown into;
+  * *main.py's own aircraft.*  It flies the report's fixed rotor, so its
+    throttle is still carried and shown rather than flown, and it has no keys for
+    the twist grip, the GOV AUTO/EMER switch or an engine failure, and no engine
+    lines in the caption - `Telemetry.engine` is what they would read;
+  * *the torque available chart.*  Figure 7.1-2 is the real answer to "how much
+    torque is there at this altitude and temperature"; what `engine.py` ships is
+    the shape of those charts - a density scaling and a 50 psi full scale - and
+    the rest of the level is digitising it.
 
 ## Known limitations, from the modules themselves
 
 These are choices, not oversights: each is stated where it lives.
 
-* **Rotor speed is held, not driven.**  The rotor speed is a state variable and
-  the air drag on the rotor moves it - `Airframe(engine_torque=...)` closes the
-  shaft against TM-73254's own torque - but the default engine torque is `None`,
-  which is an engine that holds whatever the rotor is doing, so nothing the
-  aircraft does changes it.  `controls.py` maps a `throttle` all the same, so the
-  hardware for one is built and named; its position is carried and shown and
-  flies nothing until an engine or a governor stands behind it.  `Next` records
-  what that would take.
+* **Rotor speed is held, not driven - on the report's own aircraft.**  The rotor
+  speed is a state variable, and an engine drives it: `engine.py` is a T53 with a
+  twist grip, an N2 governor and its droop band, and `Airframe(engine=Engine())`
+  - or `airframe_preset(engine=True)` - closes the shaft against it, so on that
+  aircraft an engine failure, a governor that lags and a rotor that winds down are
+  all in the model.  What is *not* in it is the default: the 8700 lb and 6158 lb
+  aircraft of TM-73254 have no engine, because every figure in the report was
+  computed with the rotor speed held at 100 per cent and the regression against
+  those figures has to reproduce them to the last bit.  `controls.py` maps a
+  `throttle` and `main.py` carries and shows its position; neither of those
+  aircraft reads it.  `Next` records what is left around the engine.
 * **The ground is a floor, not a contact model.**  `simulation.py` holds the
   c.g. on the skid line, takes the descent out of the velocity, and levels roll
   and pitch; the skids do not flex, slide or spring.
@@ -72,6 +75,64 @@ These are choices, not oversights: each is stated where it lives.
   how long the window took to see the key.
 
 ## Done
+
+* 2026-10-08 - **the engine: a T53 with its governor, so the torque comes from
+  somewhere.**  The level before this one made the rotor speed a state and left
+  `Q_engine` to a caller; `engine.py` is that caller.  It is a new module between
+  `aerodynamics.py` and `airframe.py`, standard library only, and every number in
+  it is TM 55-1520-210-10's own: 324 rotor / 6600 engine rpm (and the manual's
+  other pair, 314 / 6400, which gives 20.382 against 20.370 - the gearing read
+  twice), the 1125 ft-lb data plate calibration, which is 1525 N m and 1.054 MW
+  at 6600 rpm, i.e. 1414 shp against the T53-L-13's 1400, the 50 psi
+  transmission structural limit, the droop compensator's +-40 rpm band and the
+  manual's own *definition* of droop, the 6 to 8 psi the GOV AUTO/EMER switch
+  costs (7 taken), the 1.4, 2.1 and 3.5 psi of bleed air, and the twist grip's
+  three positions - full open selects a speed, rolled off selects a lower one,
+  fully closed shuts the fuel off.
+
+  Two things are this project's own and are named as such: the *slope* between
+  psi and newton metres (the charts, figure 7.1-2, are where the manual keeps it;
+  here the 50 psi limit is taken as the gauge's full scale, 621.4 N m of rotor
+  shaft torque per psi) and the gas producer's 0.6 sec lag.  With those,
+  `Governor.power_available` scales with air density and gives back the manual's
+  own warning that the engine can exceed the transmission limit in dense air;
+  `Governor.gain` is the power available over the droop band, so full power costs
+  the whole 40 rpm and no load costs none; `Engine.advance` is one first order
+  step of the lag per frame, and `Engine.torque` is the free turbine's P / omega,
+  which is what makes a slow rotor take more torque from the same gas and helps
+  it catch a wind down.
+
+  Wired in: `Airframe(engine=Engine())` asks the engine for a torque once a frame
+  from the rotor speed at the start of it and writes it into the same
+  `engine_torque` field a fixed torque goes into, so a T53 and a number are told
+  apart by nothing but where the number came from; `Airframe.throttle` and
+  `Airframe.reset` (which settles the engine on the torque the rotor is actually
+  absorbing, so a run starts flying rather than spooling up); `PilotInput`'s
+  fifth ratchet, the twist grip, with `step`, `set_axes`, `throttle()`,
+  `THROTTLE_STEP_GRANULARITY` and `key_rates`; `Simulation.throttle`,
+  `set_throttle` and `set_governor(emer=, failed=, target_rpm=)`;
+  `airframe_preset(..., engine=True)`; and `Telemetry.engine`, an
+  `EngineTelemetry` nested record - N2, throttle, power, torque, the torque gauge
+  as a percentage of the data plate, and what fraction of what the air can give
+  is being asked for - with honest zeros and `has_engine=False` on the report's
+  engine-less aircraft.  `Telemetry.__str__` is deliberately *not* changed, so
+  every transcript in the repository still reads exactly as it did.
+
+  What it flies: on the 8700 lb aircraft the governor settles at 322.97 rpm of
+  rotor, 0.32 per cent under the reference and inside its own band, asking 552 kW
+  (52 per cent of what there is, 26 psi on the gauge) - asserted against the same
+  closed form the loop integrates, so the droop curve cannot drift away from the
+  physics.  An engine failure is a wind down through the lag, ten time constants
+  to nothing; EMER is the grip as the fuel control at 43/50 of what there is,
+  with nothing chasing the rotor; and a closed grip is no fuel at all without
+  being a failure.  Verified: `python engine.py`, `python airframe.py`,
+  `python simulation.py` and `main.py --check` all passing with the new physics
+  asserted rather than printed; and the model's *default* aircraft - no engine,
+  the report's fixed rotor - bit for bit identical to a tree built from the
+  commit before this one, flying the same 1200 frame scripted profile and the
+  same 600 frame flight test profile in wind, with the trajectory and the
+  control lag hashes equal to the byte and `_rt_check.py`'s two missions
+  unchanged as well.
 
 * 2026-10-08 - **the airframe's rotor speed is a state, and TM-73254 table 3's
   constants are parametric in it.**  The model computed the torque that opposes

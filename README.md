@@ -17,11 +17,12 @@ Layered, each one importing only what sits below it:
 | --- | --- | --- |
 | `aerodynamics.py` | 1617 | quasi-steady blade element theory for one rotor: section data, flapping, hover and forward flight loads |
 | `rotor_control.py` | 1280 | the control path: inches of stick travel to swashplate angles, the mixing law and its rigging, the control lags |
-| `airframe.py` | 2094 | TM-73254's force and moment model - main rotor, tail rotor, fuselage, fin, stabilizer - and the six degree of freedom equations of motion |
-| `simulation.py` | 2055 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the trims, and what a renderer or a HUD asks for |
+| `engine.py` | 754 | the T53-L-13 on the other end of the shaft: the twist grip, the N2 governor and its droop band, the torque available and what EMER and bleed air cost, and the gas producer's lag |
+| `airframe.py` | 2664 | TM-73254's force and moment model - main rotor, tail rotor, fuselage, fin, stabilizer - and the six degree of freedom equations of motion, with the rotor's own speed as a state when an engine is aboard |
+| `simulation.py` | 2332 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the trims, and what a renderer or a HUD asks for |
 | `regression_tm73254.py` | 661 | the report's figures 2 to 9 reflown: eight step inputs from 60 kt and from the hover, laid next to its published responses |
 | `scenery.py` | 603 | the XML scenery format and its loader - no pygame, no OpenGL, and the one module whose test needs no window and no physics |
-| `controls.py` | 1083 | the device map: which physical control flies which - keyboard or joystick, per control, with deadzone, invert and calibration - read from the XML of `default_controls.xml`, and likewise stdlib only |
+| `controls.py` | 1088 | the device map: which physical control flies which - keyboard or joystick, per control, with deadzone, invert and calibration - read from the XML of `default_controls.xml`, and likewise stdlib only |
 | `main.py` | 3568 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, the aircraft of `simulation.py` flown from its device map - keyboard, joystick or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it |
 
 Only `main.py` imports anything outside the standard library.
@@ -56,14 +57,15 @@ way up its travel, and the keys fly it:
 Every one of those axes is a ratchet: a key slews its control while the key is
 held and a released key moves nothing at all, so every control stays where the
 hand left it, exactly as a UH-1's friction and force trim leave it.  The keys are
-deliberately fine: `simulation.PilotInput`'s three step granularities -
-`COLLECTIVE_STEP_GRANULARITY`, `CYCLIC_STEP_GRANULARITY` and
-`PEDAL_STEP_GRANULARITY`, a quarter each - are what a *key* is worth, one per
-control, so a key turns its ratchet at a quarter of the rate the control's own
-feel gives it and the same travel takes four times the presses, and four times as
-long on the key.  That is what makes a stick placeable rather than something only
-thrown from one stop to the other.  A joystick or a script is not scaled:
-`set_axes` is absolute and has no keypress to step.
+deliberately fine: `simulation.PilotInput`'s four step granularities -
+`COLLECTIVE_STEP_GRANULARITY`, `CYCLIC_STEP_GRANULARITY`,
+`PEDAL_STEP_GRANULARITY` and `THROTTLE_STEP_GRANULARITY`, a quarter each - are
+what a *key* is worth, one per control, so a key turns its ratchet at a quarter
+of the rate the control's own feel gives it and the same travel takes four times
+the presses, and four times as long on the key.  That is what makes a stick
+placeable rather than something only thrown from one stop to the other.  A
+joystick or a script is not scaled: `set_axes` is absolute and has no keypress to
+step.
 
 ## The pilot's devices
 
@@ -89,9 +91,12 @@ and one plugged in while the window is open is picked up as it appears.
 mapping with no file at all; `python controls.py` prints the map, the
 descriptions it refuses and its own self test.
 
-The throttle is mapped like the rest and flies nothing yet: the model holds 100
-per cent rotor speed and has no engine in it (see `simulation.py`), so a
-throttle position is carried, shown beside the telemetry, and no more.
+The throttle is mapped like the rest and is the one control that is not a stick:
+it is a twist grip, read as `simulation.PilotInput.throttle()` rather than as one
+of the four axes, and it goes to the engine's governor (`engine.py`). On the
+aircraft main.py flies it is carried and shown beside the telemetry and does
+nothing else, because that aircraft has no engine in the model - the report's
+fixed rotor; `airframe_preset(engine=True)` is where a throttle moves needles.
 
 
 `R` is where the *run* began, not where the trim says the aircraft belongs: this

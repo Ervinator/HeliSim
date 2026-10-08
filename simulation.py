@@ -15,12 +15,19 @@ needs is here instead:
   makes a scripted run reproducible to the last bit;
 * **the pilot's hands.**  :class:`PilotInput` turns held keys into the inches of
   stick travel :class:`rotor_control.PilotControls` wants, at a rate a hand
-  could move them: all four axes are ratchets that stay where a hand leaves
-  them - the collective because it is a heavy lever, the cyclic and the pedals
-  because that is what the aircraft has, friction and force trim rather than a
-  centring spring - and a full travel takes about a second of holding the key.
-  A joystick, which gives absolute axes instead, comes in through
-  :meth:`PilotInput.set_axes`;
+  could move them: the four stick axes are ratchets that stay where a hand
+  leaves them - the collective because it is a heavy lever, the cyclic and the
+  pedals because that is what the aircraft has, friction and force trim rather
+  than a centring spring - and a full travel takes about a second of holding
+  the key.  The fifth control is the twist grip on the collective, which is a
+  ratchet too and goes to the engine's governor rather than to a swashplate: see
+  :class:`engine.Governor` and :meth:`Simulation.throttle`.  A joystick, which
+  gives absolute axes instead, comes in through :meth:`PilotInput.set_axes`;
+* **the engine.**  Opt-in, and off by default: :func:`airframe_preset`'s
+  ``engine=True`` puts a T53 with its governor on the shaft, and
+  :attr:`Telemetry.engine` is the N2 and torque that come with it.  With no
+  engine the rotor speed is the report's fixed 100 per cent and every figure in
+  TM-73254 is reproduced to the last bit, which is what the default is for;
 * **the ground.**  :meth:`Simulation._ground` is this project's own addition and
   the only place in it that is not TM-73254.  See below;
 * **the renderer.**  :meth:`Simulation.render_position`,
@@ -37,9 +44,10 @@ jump.  A step whose state comes back out of the envelope - non-finite, or beyond
 the modest ceilings of ``UH1_ENVELOPE_CEILING_*`` - is refused outright: the last
 good state is kept and the aircraft is called crashed *out of its envelope*
 (``CRASH_OUT_OF_ENVELOPE``, which is not the floor's own
-``CRASH_GROUND_CONTACT`` below), because at 100 per cent rotor with no engine and
-no rotor speed dynamics a violent hands-off case can run away, and nothing
-downstream should ever see the result.  Nothing is
+``CRASH_GROUND_CONTACT`` below), because with the rotor speed a free state - a
+failed engine, or the collective at the down stop in a dive - a violent
+hands-off case can run away, and nothing downstream should ever see the result.
+Nothing is
 interpolated - a frame that lands between two steps
 draws the older one - because at 60 Hz that is a fifth of a millimetre of
 altitude and the code is simpler without it.
@@ -107,10 +115,12 @@ from typing import Optional
 from aerodynamics import (GRAVITY, UH1_COLLECTIVE_TRAVEL_IN,
                           UH1_HUB_WATERLINE_M, UH1_LAT_STICK_TRAVEL_IN,
                           UH1_LONG_STICK_TRAVEL_IN, UH1_PEDAL_TRAVEL_IN,
-                          UH1_RPM, UH1_ROTOR_TIME_CONSTANT_SIM_S, Vector3)
+                          UH1_RPM, UH1_RPM_LOW, UH1_ROTOR_TIME_CONSTANT_SIM_S,
+                          Vector3)
 from airframe import (FOOT, KNOT, POUND, Airframe, BodyForces, FlightState,
                       UH1_HUB_HEIGHT, UH1_SIM_MASS, UH1_TEST_MASS, apply,
                       direction_cosine_matrix, transpose)
+from engine import Engine, UH1_ENGINE_POWER_W
 from rotor_control import PilotControls
 
 # ---------------------------------------------------------------------------
@@ -194,9 +204,9 @@ CRASH_OUT_OF_ENVELOPE = "out of envelope"
 #: What each reason is shown as, by :attr:`Telemetry.crash_message` and so by
 #: :meth:`Telemetry.__str__` and main.py's caption.  ``CRASHED`` is the skids
 #: arriving hard; ``OUT OF ENVELOPE`` is the model refusing to fly the state a
-#: frame produced, which is an overload and not a contact - the rotor is at 100
-#: per cent with nothing to spill, and at 300 deg/s of body rate the answer it
-#: gives is not one anything should be flown, so the frame is refused instead.
+#: frame produced, which is an overload and not a contact - there is no
+#: structure to give, and at 300 deg/s of body rate the answer the model gives
+#: is not one anything should be flown, so the frame is refused instead.
 CRASH_MESSAGES = {
     CRASH_GROUND_CONTACT: "CRASHED",
     CRASH_OUT_OF_ENVELOPE: "OUT OF ENVELOPE",
@@ -214,7 +224,7 @@ UH1_AIRFRAME_PRESETS = {
 }
 
 
-def airframe_preset(name="simulation", **overrides):
+def airframe_preset(name="simulation", engine=None, **overrides):
     """An :class:`Airframe` on one of the report's own two configurations.
 
     ``name`` is ``"simulation"`` for the 8700 lb aircraft of TM-73254's
@@ -225,12 +235,24 @@ def airframe_preset(name="simulation", **overrides):
     inertia gives instead.  Any other :class:`Airframe` keyword goes straight
     through, so ``airframe_preset("flight test", ground_effect=False)`` is the
     flight test aircraft flying out of the cushion.
+
+    *engine* is the opt-in that changes the aircraft rather than the trim:
+    ``None``, the default, is no engine at all, i.e. the report's fixed rotor
+    that every figure in TM-73254 was computed with; ``True`` is a fresh
+    :class:`engine.Engine`, a T53 with its governor, its 40 rpm droop band and
+    its 0.6 s spool, which is what makes the rotor speed a free state the
+    aircraft settles at rather than a constant the model holds; and an
+    :class:`engine.Engine` of a caller's own is flown as it comes, which is how
+    a script sets a throttle, a bleed air load or a raised speed selector before
+    the first frame.
     """
     if name not in UH1_AIRFRAME_PRESETS:
         raise ValueError("unknown airframe preset %r, expected one of %s"
                          % (name, ", ".join(sorted(UH1_AIRFRAME_PRESETS))))
     mass, rotor_time_constant = UH1_AIRFRAME_PRESETS[name]
     settings = {"mass": mass, "rotor_time_constant": rotor_time_constant}
+    if engine:
+        settings["engine"] = Engine() if engine is True else engine
     settings.update(overrides)
     return Airframe(**settings)
 
@@ -256,6 +278,39 @@ def from_renderer(vector):
 
 
 @dataclass(frozen=True)
+class EngineTelemetry:
+    """The engine's own gauges: an N2 tachometer and a torque gauge.
+
+    A nested record rather than seven more fields on :class:`Telemetry`, which
+    is a *pilot's* readout: the airframe is one thing and the engine on the end
+    of its shaft is another, and an aircraft with no engine in it (the default,
+    see :func:`airframe_preset`) has an answer for every one of these that is
+    honest rather than absent.
+
+    ``rpm`` is N2, the engine's own speed, held by the governor at 6600 rpm when
+    the rotor is at 324; ``torque`` is what the engine is delivering at the
+    *main rotor* shaft, in the same newton metres as :attr:`Telemetry.torque`,
+    which is the rotor's drag - the two differ while the shaft is accelerating,
+    and the difference is :meth:`airframe.Airframe.rotor_acceleration`.
+    ``torque_percent`` is that torque against the 1125 ft-lb data plate
+    calibration (TM 55-1520-210-10, 7.1-14), i.e. where the gauge points, and
+    ``maximum_percent`` is what fraction of what the engine *could* give in this
+    air is being asked of it.
+    """
+
+    has_engine: bool          # False on the report's fixed-rotor aircraft
+    throttle: float           # 0 closed to 1 full open, the twist grip
+    rpm: float                # rpm, N2 - engine speed
+    power: float              # W, delivered at the engine's output shaft
+    torque: float             # N m, delivered at the main rotor shaft
+    torque_percent: float     # %, of the 1125 ft-lb data plate torque
+    maximum_torque: float     # N m, available at this speed and air
+    maximum_percent: float    # %, of that maximum being used
+    failed: bool              # the engine is out
+    emer: bool                # the GOV switch is in EMER, the governor out
+
+
+@dataclass(frozen=True)
 class Telemetry:
     """One instant of the aircraft, in the units an instrument panel wants.
 
@@ -274,6 +329,10 @@ class Telemetry:
     than a flag, because the floor's hard arrival and the envelope's refusal are
     not the same event - one is on the skids and one is in the air - and
     :attr:`crash_message` is what a panel shows for either.
+
+    ``engine`` is the engine's own panel, nested: see :class:`EngineTelemetry`,
+    and note that ``rotor_percent`` beside it is the *rotor's* speed, which a
+    governor holds a little under 100 on the aircraft that has an engine.
     """
 
     sim_time: float           # s, physics time actually flown
@@ -308,6 +367,7 @@ class Telemetry:
     ground_effect: float      # K_G, 1 in free air
     inflow_ratio: float       # lambda, the report's
     advance_ratio: float      # mu
+    engine: EngineTelemetry   # N2, throttle, torque gauge - see that class
     on_ground: bool
     crashed: bool
     crash_reason: Optional[str]  # of CRASH_*; None while it is still flying
@@ -375,6 +435,10 @@ class Telemetry:
 COLLECTIVE_STEP_GRANULARITY = 0.25
 CYCLIC_STEP_GRANULARITY = 0.25
 PEDAL_STEP_GRANULARITY = 0.25
+#: The twist grip's own granularity, on the same quarter - and its rate is per
+#: *grip* travel rather than per stick travel, so the numbers below are not
+#: comparable with the three above.
+THROTTLE_STEP_GRANULARITY = 0.25
 
 #: Where the collective lever is when a run begins on the pad: 75 % of its
 #: travel, 8.25 in of the 11, which is 0.84 in under the 9.09 in - 82.6 % - of
@@ -398,26 +462,32 @@ PAD_COLLECTIVE = 0.75
 
 @dataclass
 class PilotInput:
-    """A hand on the controls: where the four axes are, and how fast they move.
+    """A hand on the controls: where the five axes are, and how fast they move.
 
     The axes are the normalised ones a keyboard or a joystick gives: -1 to +1 on
-    the cyclic and the pedals, 0 to 1 on the collective.  :meth:`controls` is the
-    only way out, and it hands them to
-    :meth:`rotor_control.PilotControls.from_axes`, so the travels of TM-73254
-    table 2 are applied by the model rather than guessed at here.
+    the cyclic and the pedals, 0 to 1 on the collective and on the twist grip.
+    :meth:`controls` is the only way out of the four *stick* axes, and it hands
+    them to :meth:`rotor_control.PilotControls.from_axes`, so the travels of
+    TM-73254 table 2 are applied by the model rather than guessed at here; the
+    fifth, the throttle, is a twist grip on the collective rather than a stick
+    position, so it is read on its own by :meth:`throttle` and goes to the
+    engine's governor instead (see :mod:`engine`).
 
-    **All four are ratchets.**  An axis is a control *position* and it stays
+    **All five are ratchets.**  An axis is a control *position* and it stays
     where a hand leaves it: a key that is released moves nothing at all, and
     there is no spring anywhere in this class.  That is what the aircraft has:
     a UH-1's cyclic and pedals are held by friction and by force trim rather
     than by a centring spring, so a stick pushed forward stays pushed forward
-    until it is pushed back, and the collective lever is heavy to move and stays
-    where it is put.  What a trim does here is *start* the axes: :meth:`reset`
-    puts all four on a stick position, which is how a run begins at the trimmed
-    hover, and nothing pulls them off it.  An aircraft with nothing held, whose
-    collective is left on the trim, therefore flies the trim its own hands set
-    up; an aircraft whose cyclic was moved and released departs from it and
-    stays departed, which is the departure a trim light is there to report.
+    until it is pushed back, the collective lever is heavy to move and stays
+    where it is put, and the twist grip holds its setting through a friction
+    detent rather than springing back.  What a trim does here is *start* the
+    axes: :meth:`reset` puts the four sticks on a stick position, which is how
+    a run begins at the trimmed hover, and nothing pulls them off it - the grip
+    it leaves alone, since a trim has nothing to say about a throttle.  An
+    aircraft with nothing held, whose collective is left on the trim, therefore
+    flies the trim its own hands set up; an aircraft whose cyclic was moved and
+    released departs from it and stays departed, which is the departure a trim
+    light is there to report.
 
     Two ways in, because there are two kinds of device:
 
@@ -446,9 +516,22 @@ class PilotInput:
     long_stick_axis: float = 0.0     # + forward, the stops at +-1
     lat_stick_axis: float = 0.0      # + right, the stops at +-1
     pedal_axis: float = 0.0          # + right, the stops at +-1
+    #: The twist grip on the collective, which is a fifth ratchet and *not* one
+    #: of :meth:`axes`' four: 1 is full open, where the governor holds the
+    #: selected engine speed, 0 is closed, and anything between selects a lower
+    #: speed instead (see :mod:`engine`).  It is read as :meth:`throttle` and it
+    #: flies nothing on an aircraft with no engine in it.
+    throttle_axis: float = 1.0       # 0 at the closed stop, 1 full open
     collective_rate: float = 0.55    # full travel per second
     cyclic_rate: float = 1.6
     pedal_rate: float = 2.0
+    #: The twist grip's rate, full travel per second: a second from closed to
+    #: full open, which is a hand's speed on a grip and is *deliberately* slow
+    #: where the engine's own answer is slow too - the manual's caution about
+    #: EMER is that "throttle and collective coordinated control movements must
+    #: be smooth" (9-3), and a grip that could be slammed would make that a
+    #: keyboard's choice rather than the model's.
+    throttle_rate: float = 1.0
     #: The fraction of each rate a *key* is worth, so that a keypress is a step
     #: and not a throw; see COLLECTIVE_STEP_GRANULARITY above.  Fields rather
     #: than the constants alone so that a script can make its keys as fine or as
@@ -456,29 +539,40 @@ class PilotInput:
     collective_step_granularity: float = COLLECTIVE_STEP_GRANULARITY
     cyclic_step_granularity: float = CYCLIC_STEP_GRANULARITY
     pedal_step_granularity: float = PEDAL_STEP_GRANULARITY
+    throttle_step_granularity: float = THROTTLE_STEP_GRANULARITY
 
     def axes(self):
-        """The four normalised axes, ``(collective, long, lat, pedal)``.
+        """The four normalised stick axes, ``(collective, long, lat, pedal)``.
 
         Control positions, not deflections: 0 is the rigging's centre on the
         three that have one and the down stop on the collective, +-1 is a stop,
         and a stick sitting on the trim is simply an axis the trim put there.
+        The twist grip is deliberately *not* one of them - it is not a stick
+        position, it does not go through
+        :meth:`rotor_control.PilotControls.from_axes`, and it is read on its own
+        by :meth:`throttle`.
         """
         return (self.collective_axis, self.long_stick_axis,
                 self.lat_stick_axis, self.pedal_axis)
 
-    def key_rates(self):
-        """The three rates a held *key* turns its axis at, full travel per second.
+    def throttle(self):
+        """The twist grip position, 0 closed to 1 full open."""
+        return self.throttle_axis
 
-        ``(collective, cyclic, pedal)``: :meth:`step`'s own rates, each control's
-        rate times its step granularity, so a key is worth a quarter of a full
-        rate frame by default - four times the presses to cross the same travel,
-        which is what makes a keyboard flyable.  :meth:`set_axes` keeps the
-        unscaled rates, since a joystick is absolute and has no step to scale.
+    def key_rates(self):
+        """The four rates a held *key* turns its axis at, full travel per second.
+
+        ``(collective, cyclic, pedal, throttle)``: :meth:`step`'s own rates,
+        each control's rate times its step granularity, so a key is worth a
+        quarter of a full rate frame by default - four times the presses to
+        cross the same travel, which is what makes a keyboard flyable.
+        :meth:`set_axes` keeps the unscaled rates, since a joystick is absolute
+        and has no step to scale.
         """
         return (self.collective_rate * self.collective_step_granularity,
                 self.cyclic_rate * self.cyclic_step_granularity,
-                self.pedal_rate * self.pedal_step_granularity)
+                self.pedal_rate * self.pedal_step_granularity,
+                self.throttle_rate * self.throttle_step_granularity)
 
     def controls(self):
         """The stick inches these axes are worth, the stops applied.
@@ -500,6 +594,10 @@ class PilotInput:
         collective at its down stop and the rest centred, which is the rigging a
         script with no trim at all wants; with one they go to that stick
         position, and the ratchets leave them there.
+
+        The twist grip is not touched: it is not a stick position, a trim has
+        nothing to say about it, and a reset that closed a throttle would be
+        shutting an engine down on the way past.
         """
         axes = PilotControls() if controls is None else controls
         (self.collective_axis, self.long_stick_axis,
@@ -507,7 +605,7 @@ class PilotInput:
         return self
 
     def step(self, dt, collective=0.0, long_stick=0.0, lat_stick=0.0,
-             pedal=0.0):
+             pedal=0.0, throttle=0.0):
         """One frame of a keyboard, told which keys are *held*.
 
         Each argument is that control's key state: 0 for nothing held, -1 or +1
@@ -515,15 +613,20 @@ class PilotInput:
         control's *key* rate, :meth:`key_rates`' own, which is its full rate
         times a step granularity of a quarter - so a frame of a key is a quarter
         of the travel it would be at the hand's own rate, while a released one
-        leaves the axis exactly where it is.  The collective is clipped into its
-        travel; the three that have a stop either side of the centre need no
-        clipping, since a ratchet turns towards +-1 and no further.  Returns the
-        stick positions, so the frame loop of a caller is
+        leaves the axis exactly where it is.  The collective and the twist grip
+        are clipped into their travel; the three that have a stop either side of
+        the centre need no clipping, since a ratchet turns towards +-1 and no
+        further.  Returns the stick positions, so the frame loop of a caller is
         ``sim.step(dt, pilot.step(dt, **keys))`` - or :meth:`Simulation.fly`,
         which is that in one call.
+
+        *throttle* is the fifth key, on the twist grip: it is not one of the
+        four stick axes and does not appear in what is returned, so a caller
+        that flies with it reads :meth:`throttle` and hands it on - see
+        :meth:`Simulation.throttle_of`.
         """
         dt = max(float(dt), 0.0)
-        collective_key, cyclic_key, pedal_key = self.key_rates()
+        collective_key, cyclic_key, pedal_key, throttle_key = self.key_rates()
         self.collective_axis = _clip(
             _ratchet(self.collective_axis, collective, collective_key, dt),
             0.0, 1.0)
@@ -532,10 +635,12 @@ class PilotInput:
         self.lat_stick_axis = _ratchet(self.lat_stick_axis, lat_stick,
                                        cyclic_key, dt)
         self.pedal_axis = _ratchet(self.pedal_axis, pedal, pedal_key, dt)
+        self.throttle_axis = _clip(
+            _ratchet(self.throttle_axis, throttle, throttle_key, dt), 0.0, 1.0)
         return self.controls()
 
     def set_axes(self, collective=None, long_stick=None, lat_stick=None,
-                 pedal=None, dt=None):
+                 pedal=None, throttle=None, dt=None):
         """Put axes at absolute positions, for a joystick or a script.
 
         An axis is left alone when it is ``None``.  With a ``dt`` the move is
@@ -545,6 +650,10 @@ class PilotInput:
         *rates*, not :meth:`key_rates`: a joystick or a script is absolute and
         has no keypress to scale, so the step granularity is the keyboard's
         alone.
+
+        *throttle* is the twist grip, which a device with a lever for it can
+        drive the same way as the collective - see
+        :mod:`controls`, where the control is named for exactly this.
         """
         if collective is not None:
             self.collective_axis = _clip(
@@ -561,11 +670,16 @@ class PilotInput:
         if pedal is not None:
             self.pedal_axis = _slew(self.pedal_axis, _clip(pedal, -1.0, 1.0),
                                     self.pedal_rate, dt)
+        if throttle is not None:
+            self.throttle_axis = _clip(
+                _slew(self.throttle_axis, _clip(throttle, 0.0, 1.0),
+                      self.throttle_rate, dt), 0.0, 1.0)
         return self
 
     def __str__(self):
         return ("collective %5.2f | long %+5.2f | lat %+5.2f | pedal %+5.2f"
-                % self.axes())
+                " | throttle %3.0f %%"
+                % (self.axes() + (100.0 * self.throttle_axis,)))
 
 
 def _clip(value, low, high):
@@ -983,6 +1097,52 @@ class Simulation:
         self.wind = wind
         return self
 
+    def throttle(self):
+        """The twist grip position, 0 closed to 1 full open.
+
+        The pilot's own grip, so it is a *control position* and not the
+        engine's state: an aircraft with no engine in the model still has the
+        lever, it just has nothing on the other end of it.  What it does is
+        :class:`engine.Governor`'s business, and it reaches the engine through
+        :meth:`airframe.Airframe.step` once a frame.
+        """
+        return self.pilot.throttle()
+
+    def set_throttle(self, value):
+        """Put the twist grip on an absolute position, for a script.
+
+        The same shape :meth:`PilotInput.set_axes` takes and takes instantly,
+        because a script setting an initial condition has no frame time to
+        slew through; a *device* with a lever on it goes through
+        :meth:`PilotInput.set_axes` instead, with the frame's ``dt``.
+        """
+        self.pilot.set_axes(throttle=value)
+        return self
+
+    def set_governor(self, emer=None, failed=None, target_rpm=None, throttle=None):
+        """The GOV AUTO/EMER switch, a failure, and the speed selector.
+
+        Each argument is left alone when it is ``None``, so a script sets the
+        one it cares about: ``emer=True`` is the GOV switch to EMER, where the
+        governor is out of the loop and the twist grip is the fuel control;
+        ``failed=True`` is an engine failure, which is the fuel going away for
+        good; ``target_rpm`` is the speed selector and ``throttle`` the grip.
+        Does nothing at all on an aircraft with no engine, which has neither.
+        """
+        engine = self.airframe.engine
+        if engine is None:
+            return self
+        governor = engine.governor
+        if emer is not None:
+            governor.emer = bool(emer)
+        if failed is not None:
+            governor.failed = bool(failed)
+        if target_rpm is not None:
+            governor.target_rpm = float(target_rpm)
+        if throttle is not None:
+            self.set_throttle(throttle)
+        return self
+
     def step(self, frame_dt, controls=None):
         """Fly one frame of *frame_dt* seconds with *controls* held.
 
@@ -1037,11 +1197,11 @@ class Simulation:
         the ceilings of ``UH1_ENVELOPE_CEILING_*`` - is refused: the last good
         state goes back into the airframe, the aircraft is called crashed and the
         frame is spent without moving it.  That is not a substitute for physics, it
-        is the honest end of the model's envelope: the rotor is at 100 per cent
-        with no engine and no rotor speed dynamics, so a violent hands-off case, a
-        dive with the collective at the down stop above all, can run away inside a
-        60 Hz explicit Runge-Kutta step, and a renderer, a camera or a gauge must
-        never be handed the result.
+        is the honest end of the model's envelope: the rotor speed is a free state
+        driven by a first order engine lag and an explicit Runge-Kutta step at
+        60 Hz, so a violent hands-off case, an engine failure with the collective
+        left in a dive above all, can run away inside one frame, and a renderer, a
+        camera or a gauge must never be handed the result.
 
         It is *not* the floor's crash, and it says so: the reason left in
         :attr:`crash_reason` is :data:`CRASH_OUT_OF_ENVELOPE`, so a caption or a
@@ -1053,7 +1213,8 @@ class Simulation:
         """
         before = self.airframe.state
         descent = before.ground_velocity().z
-        self.forces = self.airframe.step(dt, controls, wind=self.wind)
+        self.forces = self.airframe.step(dt, controls, wind=self.wind,
+                                        throttle=self.pilot.throttle())
         self.steps += 1
         self.sim_time += dt
         if _out_of_envelope(self.airframe.state):
@@ -1247,9 +1408,38 @@ class Simulation:
             lift=forces.lift, ground_effect=rotor.ground_effect,
             inflow_ratio=rotor.inflow_ratio,
             advance_ratio=rotor.advance_ratio,
+            engine=self.engine_telemetry(),
             on_ground=self.on_ground, crashed=self.crashed,
             crash_reason=self.crash_reason,
             in_trim=self.in_trim())
+
+    def engine_telemetry(self):
+        """The engine's panel for the state the last step left behind.
+
+        Every number comes off the shaft the airframe is holding: N2 from the
+        rotor speed through the ratio, the torque from the power the engine is
+        delivering now, and the maximum from the air the aircraft is flying in.
+        With no engine aboard the gauges read zero and ``has_engine`` is False,
+        while the *grip* is still reported, since it is a control position an
+        aircraft without an engine in the model still has.
+        """
+        engine = self.airframe.engine
+        rotor_rpm = self.airframe.state.rotor_rpm
+        if engine is None:
+            return EngineTelemetry(
+                has_engine=False, throttle=self.pilot.throttle(), rpm=0.0,
+                power=0.0, torque=0.0, torque_percent=0.0, maximum_torque=0.0,
+                maximum_percent=0.0, failed=False, emer=False)
+        governor = engine.governor
+        maximum = engine.max_torque(rotor_rpm, self.airframe.air_density)
+        torque = engine.torque(rotor_rpm)
+        return EngineTelemetry(
+            has_engine=True, throttle=governor.throttle,
+            rpm=engine.n2_rpm(rotor_rpm), power=engine.power, torque=torque,
+            torque_percent=engine.torque_percent(rotor_rpm),
+            maximum_torque=maximum,
+            maximum_percent=(100.0 * torque / maximum if maximum > 0.0 else 0.0),
+            failed=governor.failed, emer=governor.emer)
 
 
 # ---------------------------------------------------------------------------
@@ -1414,18 +1604,42 @@ def _self_test():
     # A *key* is a quarter of that, the three step granularities above: four
     # times the presses, and four times as long on the key, for the same travel.
     hands = PilotInput()
-    collective_key, cyclic_key, pedal_key = hands.key_rates()
+    collective_key, cyclic_key, pedal_key, throttle_key = hands.key_rates()
     assert collective_key == 0.55 * COLLECTIVE_STEP_GRANULARITY
     assert cyclic_key == 1.6 * CYCLIC_STEP_GRANULARITY
     assert pedal_key == 2.0 * PEDAL_STEP_GRANULARITY
+    assert throttle_key == 1.0 * THROTTLE_STEP_GRANULARITY
     assert (COLLECTIVE_STEP_GRANULARITY, CYCLIC_STEP_GRANULARITY,
-            PEDAL_STEP_GRANULARITY) == (0.25, 0.25, 0.25)
+            PEDAL_STEP_GRANULARITY, THROTTLE_STEP_GRANULARITY) == (0.25, 0.25,
+                                                                  0.25, 0.25)
     assert (collective_key, cyclic_key, pedal_key) == (0.1375, 0.4, 0.5)
+    assert throttle_key == 0.25
     hands.step(0.25, collective=1.0, long_stick=1.0, lat_stick=-1.0, pedal=1.0)
     assert abs(hands.collective_axis - collective_key * 0.25) < 1e-12
     assert abs(hands.long_stick_axis - cyclic_key * 0.25) < 1e-12
     assert abs(hands.lat_stick_axis + cyclic_key * 0.25) < 1e-12
     assert abs(hands.pedal_axis - pedal_key * 0.25) < 1e-12
+    # The twist grip is the fifth ratchet, and the one control that is not a
+    # stick: it starts full open, a held key closes it at its own rate, and it is
+    # *not* one of the four axes a trim sets - nor anything PilotControls knows
+    # about, which is why it has an accessor of its own.  It is flown here on a
+    # hand of its own so that the four sticks above are left where they were.
+    grip_hands = PilotInput()
+    assert grip_hands.throttle() == 1.0
+    grip_hands.step(0.25, throttle=-1.0)
+    assert abs(grip_hands.throttle() - (1.0 - throttle_key * 0.25)) < 1e-12
+    assert grip_hands.axes() == (0.0, 0.0, 0.0, 0.0)
+    grip_hands.step(20.0, throttle=-1.0)
+    assert grip_hands.throttle() == 0.0                 # a stop, and no further
+    grip_hands.step(0.25, throttle=1.0)
+    assert grip_hands.throttle() == throttle_key * 0.25
+    grip_hands.set_axes(throttle=0.75, dt=0.1)          # absolute, at its rate
+    assert abs(grip_hands.throttle() - (throttle_key * 0.25 + 0.1)) < 1e-12
+    grip_hands.set_axes(throttle=1.0)                   # instant, for a script
+    assert grip_hands.throttle() == 1.0
+    grip_hands.reset(PilotControls())
+    assert grip_hands.throttle() == 1.0                 # a reset leaves the grip
+    assert len(grip_hands.axes()) == 4
     # Released, all four are exactly where they were left: a key that is not held
     # is not a move, there is no spring to answer it, and the quarter second of
     # release that used to bring a stick back to its neutral now does nothing at
@@ -1445,12 +1659,70 @@ def _self_test():
     assert hands.collective_axis == 1.0
     hands.set_axes(collective=0.0, dt=0.1)
     assert abs(hands.collective_axis - (1.0 - 0.055)) < 1e-12
-    # And the axes can be put on stick positions, which is the inverse of that.
+    # The axes can be put on stick positions, which is the inverse of that.
     hands.reset(sim.trim_controls)
     round_trip = hands.controls()
     for name in ("collective", "long_stick", "lat_stick", "pedal"):
         assert abs(getattr(round_trip, name)
                    - getattr(sim.trim_controls, name)) < 1e-12
+
+    # The twist grip, which is the fifth control and not a stick: the loop the
+    # report's aircraft flies has no engine and says so, while the same aircraft
+    # with ``engine=True`` has one, settles a little under its selected speed,
+    # and reports the N2 and the torque that go with it.
+    assert sim.airframe.engine is None
+    assert sim.throttle() == 1.0 and not sim.telemetry().engine.has_engine
+    assert sim.telemetry().engine.rpm == 0.0
+    assert sim.telemetry().engine.torque_percent == 0.0
+    grip = Simulation(airframe=airframe_preset(engine=True))
+    assert grip.airframe.engine is not None
+    assert grip.throttle() == 1.0
+    grip.fly(SIM_TIME_STEP_S, throttle=-1.0)
+    assert abs(grip.throttle() - (1.0 - 0.25 * SIM_TIME_STEP_S)) < 1e-12
+    grip.set_throttle(1.0)
+    assert grip.throttle() == 1.0
+    assert grip.telemetry().engine.has_engine
+    grip.set_governor(failed=True)
+    assert grip.airframe.engine.governor.failed
+    grip.set_governor(failed=False)
+
+    # Six seconds of frames on the engine's own aircraft: the governor holds the
+    # 6600 rpm it was rigged to within its own +-40 rpm band, the rotor settles
+    # a shade under 100 per cent for it, and the torque gauge reads the hover's
+    # own 52 per cent - and the aircraft is still flying, not falling.
+    for _ in range(360):
+        grip.step_fixed()
+    panel = grip.telemetry().engine
+    assert 6550.0 < panel.rpm < 6600.0, panel.rpm
+    assert 50.0 < panel.torque_percent < 55.0, panel.torque_percent
+    assert UH1_RPM_LOW < grip.telemetry().rotor_rpm < UH1_RPM + 1e-9
+    assert panel.maximum_torque > panel.torque
+    assert 0.0 < panel.maximum_percent < 100.0
+    assert panel.power > 0.0 and not panel.failed and not panel.emer
+    assert not grip.crashed
+
+    # EMER takes the governor out of the loop and the twist grip becomes the
+    # fuel control (TM 55-1520-210-10, 9-3): half a grip is half of what the
+    # engine has less the 7 psi the switch costs, whatever the rotor is doing,
+    # and the rotor winds down because nothing is chasing it any more.
+    emer = Simulation(airframe=airframe_preset(engine=True))
+    emer.set_governor(emer=True, throttle=0.5)
+    for _ in range(240):
+        emer.step_fixed()
+    panel = emer.telemetry().engine
+    assert panel.emer and abs(panel.throttle - 0.5) < 1e-12
+    assert abs(panel.power - 0.5 * 43.0 / 50.0 * UH1_ENGINE_POWER_W) < 2000.0
+    assert emer.telemetry().rotor_rpm < UH1_RPM - 5.0
+    # And an engine failure in AUTO is the torque going away rather than the
+    # grip: six seconds is ten of the lag's time constants, so what is left is
+    # a thousandth of the hover's power and the rotor is on its way down below
+    # the green arc with the collective still up in the pilot's hand.
+    emer.set_governor(emer=False, failed=True)
+    for _ in range(360):
+        emer.step_fixed()
+    panel = emer.telemetry().engine
+    assert panel.failed and panel.power < 0.001 * UH1_ENGINE_POWER_W, panel
+    assert emer.telemetry().rotor_rpm < UH1_RPM_LOW, emer.telemetry().rotor_rpm
 
     # The axes are control positions, so a stick that is let go stays where it
     # was: that is the ratchet, and it is the whole difference from the springs

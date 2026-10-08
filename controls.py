@@ -40,12 +40,15 @@ Two kinds of source, because there are two kinds of device:
 The five control names are :data:`CONTROL_NAMES`: ``cyclic-long`` (cyclic up and
 down), ``cyclic-lat`` (cyclic left and right), ``pedals`` (the anti torque
 pedals), ``collective`` and ``throttle``.  The first four drive
-:class:`simulation.PilotInput`'s four axes - the mapping from a control name to
-that keyword is :data:`AXIS_FOR_CONTROL` - and ``throttle`` is mapped here so
-that the hardware can be wired up for it now and named in one place: the model
-holds 100 per cent rotor speed and has no engine in it (see ``main.py``), so a
-throttle position is carried and logged but flies nothing until the model grows
-rotor speed dynamics.  A control a file does not name keeps
+:class:`simulation.PilotInput`'s four *stick* axes - the mapping from a control
+name to that keyword is :data:`AXIS_FOR_CONTROL` - and ``throttle`` is the twist
+grip, which is the one control that is not a stick: it is read as
+:meth:`simulation.PilotInput.throttle` and goes to the engine's governor (see
+:mod:`engine`), so it is carried and logged separately by whoever flies the
+frame.  The map this module ships is the keyboard's, so main.py's own aircraft -
+the report's fixed rotor, with no engine in it - carries the position and shows
+it and does nothing else with it; an aircraft with ``engine=True`` is where it
+moves the needles.  A control a file does not name keeps
 :func:`default_control`'s own keyboard mapping, so a file may override one
 control and leave the rest alone.
 
@@ -95,8 +98,10 @@ CONTROL_NAMES = (CYCLIC_LONG, CYCLIC_LAT, PEDALS, COLLECTIVE, THROTTLE)
 BIPOLAR = (CYCLIC_LONG, CYCLIC_LAT, PEDALS)
 UNIPOLAR = (COLLECTIVE, THROTTLE)
 
-#: The :class:`simulation.PilotInput` keyword each control drives.  ``throttle``
-#: is deliberately absent: it has no axis to drive yet (module docstring).
+#: The :class:`simulation.PilotInput` *stick* keyword each control drives.
+#: ``throttle`` is deliberately absent: it is a twist grip and not a stick, so
+#: it has no place in :meth:`simulation.PilotInput.axes` and is read on its own
+#: by :meth:`simulation.PilotInput.throttle` (module docstring).
 AXIS_FOR_CONTROL = {
     CYCLIC_LONG: "long_stick",
     CYCLIC_LAT: "lat_stick",

@@ -73,9 +73,12 @@ each other, on a rotor model neither of which was fitted to the other.
 wake geometry, the vortex ring state, component interference, a flapping
 solution of its own (the flapping is equations 6 and 7, quasi-static, with the
 report's fixed a0 = 0.048 rad cone angle rather than the coning
-:func:`rotor_control.solve_flapping` would give), lead-lag, and any engine or
-rotor speed dynamics.  The inertia matrix carries the UH-1H's 2007 kg m^2
-product of inertia, which is what couples roll and yaw.
+:func:`rotor_control.solve_flapping` would give), lead-lag, and - in the
+aircraft this module flies by default - any engine or rotor speed dynamics:
+the rotor speed is held at 100 per cent unless an :class:`engine.Engine` is
+handed to :class:`Airframe`, which is where the governor, the droop band and
+the wind down after a failure live.  The inertia matrix carries the UH-1H's
+2007 kg m^2 product of inertia, which is what couples roll and yaw.
 
 Standard library only, so it runs and tests headless.
 """
@@ -92,6 +95,7 @@ from aerodynamics import (GRAVITY, RHO_SEA_LEVEL, Vector3,
 from rotor_control import (ControlLags, MixingLaw, PilotControls,
                            UH1_COLLECTIVE_TRAVEL_IN,
                            UH1_ROTOR_TIME_CONSTANT_S, solve_linear)
+from engine import Engine, UH1_ENGINE_DROOP_RPM, UH1_ENGINE_RPM
 
 # ---------------------------------------------------------------------------
 # Unit conversions, so that the report's English column can be quoted next to
@@ -1197,6 +1201,18 @@ class Airframe:
     turns the rotor is then the collective in the pilot's hand, which is the
     physics of an engine failure, of a governor that lags, and of nothing at
     all once the torque is set to zero and the rotor is left to windmill.
+
+    An ``engine`` is the same shaft balance with something real on the other
+    end of it: :class:`engine.Engine` is asked for its torque once per frame,
+    from the rotor speed at the start of the frame, and that number is written
+    into ``engine_torque`` for :meth:`rotor_acceleration` to use - so the two
+    ways of driving the shaft meet in one field and a fixed torque and a T53
+    are told apart by nothing but where the number came from.  With an engine
+    the throttle is a pilot control (:attr:`throttle`, and
+    :class:`simulation.PilotInput`), and the rotor speed becomes a free state
+    the governor holds rather than a constant the model holds: the aircraft
+    settles a little under its selected speed, by however much of the 40 rpm
+    droop band its power demand is worth.
     """
 
     mass: float = UH1_SIM_MASS
@@ -1210,7 +1226,33 @@ class Airframe:
     rotor_time_constant: float = UH1_ROTOR_TIME_CONSTANT_S
     ground_effect: bool = True
     rotor_inertia: float = UH1_ROTOR_INERTIA
+    #: Torque at the main rotor shaft, N m, for this frame: ``None`` means
+    #: there is no shaft balance to fly and the report's fixed rotor is what
+    #: this airframe is.  A *number* is a torque an engine is delivering, and
+    #: an :attr:`engine` overwrites it every frame with the one it is.
     engine_torque: Optional[float] = None
+    #: The engine: ``None`` by default, which is the report's fixed rotor to
+    #: the last bit.  Give it an :class:`engine.Engine` and the shaft balance
+    #: is driven by a T53 with a governor, the throttle comes in through the
+    #: pilot's hand, and an engine failure is a torque that goes away.
+    engine: Optional[Engine] = None
+
+    @property
+    def throttle(self):
+        """The twist grip, 0 to 1, on whichever governor is there.
+
+        Without an engine there is no governor to roll, so this is always 1:
+        the aircraft of TM-73254 has no engine in the model at all and its
+        rotor is held at whatever speed the state has it at.  With one, this
+        is :attr:`engine.Governor.throttle` seen from outside, which is what
+        :mod:`simulation`'s :class:`simulation.PilotInput` sets.
+        """
+        return self.engine.governor.throttle if self.engine is not None else 1.0
+
+    @throttle.setter
+    def throttle(self, value):
+        if self.engine is not None:
+            self.engine.governor.throttle = float(value)
 
     def command_angles(self, controls):
         """The mixing stage on its own: stick positions in, control angles out."""
@@ -1235,14 +1277,25 @@ class Airframe:
         port, so no sign is needed here, only the swap.
         """
         seen = self.lags.step(dt, self.command_angles(controls))
-        control_pitch = ControlPitch(
+        return (self.control_pitch_of(seen, controls.long_stick), seen)
+
+    def control_pitch_of(self, seen, long_stick_in=0.0):
+        """The report's :class:`ControlPitch` for lagged mixing angles *seen*.
+
+        One place, because there are two callers: :meth:`advance_controls` with
+        the angles the rotor is at after the lags, and :meth:`reset` with the
+        angles the trim put the lags on.  See :meth:`advance_controls` for why
+        the two cyclic numbers are swapped on the way through.  *long_stick_in*
+        is the pilot's stick position, which is not part of the mixing angles
+        and is carried into the force model on its own.
+        """
+        return ControlPitch(
             collective_rad=report_collective_rad(seen.collective_pitch_deg,
                                                  self.twist_deg),
             control_axis_long_rad=math.radians(seen.cyclic_lat_deg),
             control_axis_lat_rad=math.radians(seen.cyclic_long_deg),
             tail_collective_rad=math.radians(seen.tail_collective_deg),
-            long_stick_in=controls.long_stick)
-        return control_pitch, seen
+            long_stick_in=long_stick_in)
 
     def forces(self, control_pitch, state=None, wind=None, air_density=None):
         """The report's forces and moments for one instant, in body axes.
@@ -1356,6 +1409,11 @@ class Airframe:
         rotor to the last bit.  That is deliberate - every figure in TM-73254
         was computed with the rotor speed held constant, and the simulator this
         came from has to be able to reproduce them.
+
+        A number here is a torque on the shaft, and with an
+        :class:`engine.Engine` aboard this method's field is written by
+        :meth:`step` once a frame, so the difference between a fixed torque and
+        a T53 is nothing but where the number came from.
         """
         if self.engine_torque is None:
             return 0.0
@@ -1366,7 +1424,7 @@ class Airframe:
         return apply(direction_cosine_matrix(state.attitude.x, state.attitude.y,
                                              state.attitude.z), state.velocity)
 
-    def step(self, dt, controls, wind=None):
+    def step(self, dt, controls, wind=None, throttle=None):
         """Fly one frame of *dt* seconds with *controls* held: the frame loop.
 
         Mixes the controls, runs the lags by *dt*, converts to the report's
@@ -1376,8 +1434,22 @@ class Airframe:
         is advanced in place and the forces at the end of the frame are
         returned, since a renderer or a HUD wants them and they cost one more
         evaluation than the step itself.
+
+        *throttle*, 0 to 1, is the twist grip: it is written onto the engine's
+        governor when there is an engine, and ignored when there is not (which
+        is also what leaving it ``None`` does).  With an engine the frame
+        begins by asking it for a torque at the rotor speed the frame started
+        at, and that torque is held across the four Runge-Kutta stages exactly
+        as the control pitch is: a gas producer does not spool up inside one
+        sixteenth of a second, and a frame loop that let it would be
+        integrating an engine it never modelled.
         """
+        if throttle is not None:
+            self.throttle = throttle
         control_pitch, _ = self.advance_controls(dt, controls)
+        if self.engine is not None:
+            self.engine_torque = self.engine.advance(
+                dt, self.state.rotor_rpm, self.air_density)
         if dt <= 0.0:
             return self.forces(control_pitch, wind=wind)
         state = self.state
@@ -1405,11 +1477,32 @@ class Airframe:
         :class:`rotor_control.ControlLags` starts at zero pitch, so a flight
         that began without this would spend its first half second pulling the
         collective up from nothing.
+
+        The engine, when there is one, is put on the torque the rotor is
+        *actually absorbing* at the state being reset to - the shaft balance
+        this method can evaluate and no other - so a run starts in equilibrium
+        and the first frames are a flight rather than an engine spooling up
+        behind it.  From there the governor walks it to wherever its own droop
+        band puts it, which is the 1 rpm or so of sag a hovering UH-1 has.
         """
         if state is not None:
             self.state = state
         if controls is not None:
             self.lags.reset(self.command_angles(controls))
+        if self.engine is not None:
+            if controls is None:
+                # No stick positions to evaluate a shaft balance at, so the
+                # engine goes to whatever its governor is asking for at that
+                # rotor speed: the best a reset without controls can do.
+                self.engine_torque = self.engine.settle(self.state.rotor_rpm,
+                                                        self.air_density)
+            else:
+                angles = self.lags.step(0.0, self.command_angles(controls))
+                self.engine_torque = self.engine.settle_on(
+                    self.forces(self.control_pitch_of(angles,
+                                                      controls.long_stick),
+                                state=self.state).rotor.torque,
+                    self.state.rotor_rpm)
         return self
 
     def trim_hover(self, weight=None, air_density=None, altitude=200.0,
@@ -2224,6 +2317,57 @@ def _self_test():
     # what the default engine torque means.
     spinning_down, _ = airframe.derivatives(trim_state, pitch)
     assert spinning_down.rotor_speed == 0.0
+
+    # The engine: the same shaft balance with a T53 on the other end of it.
+    # There is no throttle to roll on an aircraft with no engine, and there is
+    # no rotor speed dynamics either - this is the flag that keeps every figure
+    # in the report where it was.
+    assert airframe.throttle == 1.0
+    airframe.throttle = 0.25
+    assert airframe.throttle == 1.0
+
+    # With one, a reset puts it on the torque the rotor is absorbing - 16268
+    # N m for this trim - so the shaft balance starts where the trim left it,
+    # and then the governor walks the aircraft to its own droop point: a shade
+    # under 1 rpm of rotor for a hover, 21 of the 40 rpm of N2 the manual rigs
+    # the compensator to (2-23).  Six seconds of frames are enough to sit down
+    # on it, and the closed form and the integrated loop have to agree about
+    # where that is, or the droop curve is decorative.
+    governed = Airframe(engine=Engine())
+    governed.reset(trim_state, controls)
+    assert abs(governed.engine_torque - drag) < 1.0, governed.engine_torque
+    for _ in range(360):
+        governed.step(1.0 / 60.0, controls)
+    settled = governed.state.rotor_rpm
+    assert UH1_RPM_LOW < settled < UH1_RPM, settled
+    assert abs(UH1_RPM - settled) < 2.0, settled
+    assert abs(governed.engine.governor.n2_rpm(settled)
+               - UH1_ENGINE_RPM) < UH1_ENGINE_DROOP_RPM
+    assert abs(settled - governed.engine.governor.settled_rotor_rpm(
+        drag * UH1_OMEGA)) < 1.0, settled
+    # The altitude has moved a little - the trim was made at 100 per cent and
+    # the governor is holding 99.7 - but this is a flight, not a fall: the
+    # aircraft is sinking at centimetres a second, not metres.
+    assert governed.state.ground_velocity().z < 1.0
+
+    # An engine failure is the torque going away, and the lag is what makes it
+    # a wind down rather than a switch: half a second in, the engine is still
+    # delivering better than a third of its power - and the rotor has lost more
+    # than a warning band's worth of speed, because a hovering rotor with no
+    # engine is a rotor with 16 kN m of drag and nothing driving it.  Six
+    # seconds in, the rotor is out of the green arc, and the collective the
+    # trim left in the pilot's hand is what has it there.
+    failed = Airframe(engine=Engine())
+    failed.reset(trim_state, controls)
+    failed.engine.governor.failed = True
+    for _ in range(30):
+        failed.step(1.0 / 60.0, controls)
+    assert failed.engine.power > 0.3 * drag * UH1_OMEGA, failed.engine.power
+    assert UH1_RPM - 20.0 < failed.state.rotor_rpm < UH1_RPM
+    for _ in range(330):
+        failed.step(1.0 / 60.0, controls)
+    assert failed.engine.power < 0.02 * drag * UH1_OMEGA, failed.engine.power
+    assert failed.state.rotor_rpm < UH1_RPM_LOW, failed.state.rotor_rpm
 
 
 def _demo():
