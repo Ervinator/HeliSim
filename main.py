@@ -13,9 +13,14 @@ around the report's own 6158 lb instrumented UH-1H, the aircraft its figures 2 t
 9 were measured on.  The keyboard goes into the model through
 :class:`simulation.PilotInput`, the helicopter is drawn with one ``glMultMatrixf``
 of :meth:`simulation.Simulation.render_matrix` - no Euler order and no sign left
-to get wrong between the model and the screen - and the camera is
+to get wrong between the model and the screen - and there are three views of it,
+cycled with ``C``.  A run begins in the *cockpit*: the eye is the pilot's own,
+1.6 m ahead of the c.g. and half a metre above it, the view looks out along the
+nose with the aircraft's own up, and the fuselage is left out of it - the cabin
+the pilot is sitting in is not something the pilot sees - so what is drawn of the
+aircraft is the rotor sweeping overhead.  ``C`` then gives the chase view of
 :class:`simulation.ChaseCamera`, whose ``eye_target_up`` triple goes straight into
-``gluLookAt``.
+``gluLookAt``, and the fixed pad camera.
 
 **The world is kilometres across, because the aircraft is.**  A UH-1 covers a
 kilometre in twenty seconds at 60 kt and the model's hover trims sit at 200 m, so
@@ -37,7 +42,7 @@ Keys:
     A / D           pedals: nose left / right, the anti torque control
     R               reset: back to the state the run started in, on the pad
     P               park: skids on the pad, the lever at 75 %
-    C               camera: behind the aircraft, or fixed on the pad
+    C               camera: cockpit, behind the aircraft, or fixed on the pad
     Esc             quit
 
 All four axes are ratchets: a key slews its control while the key is held and a
@@ -257,6 +262,21 @@ SHADOW_HEIGHT_M = 0.06
 #: renderer's world x is east, y is up and z is south.
 PAD_EYE = Vector3(26.0, 11.0, 26.0)
 WORLD_UP = Vector3(0.0, 1.0, 0.0)
+
+#: The pilot's eye in the cockpit, m, in the aircraft's own body axes: +x is the
+#: nose, +y starboard and +z down, so this is 1.60 m ahead of the c.g. and 0.50 m
+#: above it - just inside the cabin of :data:`AIRFRAME_BOXES`, behind the
+#: windscreen and a little over a metre above the floor the skid struts reach up
+#: to.  It is where the cockpit view looks from, and being *inside* the cabin is
+#: what makes that view drop the fuselage: the boxes are drawn two sided, so from
+#: in there their own inner faces would be the whole of the window in a wall of
+#: cabin.  See :func:`draws_hull`.
+COCKPIT_EYE_M = Vector3(1.60, 0.0, -0.50)
+
+#: How far ahead of the cockpit eye the view is aimed, m.  ``gluLookAt`` takes a
+#: direction and not a distance, and this one is well clear of the aircraft, which
+#: keeps the aim off the nose's own rounding.
+COCKPIT_LOOK_AHEAD_M = 20.0
 
 # The scenery description, filled in by main() from the XML file.
 SCENERY = scenery.Scenery()
@@ -568,7 +588,22 @@ def draw_tail_rotor(azimuth_deg):
     glPopMatrix()
 
 
-def draw_helicopter(sim):
+def draws_hull(view):
+    """Is the aircraft's own body drawn in *view*?
+
+    Every view but the cockpit's, and those look at the aircraft from outside it,
+    where a fuselage is the thing being looked at.  In the cockpit the eye is
+    inside the cabin of :data:`AIRFRAME_BOXES` - the boxes are two sided so that a
+    sketch of an outline needs no winding to be right - and a two sided box seen
+    from inside is a wall of cabin with the world somewhere behind it, which is
+    the opposite of a cockpit.  The rotors are drawn in every view: they are the
+    one part of the machine a pilot inside it does see, sweeping overhead of the
+    cabin's own roof.
+    """
+    return view != VIEW_COCKPIT
+
+
+def draw_helicopter(sim, view):
     """Draw the aircraft where the model puts it, at the attitude it has.
 
     One ``glMultMatrixf`` of :meth:`Simulation.render_matrix` puts this frame
@@ -576,23 +611,29 @@ def draw_helicopter(sim):
     coordinate and there is no Euler order to get wrong on the way to the screen.
     Back face culling is off for the boxes: they are closed and opaque, and which
     way their faces wind is not worth getting wrong for a sketch of an outline.
+
+    *view* decides only whether the hull is drawn at all - see :func:`draws_hull`
+    - and the rotors are always drawn, since the cockpit's own view of the
+    aircraft is the rotor turning over it.  The tail rotor goes with them and is
+    simply behind a cockpit's eye, where the frustum leaves it.
     """
     glPushMatrix()
     glMultMatrixf((GLfloat * 16)(*sim.render_matrix()))
 
     glDisable(GL_CULL_FACE)
-    for colour, corners in AIRFRAME_BOXES:
-        draw_box(colour, *corners)
-    for side in (-1.0, 1.0):
-        # A skid: the rail below, on the model's own skid line, and its struts.
-        rail = side * SKID_HALF_WIDTH_M
-        draw_box(SKID_COLOUR, SKID_BACK_M, SKID_FRONT_M,
-                 rail - 0.09, rail + 0.09,
-                 SKID_HEIGHT_M - 0.06, SKID_HEIGHT_M + 0.06)
-        for x in (-SKID_STRUT_X_M, SKID_STRUT_X_M):
-            draw_box(SKID_COLOUR, x - 0.10, x + 0.10,
-                     rail - 0.07, rail + 0.07,
-                     SKID_STRUT_Z_M, SKID_HEIGHT_M)
+    if draws_hull(view):
+        for colour, corners in AIRFRAME_BOXES:
+            draw_box(colour, *corners)
+        for side in (-1.0, 1.0):
+            # A skid: the rail below, on the model's own skid line, and its struts.
+            rail = side * SKID_HALF_WIDTH_M
+            draw_box(SKID_COLOUR, SKID_BACK_M, SKID_FRONT_M,
+                     rail - 0.09, rail + 0.09,
+                     SKID_HEIGHT_M - 0.06, SKID_HEIGHT_M + 0.06)
+            for x in (-SKID_STRUT_X_M, SKID_STRUT_X_M):
+                draw_box(SKID_COLOUR, x - 0.10, x + 0.10,
+                         rail - 0.07, rail + 0.07,
+                         SKID_STRUT_Z_M, SKID_HEIGHT_M)
 
     # The rotors last, translucent and without depth writes, so that a disc does
     # not hide the aircraft behind it, and the blades at the clock's azimuth.
@@ -638,7 +679,9 @@ def draw_shadow(sim):
 def draw_scene(sim, camera, view):
     """One frame of the world, from the camera the view asks for.
 
-    The last thing drawn is this file's own HUD, the control position panel of
+    The aircraft is in it in every view but the cockpit's, which is the one that
+    looks out of the aircraft rather than at it - see :func:`draws_hull`.  The last
+    thing drawn is this file's own HUD, the control position panel of
     :func:`draw_control_panel`, which is in window pixels rather than in the
     world and so is not the camera's business at all.
     """
@@ -660,7 +703,7 @@ def draw_scene(sim, camera, view):
 
     draw_scenery()
     draw_shadow(sim)
-    draw_helicopter(sim)
+    draw_helicopter(sim, view)
     draw_control_panel(sim)
 
 
@@ -1710,11 +1753,15 @@ def draw_control_panel(sim):
 # The frame loop: the keys in, the clock, the camera and the window.
 # ---------------------------------------------------------------------------
 
-#: The two views this sandbox has.  Both look at the aircraft - from behind it, or
-#: from the pad - because the keys a free camera would need are the aircraft's own.
+#: The three views this sandbox has.  Two of them look *at* the aircraft - from
+#: behind it, or from the pad - because the keys a free camera would need are the
+#: aircraft's own; the third looks *out* of it, from the pilot's own seat, and is
+#: where a run begins.  They are named here, with the frame loop that cycles them,
+#: and read by the renderer above as globals.
+VIEW_COCKPIT = "cockpit"
 VIEW_CHASE = "chase"
 VIEW_PAD = "pad"
-VIEWS = (VIEW_CHASE, VIEW_PAD)
+VIEWS = (VIEW_COCKPIT, VIEW_CHASE, VIEW_PAD)
 
 
 def pilot_keys(keys):
@@ -1813,14 +1860,40 @@ def held_names(keys):
     return "+".join(names) or "-"
 
 
+def cockpit_eye_target_up(sim):
+    """The cockpit view's ``(eye, target, up)``: the pilot's own, in body axes.
+
+    The eye is :data:`COCKPIT_EYE_M` placed along the aircraft's own three axes -
+    so it rides the cabin wherever the machine is and however it is pointing -
+    and the view looks out along the nose, at a point
+    :data:`COCKPIT_LOOK_AHEAD_M` ahead of it.  The up vector is the aircraft's own
+    up, which is the negative of :meth:`Simulation.render_basis`'s *down*: the
+    horizon rolls and pitches in the window exactly as the helicopter does, since
+    a cockpit that held the world's own horizon level while its aircraft rolled
+    would be a chase camera seen from the wrong end.  On the pad, where the skids
+    hold the aircraft level, the two ups agree and the horizon sits level.
+
+    Nothing here is smoothed or lagged: the eye is the machine's, so the view
+    moves with it rather than trailing it, and the one thing a cockpit asks of a
+    camera - that it be somewhere the pilot is - is all this decides.
+    """
+    nose, starboard, down = sim.render_basis()
+    eye = (sim.render_position() + nose * COCKPIT_EYE_M.x
+           + starboard * COCKPIT_EYE_M.y + down * COCKPIT_EYE_M.z)
+    return eye, eye + nose * COCKPIT_LOOK_AHEAD_M, -down
+
+
 def camera_eye_target_up(sim, camera, view):
     """``(eye, target, up)`` for ``gluLookAt``, from the view asked for.
 
     The chase view is :class:`simulation.ChaseCamera`'s own triple, which is in
     the renderer's world already.  The pad view is this file's: a fixed eye south
     east of the pad looking at the aircraft, which is what one wants when the
-    aircraft has flown out of the chase camera's reach.
+    aircraft has flown out of the chase camera's reach.  The cockpit view is the
+    third, above: the pilot's own eye in the cabin, looking out along the nose.
     """
+    if view == VIEW_COCKPIT:
+        return cockpit_eye_target_up(sim)
     if view == VIEW_PAD:
         return PAD_EYE, sim.render_position(), WORLD_UP
     return camera.eye_target_up()
@@ -2111,6 +2184,10 @@ def main():
           % (2.0 * GROUND_HALF_M / 1000.0,))
     print("keys: W/S collective, arrows cyclic, A/D pedals, R reset, P park,"
           " C camera, Esc quit")
+    print("  the view begins in the cockpit, looking out over the nose with the")
+    print("  rotor over it and the aircraft's own cabin left out of the frame;"
+          " C cycles")
+    print("  the three: %s" % (", ".join(VIEWS),))
     print("  and the panels up the window's left edge are the pilot's controls:")
     print("  two red lines for the pedals, a red disc for the cyclic, and a red")
     print("  lever for the collective in a green field - the mockup %s"
@@ -2137,7 +2214,7 @@ def main():
               " positions; --no-log flies without one")
 
     camera = ChaseCamera()
-    view = VIEW_CHASE
+    view = VIEW_COCKPIT
 
     pygame.init()
     pygame.display.set_mode((WIDTH, HEIGHT), DOUBLEBUF | OPENGL)
@@ -2323,6 +2400,18 @@ def _self_check():
     assert airborne and highest > UH1_CG_HEIGHT_ON_GROUND + 0.5, highest
     assert not sim.crashed and math.isfinite(sim.telemetry().thrust)
 
+    # The cockpit view at this moment, which is the one place in the check where
+    # the aircraft is off the skids and flying its trim's own attitude: nose up by
+    # the few degrees its c.g. is aft of the hub and rolled slightly, so the view's
+    # up is the *aircraft's* own and not the world's.  That is the whole of what
+    # the view is - the horizon goes over as the machine does, which a chase camera
+    # deliberately does not do - and the eye rides the cabin with it, since the eye
+    # is a point in the aircraft's body axes rather than a place in the world.
+    flying_up = camera_eye_target_up(sim, camera, VIEW_COCKPIT)[2]
+    assert flying_up.dot(WORLD_UP) < 0.99            # not the world's own up
+    chased_up = camera_eye_target_up(sim, camera, VIEW_CHASE)[2]
+    assert chased_up.as_tuple() == WORLD_UP.as_tuple()    # and the chase's is
+
     # R: reset, which comes back to where the *run* began and not to where the
     # trim says the aircraft belongs.  This run began on the pad, so that is
     # where R puts it - at any moment, and at the first one too, which is what a
@@ -2395,6 +2484,35 @@ def _self_check():
     assert pad_eye.as_tuple() == PAD_EYE.as_tuple()
     assert pad_target.as_tuple() == position.as_tuple()
     assert pad_up.as_tuple() == WORLD_UP.as_tuple()
+
+    # The cockpit view, which is where a run begins: the eye of the pilot, in the
+    # aircraft's own body axes, looking out along the nose.  The eye is 1.6 m
+    # ahead of the c.g. and half a metre above it *however the aircraft is placed
+    # and pointing*, since it is a point in the body frame and not a place in the
+    # world, and it is inside the cabin of AIRFRAME_BOXES - which is exactly why
+    # that view is the one that draws no fuselage.  On the pad the skids hold the
+    # aircraft level, so the view's up is the world's own to the last degree of a
+    # park; in the air, above, it is the aircraft's own.
+    assert VIEWS[0] == VIEW_COCKPIT and len(set(VIEWS)) == 3   # and it is first
+    assert not draws_hull(VIEW_COCKPIT)
+    assert draws_hull(VIEW_CHASE) and draws_hull(VIEW_PAD)
+    cabin = AIRFRAME_BOXES[0][1]
+    eye_axes = COCKPIT_EYE_M.as_tuple()
+    for axis in range(3):
+        assert cabin[2 * axis] < eye_axes[axis] < cabin[2 * axis + 1]
+    assert COCKPIT_EYE_M.z > -UH1_HUB_HEIGHT     # the rotor is over the cockpit
+    nose, starboard, down = sim.render_basis()
+    cockpit_eye, cockpit_target, cockpit_up = camera_eye_target_up(
+        sim, camera, VIEW_COCKPIT)
+    offset = (nose * COCKPIT_EYE_M.x + starboard * COCKPIT_EYE_M.y
+              + down * COCKPIT_EYE_M.z)
+    assert (cockpit_eye - position - offset).length() < 1e-12
+    assert cockpit_up.as_tuple() == (-down).as_tuple()
+    assert abs(cockpit_up.dot(WORLD_UP) - 1.0) < 1e-6      # level on the pad
+    aim = cockpit_target - cockpit_eye
+    assert abs(aim.length() - COCKPIT_LOOK_AHEAD_M) < 1e-12
+    assert aim.normalized().dot(nose) > 1.0 - 1e-12       # and out along the nose
+    assert VIEW_COCKPIT in window_title(sim, VIEW_COCKPIT)
 
     # The one glMultMatrixf of the whole renderer: sixteen floats, column major,
     # the body axes of render_basis in its columns and the aircraft's position in
