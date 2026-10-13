@@ -11,33 +11,8 @@ wiring that flying cannot test.
   the shaft - see `Done` below - so a torque now comes from somewhere: a T53 with
   a twist grip, an N2 governor with the manual's own +-40 rpm droop band, a
   0.6 sec spool, 1125 ft-lb of data plate torque, 50 psi of transmission, 7 psi
-  for EMER and the manual's bleed air numbers.  Three things are still open:
+  for EMER and the manual's bleed air numbers.  Two things are still open:
 
-  * *`trim_autorotation`.*  Descent rate as the unknown, for the case the
-    engine's failure path can now be flown into.  It was **blocked** until the
-    inflow solver grew a second branch: with ``x = -lambda`` bracketed over
-    ``x >= 1e-9`` only - the report's equation 10 in its one working state, air
-    down through the disc - a low collective at *any* descent rate came back
-    pinned at ``lambda = 0.0000`` (at the down stop, at 2 in and at 4 in, over
-    every combination of 0 to 60 m/s forward and 0 to 45 m/s down) and
-    equation 4's torque stayed *positive* throughout (7.6, 5.9 and 5.0 kN m),
-    so ``Q_engine - Q = 0`` had no root for a trim to close on.  That is fixed:
-    `_solve_inflow_ratio` now tries the other root of the same equation, on
-    ``x < 0``, where ``h`` falls from the same blow up at zero to -infinity -
-    the windmill brake state of a descending rotor, air *up* through the disc,
-    a positive inflow ratio, and a shaft torque the rotor takes *from* the
-    airstream rather than gives to it, which is the energy extraction of a real
-    autorotation.  It is taken only when there is no working state *and* the
-    rotor is descending with its collective down (``wind_along_axis < 0`` and
-    ``thrust_at(0) <= 0``), the one configuration the branch is physical in, so
-    every climbing, hovering and collective-up frame is still the report's own.
-    Neither report derives it - "windmill", "vortex ring" and "vertical
-    descent" appear nowhere in TM-73254, and the only "autorotation" in
-    TM 55-1520-210-10 or TR-71-34 is procedure rather than derivation - so the
-    branch is a textbook two-branch momentum model, cited as external where it
-    lives.  What is left is the trim itself: descent rate as the unknown,
-    closing the shaft balance on that branch with the engine failed and the
-    rotor free;
   * *main.py's own aircraft.*  It flies the report's fixed rotor, as it should -
     every figure in TM-73254 was computed with that - and what is left there is
     around the engine: the device map names no throttle yet (see the note in
@@ -64,6 +39,17 @@ These are choices, not oversights: each is stated where it lives.
   those figures has to reproduce them to the last bit.  `controls.py` maps a
   `throttle` and `main.py` carries and shows its position; neither of those
   aircraft reads it.  `Next` records what is left around the engine.
+* **The windmill root is opt-in, and it is unstable away from the trim.**
+  `Airframe.windmill` is off by default and the report's own aircraft never sees
+  the second root of equation 10, which is what keeps every figure in TM-73254
+  where it was.  An airframe that turns it on - `Airframe(windmill=True)` - is
+  one `trim_autorotation` can be asked of, and the steady autorotation it finds
+  is a real one: flown from it, the aircraft holds the condition.  What is *not*
+  in the model is anything that holds a rotor *near* that condition: there is no
+  blade stall and no flap limit, so a rotor taken well off the trim finds the
+  root doing more than the trim asked of it and overspeeds without bound.  That
+  is why the flag is per-airframe and off by default, and why `trim_autorotation`
+  raises rather than guessing when it is asked of an aircraft without it.
 * **The ground is a floor, not a contact model.**  `simulation.py` holds the
   c.g. on the skid line, takes the descent out of the velocity, and levels roll
   and pitch; the skids do not flex, slide or spring.
@@ -91,6 +77,50 @@ These are choices, not oversights: each is stated where it lives.
   how long the window took to see the key.
 
 ## Done
+
+* 2026-10-13 - **the autorotation trim, on the descent rate as the unknown, and
+  the windmill root it needs.**  `trim_autorotation` is the third of the trim
+  family and the one the engine's failure path left open: with nothing on the
+  shaft the rotor's own balance is `Q = 0`, and the one thing that closes it is
+  how fast the aircraft is coming down.  Its seven unknowns are the four sticks,
+  the pitch and roll attitudes and the *descent rate* in m/s; its seven residuals
+  are the six of `equilibrium_residual` and the shaft's own seventh, which is the
+  place `trim_hover` puts its solved-for rotor speed.  The rotor speed cannot
+  also be an unknown - the two together against the seven equations would be one
+  short - so it is a named `rotor_speed`, 324 rpm by default, and the descent
+  rate is what comes back.
+
+  Asked for the report's own 60 kt condition the answer is the flight manual's
+  own: collective 6.26 in - nearly four inches below the 10.24 in hover - pitch
+  4.8 deg nose up, and 9.11 m/s down, 1792 fpm, against the 1800 to 2000 a
+  UH-1H autorotates at there.  Both halves are closed to 1e-7 N and N m, the
+  rotor is on the second root of equation 10 (a positive inflow ratio, air up
+  through the disc) with its torque at nothing, and flown from that state for
+  five seconds of frames the aircraft falls the 45.5 m the trim was drawn for
+  with the rotor still at 324.00 rpm - a trim that flies, not merely a solution.
+
+  The branch had to be reached, and that is where the previous level's gate was
+  too narrow.  It offered the windmill root only to a descending rotor whose
+  collective was down (`thrust_at(0) <= 0`) - the collective-down entry the
+  simulation flies a dead engine into - and an *autorotating* rotor carries the
+  aircraft's weight while it turns, so its collective is up and that test never
+  offered it the state it flies in.  Widening the gate to every descending rotor
+  the equation has a root for turns out to be wrong the other way: a hovering
+  rotor whose collective is left up and whose speed is run down then finds the
+  root and overspeeds without bound, because the model has no blade stall to stop
+  it.  So it is not the default.  It is `Airframe.windmill`, off by default and
+  threaded through `body_forces`, `main_rotor_forces` and `_solve_inflow_ratio`,
+  and `trim_autorotation` raises unless the aircraft it is asked of has it: the
+  report's own aircraft keeps every figure in TM-73254 to the last bit, and only
+  an airframe being flown - or trimmed - as an autorotation offers the rotor that
+  root.
+
+  Verified: `python airframe.py` printing `self test passed` with the trim, its
+  residuals and the five-second flight asserted; and `python simulation.py`,
+  `python regression_tm73254.py` (314 lines, the report's figures 2 to 9
+  unchanged to the byte, because the default aircraft never sees the new root),
+  `python engine.py`, `python rotor_control.py`, `python aerodynamics.py`,
+  `python scenery.py`, `python controls.py` and `main.py --check` all passing.
 
 * 2026-10-08 - **the sandbox flies the engine: fitted live with F, and flown from
   the keyboard.**  `main.py`'s aircraft was the report's own - no engine, the

@@ -378,27 +378,40 @@ UH1_TIP_SPEED = UH1_OMEGA * UH1_RADIUS        # m/s, 249.4
 UH1_ROTOR_INERTIA = 3315.0    # kg m^2, 2 X 1658 about the shaft
 
 #: What a trim's numerical Newton solve takes per unknown: the step a Jacobian
-#: column takes, in that unknown, and the most one correction may move it.  Three
+#: column takes, in that unknown, and the most one correction may move it.  Four
 #: kinds of unknown are mixed in one vector - stick positions in inches,
-#: attitudes in radians, and the rotor speed in rad/s for the trims that solve
-#: for it (see :meth:`Airframe.trim_hover`) - and the sizes differ because the
-#: numbers do.  A rotor speed is a large number whose residual is a torque in the
-#: hundreds of kilonewton metres, so 1e-5 rad/s of it would be lost in the
-#: rounding where 1e-3 is not, and half of the 40 rpm the governor's own droop
-#: band is worth is as far as one step should jump on a state that is a band
-#: rather than an attitude.  The clamps are not there to shape the answer, only
-#: to keep a singular Jacobian from running away.
+#: attitudes in radians, the rotor speed in rad/s for the trims that solve for
+#: it (see :meth:`Airframe.trim_hover`), and the descent rate in m/s for the trim
+#: that solves for *that* (:meth:`Airframe.trim_autorotation`) - and the sizes
+#: differ because the numbers do.  A rotor speed is a large number whose residual
+#: is a torque in the hundreds of kilonewton metres, so 1e-5 rad/s of it would be
+#: lost in the rounding where 1e-3 is not, and half of the 40 rpm the governor's
+#: own droop band is worth is as far as one step should jump on a state that is a
+#: band rather than an attitude.  A descent rate moves the shaft torque by a few
+#: hundred newton metres per metre a second, so its step is large by the standards
+#: of the attitudes and small by that of the rotor speed, and its clamp is a
+#: metre a second: a step that moved the answer several metres a second past
+#: where it belongs would only be pulled back.  The clamps are not there to shape
+#: the answer, only to keep a singular Jacobian from running away.
 TRIM_STICK_STEP_IN = 0.01
 TRIM_ANGLE_STEP_RAD = 1e-5
 TRIM_ROTOR_STEP_RADPS = 1e-3
+TRIM_DESCENT_STEP_MPS = 0.05
 TRIM_STICK_CLAMP_IN = 3.0
 TRIM_ANGLE_CLAMP_RAD = 3.0
 TRIM_ROTOR_CLAMP_RADPS = 2.0
+TRIM_DESCENT_CLAMP_MPS = 1.0
+
+#: Where the autorotation trim starts looking for the descent rate, m/s.  A
+#: UH-1H autorotates down at this order - the trim's own answer at 60 kt is
+#: 9.1 m/s, 1790 fpm, against the manual's own 1800 to 2000 - so it is on the
+#: windmill branch from the first trial rather than having to cross onto it.
+TRIM_DESCENT_GUESS_MPS = 8.0
 
 
 def _solve_inflow_ratio(thrust_at, mu, wind_along_axis, ground_effect,
                         r7=UH1_ROTOR_R7, r8=UH1_ROTOR_R8,
-                        tolerance=1e-10, iterations=80):
+                        tolerance=1e-10, iterations=80, windmill=False):
     """Solve the report's inflow ratio, equation 10, for a rotor disc.
 
     Equation 10 is implicit in lambda::
@@ -430,12 +443,34 @@ def _solve_inflow_ratio(thrust_at, mu, wind_along_axis, ground_effect,
     The working state is tried first and kept whenever it exists, so every
     climbing and hovering frame is the one the report gives.  The windmill
     branch is used only when there is no working state *and* the rotor is
-    descending (``wind_along_axis`` negative), because that is the only case
-    the branch is physical in: at a hover there is no root on it, and asking
-    would only find the negative thrust the equation gives where a real rotor
-    would simply have stopped making any.  Returns
-    ``(inflow_ratio, evaluations, converged)`` and reports the answer as
-    unconverged rather than guessing when neither branch has a bracket.
+    descending (``wind_along_axis`` negative), because that is the only case the
+    branch is physical in: at a hover there is no root on it, and asking would
+    only find the negative thrust the equation gives where a real rotor would
+    simply have stopped making any.
+
+    ``windmill`` says how much of that descending regime a caller wants the
+    branch offered in.  ``False`` - the report's own aircraft, and every frame
+    of normal flight - takes it only for the configuration the first cut of this
+    branch was built for, a descending rotor whose collective is down
+    (``thrust_at(0) <= 0``): the collective-down entry of a real autorotation,
+    which is where the simulation flies a dead engine into the ground.  ``True``
+    takes it for *any* descending rotor the equation actually has a root for,
+    which is what a steady autorotation needs: an autorotating rotor carries the
+    aircraft's weight in thrust while it turns, so its collective is *not* down
+    and the narrower test would never offer it the state it flies in.  The two
+    differ only where the rotor is descending with thrust at zero inflow
+    positive, and there the equation can hold a windmill root that a full
+    momentum model has but a model with no blade stall cannot stabilise: a
+    hovering rotor whose collective is left up and whose speed is run down walks
+    into it and diverges, which is why it is not the default and why only the
+    autorotation trim and the airframe it is asked of turn it on.
+
+    Within either regime the branch is taken only when the equation has a root
+    on it, so the near end of the bracket is checked rather than assumed and a
+    descending rotor that has none comes back unconverged rather than pinned at
+    an end it was never on.  Returns ``(inflow_ratio, evaluations, converged)``
+    and reports the answer as unconverged rather than guessing when neither
+    branch has a bracket.
     """
     evaluations = 0
 
@@ -475,25 +510,28 @@ def _solve_inflow_ratio(thrust_at, mu, wind_along_axis, ground_effect,
             inflow, count = bisect(1e-9, high)
             return inflow, evaluations + count, True
 
-    # No working state.  A descending rotor whose collective is down can be in
-    # the windmill brake state instead, the second root, x < 0: on that side the
-    # residual falls from the same blow up at x = 0 to -infinity, so it is
-    # bracketed from x = 0 down.  The branch is physical only for that
-    # configuration - a rotor still pulling with its collective up, or one that
-    # is not descending, has no windmill state to be in - which is what the
-    # thrust at zero inflow being non-positive and the descent together test.
-    if wind_along_axis < 0.0 and thrust_at(0.0) <= 0.0:
-        low = -0.5
-        for _ in range(60):
-            evaluations += 1
-            if residual(low) < 0.0:
-                break
-            low *= 2.0
-        else:
-            low = None
-        if low is not None:
-            inflow, count = bisect(low, -1e-9)
-            return inflow, evaluations + count, True
+    # No working state.  A descending rotor can be in the windmill brake state
+    # instead, the second root, x < 0: on that side the residual falls from the
+    # same blow up at x = 0 to -infinity, so a root is bracketed from x = 0 down
+    # whenever the residual is still positive at the near end.  Which descending
+    # rotors are offered the branch is what ``windmill`` decides - see the
+    # docstring - and either way the near end is checked, so a rotor that has no
+    # root there comes back unconverged rather than pinned at an end it was never
+    # on.
+    if wind_along_axis < 0.0 and (windmill or thrust_at(0.0) <= 0.0):
+        evaluations += 1
+        if residual(-1e-9) > 0.0:
+            low = -0.5
+            for _ in range(60):
+                evaluations += 1
+                if residual(low) < 0.0:
+                    break
+                low *= 2.0
+            else:
+                low = None
+            if low is not None:
+                inflow, count = bisect(low, -1e-9)
+                return inflow, evaluations + count, True
 
     return -1e-9, evaluations, False
 
@@ -618,7 +656,7 @@ def rotor_constants(omega=UH1_OMEGA):
 def main_rotor_forces(controls, body_velocity, body_rates,
                       air_density=RHO_SEA_LEVEL, rotor_height=1000.0,
                       rotor_time_constant=UH1_ROTOR_TIME_CONSTANT_S,
-                      omega=UH1_OMEGA, constants=None):
+                      omega=UH1_OMEGA, constants=None, windmill=False):
     """TM-73254 equations 1 to 10: the main rotor's force at the hub.
 
     ``controls`` is a :class:`ControlPitch`, ``body_velocity`` the aircraft's
@@ -640,6 +678,12 @@ def main_rotor_forces(controls, body_velocity, body_rates,
     coefficients, equations 6 and 7.  Flip it to
     :data:`aerodynamics.UH1_ROTOR_TIME_CONSTANT_SIM_S` to reproduce the report's
     own step responses.
+
+    ``windmill`` is passed to :func:`_solve_inflow_ratio`: ``False``, the
+    report's own aircraft, offers a descending rotor the second root only when
+    its collective is down; ``True`` offers it to any descending rotor that has
+    one, which is what an autorotation trim needs.  A caller that does not know
+    and does not care is on the report's own aircraft.
 
     The quasi-static rotor this gives is the report's, not this project's:
     :mod:`aerodynamics` solves a two bladed blade element rotor with a real
@@ -687,7 +731,7 @@ def main_rotor_forces(controls, body_velocity, body_rates,
     ground_effect = ground_effect_factor(rotor_height)
     inflow, evaluations, converged = _solve_inflow_ratio(
         lambda x: thrust_at(-x), mu, w_c, ground_effect,
-        r7=constants.r7, r8=constants.r8)
+        r7=constants.r7, r8=constants.r8, windmill=windmill)
     induced = -inflow * constants.tip_speed - w_c
 
     # Flapping coefficients, equations 5 to 7, about the report's fixed cone
@@ -960,7 +1004,7 @@ class BodyForces:
 def body_forces(controls, body_velocity, body_rates, air_density=RHO_SEA_LEVEL,
                 rotor_height=1000.0,
                 rotor_time_constant=UH1_ROTOR_TIME_CONSTANT_S,
-                omega=UH1_OMEGA, constants=None):
+                omega=UH1_OMEGA, constants=None, windmill=False):
     """The whole aircraft's force and moment, TM-73254 equations 11 to 66.
 
     ``controls`` is a :class:`ControlPitch`, ``body_velocity`` the aircraft's
@@ -982,6 +1026,9 @@ def body_forces(controls, body_velocity, body_rates, air_density=RHO_SEA_LEVEL,
     and above it.  Both are used as positions with the moments taken as
     ``r cross F`` rather than as the printed forms, and the self test asserts
     the two agree, which is what makes the signs of those six lines checkable.
+
+    ``windmill`` reaches the main rotor's inflow solve and nothing else: see
+    :func:`main_rotor_forces`.  It is ``False`` for the report's own aircraft.
     """
     if constants is None:
         constants = rotor_constants(omega)
@@ -989,7 +1036,7 @@ def body_forces(controls, body_velocity, body_rates, air_density=RHO_SEA_LEVEL,
                               air_density=air_density,
                               rotor_height=rotor_height,
                               rotor_time_constant=rotor_time_constant,
-                              constants=constants)
+                              constants=constants, windmill=windmill)
     u_b, v_b = body_velocity.x, body_velocity.y
     p_b, r_b = body_rates.x, body_rates.z
     b1s = controls.control_axis_long_rad
@@ -1293,6 +1340,12 @@ class Airframe:
     the governor holds rather than a constant the model holds: the aircraft
     settles a little under its selected speed, by however much of the 40 rpm
     droop band its power demand is worth.
+
+    ``windmill`` is the last of the airframe's own switches and the one that
+    makes a *steady* autorotation reachable - see :meth:`trim_autorotation`.
+    It is off by default and the report's own aircraft never sees the second
+    root of equation 10; only an airframe being flown as an autorotation should
+    turn it on.
     """
 
     mass: float = UH1_SIM_MASS
@@ -1316,6 +1369,19 @@ class Airframe:
     #: is driven by a T53 with a governor, the throttle comes in through the
     #: pilot's hand, and an engine failure is a torque that goes away.
     engine: Optional[Engine] = None
+    #: May the rotor use the second root of equation 10 - the windmill brake
+    #: state - for any descending rotor that has one?  ``False`` by default,
+    #: the report's own aircraft, which offers that root only to a descending
+    #: rotor whose collective is down and is otherwise the report's one working
+    #: state exactly as every figure in TM-73254 was computed.  ``True`` lets
+    #: :meth:`forces` (and so :meth:`derivatives`, :meth:`step`,
+    #: :meth:`equilibrium_residual` and :meth:`trim_autorotation`) see the
+    #: root of a rotor that is *carrying* the aircraft - an autorotation, whose
+    #: collective is not down - as well.  It is off by default because that
+    #: root is unstable in a model with no blade stall: a hovering rotor whose
+    #: collective is left up and whose speed is run down finds it and overspeeds,
+    #: so only an aircraft being flown as an autorotation should have it.
+    windmill: bool = False
 
     @property
     def throttle(self):
@@ -1409,7 +1475,7 @@ class Airframe:
             rotor_height=(state.rotor_height if self.ground_effect
                           else 10.0 * 2.0 * UH1_RADIUS),
             rotor_time_constant=self.rotor_time_constant,
-            omega=state.rotor_speed)
+            omega=state.rotor_speed, windmill=self.windmill)
 
     def air_relative_velocity(self, state, wind=None):
         """The aircraft's velocity relative to the air, in body axes, m/s.
@@ -1920,6 +1986,150 @@ class Airframe:
                 if solving and column == 6:
                     # The side the answer is on; see :meth:`trim_hover`.
                     step = -step
+                shifted = list(guess)
+                shifted[column] += step
+                delta = residual(shifted)
+                for row in range(count):
+                    jacobian[row][column] = (delta[row] - values[row]) / step
+            correction = solve_linear(jacobian, [-value for value in values])
+            if correction is None:
+                break
+            guess = [guess[index] + max(-clamps[index],
+                                        min(clamps[index], correction[index]))
+                     for index in range(count)]
+
+        controls = PilotControls(collective=guess[0], pedal=guess[1],
+                                 long_stick=guess[2], lat_stick=guess[3])
+        return controls, trial_state(guess)
+
+    def trim_autorotation(self, airspeed=60.0 * KNOT, weight=None,
+                          air_density=None, altitude=200.0, iterations=40,
+                          tolerance=0.1, rotor_speed=UH1_OMEGA,
+                          torque_tolerance=1.0):
+        """The sticks, attitude and *descent rate* that hold an autorotation.
+
+        An engine failure leaves the rotor free: nothing drives the shaft, so
+        the balance the rotor speed obeys is ``Q = 0`` - the torque equation 4
+        says it is absorbing is zero - and a steady autorotation is a rotor
+        turning at a constant speed with no shaft torque on it at all.  The
+        flight path is steady too, so it is a *descent*: the aircraft is falling
+        along an inclined path at a constant rate, and the net force on it in
+        earth axes is zero, which is the same condition :meth:`trim_level_flight`
+        solves with the third component of the velocity left as an unknown.
+
+        That is the whole of the trim.  Its unknowns are the four stick
+        positions, the pitch and roll attitudes, and the seventh, the *descent
+        rate* in m/s - the vertical component of the earth fixed velocity, so a
+        60 kt trim at sea level falls north at 30.9 m/s and down at 9.1.  Its
+        residuals are the six of :meth:`equilibrium_residual` - the net force in
+        earth axes and the three body moments - and the seventh is the shaft
+        balance, :meth:`shaft_residual`.  It is the same seven-by-seven Newton
+        solve as :meth:`trim_hover`'s rotor-speed one, and the seventh unknown
+        stands in the same place, but it is a *rate* rather than a speed: what a
+        powered trim asks is how fast the rotor settles against the engine's
+        droop curve, and what this one asks is how fast the aircraft settles
+        down to where the rotor's own drag is exactly what the airstream drives
+        it with.
+
+        The rotor speed is *not* an unknown here, and cannot be: the rotor speed
+        and the descent rate are two things a real autorotation settles at and
+        there are only seven equations, so one of the two is the caller's.  It is
+        *rotor_speed*, rad/s, and it defaults to the 100 per cent the report's own
+        figures are drawn at.  The descent rate is what comes back.
+
+        The airframe has to be one that can be in this state, which is two
+        things.  It must have something on the other end of the shaft, so
+        :meth:`shaft_residual` has a balance to close (:attr:`engine` or
+        :attr:`engine_torque`), and for an *autorotation* that something must be
+        delivering nothing - a failed :class:`engine.Engine` or an
+        ``engine_torque`` of zero, which is what makes the seventh residual
+        ``-Q`` rather than an engine's torque less it.  And it must have
+        :attr:`windmill` on, because the rotor that carries an aircraft in a
+        steady autorotation is in the windmill brake state - air up through the
+        disc, the second root of equation 10 - while its collective is *not* at
+        the down stop, and the report's own aircraft offers that root only to a
+        descending rotor whose collective is down.  Asking an airframe without
+        either raises, rather than returning a state that is not one.
+
+        Returns ``(PilotControls, FlightState)``, the state carrying the descent
+        rate in its velocity and the rotor speed it was asked for.  Feed both to
+        :meth:`reset` and the next ``step`` starts on the autorotation rather
+        than sliding into it.  The descent rate is reported north, level-headed,
+        like the level flight trim: the horizontal velocity is *airspeed* north
+        and the trim is an answer anybody can rotate to a heading.  *tolerance*
+        is newtons and newton metres and *torque_tolerance* newton metres, in the
+        same spirit as the other two trims - this, too, is a model fitted to
+        flight test data.
+
+        ``60 * KNOT`` is the condition worth trying, as it is the report's own,
+        and the answer is the manual's own: 9.1 m/s, 1790 fpm, inside the 1800
+        to 2000 an autorotating UH-1H holds at 60 kt.  An airspeed of zero is the
+        vertical autorotation, where equation 10's two roots meet (``mu`` is
+        zero) - a real condition, and one this seven-by-seven solve is not built
+        for.
+        """
+        air_density = self.air_density if air_density is None else air_density
+        if not self.windmill:
+            raise ValueError(
+                "trim_autorotation needs Airframe(windmill=True): an "
+                "autorotating rotor is in the windmill brake state with its "
+                "collective up, which the report's own aircraft does not allow")
+        if weight is None:
+            weight = self.mass * GRAVITY
+        law = self.law
+        constants = rotor_constants(rotor_speed)
+        per_in = math.degrees(law.collective_per_in)
+        # A first guess from equation 1 with no inflow at all, the same hover
+        # collective the other two trims open on: an autorotation's collective
+        # sits lower, and the solve walks it down from here.
+        report_rad = 3.0 * weight / constants.r1
+        guess_deg = (math.degrees(report_rad) - 0.75 * self.twist_deg)
+        collective_in = (guess_deg - law.collective_neutral_deg) / per_in
+        # unknowns: collective in, pedal in, long stick in, lat stick in,
+        # pitch rad, roll rad, descent rate m/s.  The attitude starts level and
+        # the descent at the order a UH-1H autorotates down at, so the first
+        # Newton step is short in all seven.
+        guess = [collective_in, 0.0, 0.0, 0.0, 0.0, 0.0,
+                 TRIM_DESCENT_GUESS_MPS]
+        position = Vector3(0.0, 0.0, -altitude)
+
+        def trial_state(values):
+            """The state a guess describes: descending north at *airspeed*."""
+            matrix = direction_cosine_matrix(values[5], values[4], 0.0)
+            return FlightState(
+                position=position,
+                velocity=apply(transpose(matrix),
+                               Vector3(airspeed, 0.0, values[6])),
+                attitude=Vector3(values[5], values[4], 0.0), rates=Vector3(),
+                rotor_speed=rotor_speed)
+
+        def residual(values):
+            controls = PilotControls(collective=values[0], pedal=values[1],
+                                     long_stick=values[2], lat_stick=values[3])
+            trial = trial_state(values)
+            force, moment = self.equilibrium_residual(
+                controls, trial, weight=weight, air_density=air_density)
+            rows = [force.x, force.y, force.z, moment.x, moment.y, moment.z]
+            # The shaft row out of forces of its own: the descent rate is what
+            # this trim is here to solve, and its equation is the rotor's own
+            # torque balance - the same rotor as the six above, asked what the
+            # shaft is doing rather than what the path is.
+            rows.append(self.shaft_residual(controls, trial,
+                                            air_density=air_density))
+            return rows
+
+        count = len(guess)
+        clamps = ([TRIM_STICK_CLAMP_IN] * 4 + [TRIM_ANGLE_CLAMP_RAD] * 2
+                  + [TRIM_DESCENT_CLAMP_MPS])
+        for _ in range(max(int(iterations), 4)):
+            values = residual(guess)
+            if _trim_converged(values, tolerance, torque_tolerance):
+                break
+            jacobian = [[0.0] * count for _ in range(count)]
+            for column in range(count):
+                step = (TRIM_DESCENT_STEP_MPS if column == 6
+                        else TRIM_ANGLE_STEP_RAD if column >= 4
+                        else TRIM_STICK_STEP_IN)
                 shifted = list(guess)
                 shifted[column] += step
                 delta = residual(shifted)
@@ -2693,6 +2903,68 @@ def _self_test():
     assert abs(held.shaft_residual(controls, trim_state)) < 1e-9, \
         held.shaft_residual(controls, trim_state)
 
+    # ---------------------------------------------------------------------
+    # The descent rate as an unknown: the autorotation trim.
+    # ---------------------------------------------------------------------
+
+    # A failed engine leaves the rotor free, a steady autorotation puts Q = 0
+    # on the shaft, and what closes that balance is how fast the aircraft comes
+    # down: ``trim_autorotation`` solves for the descent rate, seven unknowns
+    # against the six of the path and the shaft's own seventh.  The report's
+    # 60 kt condition is the one to ask, and the answer is the flight manual's
+    # own - 9.1 m/s, 1792 fpm, against the 1800 to 2000 a UH-1H holds there -
+    # on a rotor in the windmill brake state (a positive inflow ratio, air up
+    # through the disc) with a collective four inches below the hover's and the
+    # 100 per cent it was asked for.
+    autorotating = Airframe(engine_torque=0.0, windmill=True)
+    assert autorotating.windmill and autorotating.shaft_driven
+    auto_controls, auto_state = autorotating.trim_autorotation(60.0 * KNOT)
+    ground = auto_state.ground_velocity()
+    descent = ground.z
+    assert abs(ground.x - 60.0 * KNOT) < 1e-9 and abs(ground.y) < 1e-9
+    assert 8.0 < descent < 11.0, descent
+    assert 1600.0 < descent / 0.00508 < 2200.0, descent / 0.00508
+    assert abs(auto_state.rotor_speed - UH1_OMEGA) < 1e-9
+    assert auto_controls.collective < controls.collective - 1.0
+    auto_pitch = ControlPitch.from_angles(
+        autorotating.command_angles(auto_controls), auto_controls.long_stick)
+    auto_forces = autorotating.forces(auto_pitch, auto_state)
+    assert auto_forces.rotor.converged
+    assert auto_forces.rotor.inflow_ratio > 0.0        # the windmill branch
+    assert auto_forces.rotor.thrust > 0.0              # and still carrying it
+    assert abs(auto_forces.rotor.torque) < 0.1         # Q = 0, nothing drives
+    # Both halves closed: the six of equilibrium_residual and the shaft's own.
+    auto_force, auto_moment = autorotating.equilibrium_residual(
+        auto_controls, auto_state)
+    assert abs(auto_force.x) < 0.1 and abs(auto_force.y) < 0.1
+    assert abs(auto_force.z) < 0.1 and auto_moment.length() < 0.1
+    assert abs(autorotating.shaft_residual(auto_controls, auto_state)) < 0.1
+    # And an autorotation rather than merely a solution: flown from there it
+    # holds, down the path at the rate it was trimmed for, rotor speed and all.
+    autorotating.reset(auto_state, auto_controls)
+    trimmed_altitude = auto_state.altitude
+    for _ in range(300):
+        autorotating.step(1.0 / 60.0, auto_controls)
+    assert abs(autorotating.state.rotor_speed - UH1_OMEGA) < 1e-3, \
+        autorotating.state.rotor_speed
+    fallen = trimmed_altitude - autorotating.state.altitude
+    assert abs(fallen - 5.0 * descent) < 0.1, fallen
+
+    # The two things the airframe has to be, and it says so rather than
+    # returning a state that is not one.  The report's own aircraft offers the
+    # windmill root only to a collective-down rotor, so it has no autorotation
+    # to trim; and a shaft merely driven is not enough either, because the
+    # rotor of a trim that is being *flown* as an autorotation needs that root.
+    assert not Airframe().windmill and not Airframe(engine_torque=0.0).windmill
+    for undecided in (Airframe(engine_torque=0.0), Airframe(engine=Engine())):
+        try:
+            undecided.trim_autorotation(60.0 * KNOT)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("an aircraft with no windmill root trimmed "
+                                 "an autorotation")
+
 
 def _demo():
     """Print what the airframe does: constants, a hover, and four steps.
@@ -2978,6 +3250,36 @@ def _demo():
                  math.degrees(airframe.state.attitude.y),
                  math.degrees(slow.state.rates.y),
                  math.degrees(slow.state.attitude.y)))
+
+    print()
+    print("an autorotation, trimmed on the descent rate, at the report's 60 kt:")
+    autorotation = Airframe(engine_torque=0.0, windmill=True)
+    auto_controls, auto_state = autorotation.trim_autorotation(60.0 * KNOT)
+    auto_pitch = ControlPitch.from_angles(
+        autorotation.command_angles(auto_controls), auto_controls.long_stick)
+    auto_forces = autorotation.forces(auto_pitch, auto_state)
+    auto_ground = auto_state.ground_velocity()
+    print("  the rotor free on Q = 0, so the descent rate is the seventh")
+    print("  unknown and the shaft balance is what it closes:")
+    print("  sticks  " + str(auto_controls))
+    print("  %s" % auto_state)
+    print("  rotor   T %7.0f N, Q %+8.2f N m, lambda %+7.4f - the windmill"
+          " brake state," % (auto_forces.rotor.thrust,
+                             auto_forces.rotor.torque,
+                             auto_forces.rotor.inflow_ratio))
+    print("          air up through the disc, so the rotor takes its energy"
+          " from the air")
+    print("  the descent that closes it: %.2f m/s, %.0f fpm, against the 1800"
+          " to 2000" % (auto_ground.z, auto_ground.z / 0.00508))
+    print("  a UH-1H autorotates at there; the collective is %.2f in against"
+          % auto_controls.collective)
+    print("  the %.2f in hover.  Flown from here it holds, and five seconds"
+          " later:" % controls.collective)
+    autorotation.reset(auto_state, auto_controls)
+    for _ in range(300):
+        autorotation.step(1.0 / 60.0, auto_controls)
+    print()
+    print("  %s" % autorotation.state)
 
     print()
     _self_test()
