@@ -14,7 +14,30 @@ wiring that flying cannot test.
   for EMER and the manual's bleed air numbers.  Three things are still open:
 
   * *`trim_autorotation`.*  Descent rate as the unknown, for the case the
-    engine's failure path can now be flown into;
+    engine's failure path can now be flown into.  It was **blocked** until the
+    inflow solver grew a second branch: with ``x = -lambda`` bracketed over
+    ``x >= 1e-9`` only - the report's equation 10 in its one working state, air
+    down through the disc - a low collective at *any* descent rate came back
+    pinned at ``lambda = 0.0000`` (at the down stop, at 2 in and at 4 in, over
+    every combination of 0 to 60 m/s forward and 0 to 45 m/s down) and
+    equation 4's torque stayed *positive* throughout (7.6, 5.9 and 5.0 kN m),
+    so ``Q_engine - Q = 0`` had no root for a trim to close on.  That is fixed:
+    `_solve_inflow_ratio` now tries the other root of the same equation, on
+    ``x < 0``, where ``h`` falls from the same blow up at zero to -infinity -
+    the windmill brake state of a descending rotor, air *up* through the disc,
+    a positive inflow ratio, and a shaft torque the rotor takes *from* the
+    airstream rather than gives to it, which is the energy extraction of a real
+    autorotation.  It is taken only when there is no working state *and* the
+    rotor is descending with its collective down (``wind_along_axis < 0`` and
+    ``thrust_at(0) <= 0``), the one configuration the branch is physical in, so
+    every climbing, hovering and collective-up frame is still the report's own.
+    Neither report derives it - "windmill", "vortex ring" and "vertical
+    descent" appear nowhere in TM-73254, and the only "autorotation" in
+    TM 55-1520-210-10 or TR-71-34 is procedure rather than derivation - so the
+    branch is a textbook two-branch momentum model, cited as external where it
+    lives.  What is left is the trim itself: descent rate as the unknown,
+    closing the shaft balance on that branch with the engine failed and the
+    rotor free;
   * *main.py's own aircraft.*  It flies the report's fixed rotor, as it should -
     every figure in TM-73254 was computed with that - and what is left there is
     around the engine: the device map names no throttle yet (see the note in

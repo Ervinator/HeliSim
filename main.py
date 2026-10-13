@@ -175,7 +175,8 @@ from aerodynamics import (UH1_BLADE_COUNT, UH1_CHORD, UH1_COLLECTIVE_TRAVEL_IN,
 from airframe import (FOOT, POUND, UH1_HUB_HEIGHT, UH1_TAIL_ARM,
                       UH1_TAIL_HEIGHT)
 from simulation import (ChaseCamera, PAD_COLLECTIVE, SIM_TIME_STEP_S, Simulation,
-                        UH1_CG_HEIGHT_ON_GROUND, airframe_preset)
+                        UH1_CG_HEIGHT_ON_GROUND, UH1_ENVELOPE_CEILING_MPS,
+                        airframe_preset)
 
 WIDTH, HEIGHT = 960, 640
 
@@ -3031,7 +3032,11 @@ def _self_check():
     # is out of its envelope: nothing touched anything, and an `OUT OF ENVELOPE`
     # beside an altitude is the altitude it was refused at - where it still is,
     # since a refused frame puts the last good state back.  No number of frames
-    # moves it again, and only R clears either.
+    # moves it again, and only R clears either.  The refusing state is an overload
+    # - a speed past the ceiling set on the state directly - rather than a whole
+    # entry the model will not fly, because with the report's second root, the
+    # windmill brake state, a descending entry with the collective down is one
+    # the model *does* fly; an overload is not.
     hit = Simulation(airframe=airframe_preset(AIRFRAME_PRESET))
     hit.reset(altitude=UH1_CG_HEIGHT_ON_GROUND + 3.0,
               controls=hit.trim_controls.collective_down())
@@ -3043,6 +3048,11 @@ def _self_check():
     refused = Simulation(airframe=airframe_preset(AIRFRAME_PRESET))
     refused.reset(altitude=30.0,
                   controls=refused.trim_controls.collective_down())
+    # The refusal is the state's own and not the entry's: a speed past the
+    # envelope ceiling, put on the state directly, is a state no frame will fly,
+    # so the first frame is spent, the good state kept and the aircraft refused.
+    refused.airframe.state.velocity = Vector3(
+        0.0, 0.0, -2.0 * UH1_ENVELOPE_CEILING_MPS)
     for _ in range(600):
         refused.step(SIM_TIME_STEP_S)
         if refused.crashed:

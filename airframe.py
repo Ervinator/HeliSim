@@ -412,19 +412,31 @@ def _solve_inflow_ratio(thrust_at, mu, wind_along_axis, ground_effect,
 
         h(x) = x - R7 * w_C - R8 * K_G * T(x) / sqrt(mu ** 2 + x ** 2)
 
-    with a single root bracketed between the zero inflow at one end (where the
-    momentum term blows up) and a deep inflow at the other.  ``thrust_at(x)``
-    returns the thrust equation 1 gives when the inflow ratio is -x, in N.  A
-    bisection is used, so it cannot oscillate the way the report's fixed point
-    iteration would: that iteration's own derivative at a UH-1H hover is about
-    -40, which diverges.  ``r7`` and ``r8`` are table 3's two inflow constants,
-    both closed forms in the rotor speed, so a rotor that is not at 100 per cent
-    solves its own equation rather than the reference one.  Returns
-    ``(inflow_ratio, evaluations, converged)`` and
-    reports the answer as unconverged rather than guessing when no bracket can
-    be found, which is what a windmill brake state looks like from here.
+    ``h`` has a root on either side of the blow up at x = 0, and they are the
+    two states a rotor can hold.  On ``x > 0`` the air goes down through the
+    disc - the report's one working state, a negative inflow ratio and a
+    positive shaft torque.  On ``x < 0`` the air goes up through it: the
+    windmill brake state of a descending rotor, a positive inflow ratio and a
+    shaft torque the rotor takes from the airstream rather than gives to it,
+    which is what an autorotation needs.  Each branch is bracketed between the
+    blow up at x = 0 and a deep inflow at the other end, and a bisection is used
+    rather than the report's fixed point iteration, whose own derivative at a
+    UH-1H hover is about -40 and diverges.  ``thrust_at(x)`` returns the thrust
+    equation 1 gives when the inflow ratio is -x, in N.  ``r7`` and ``r8`` are
+    table 3's two inflow constants, both closed forms in the rotor speed, so a
+    rotor that is not at 100 per cent solves its own equation rather than the
+    reference one.
+
+    The working state is tried first and kept whenever it exists, so every
+    climbing and hovering frame is the one the report gives.  The windmill
+    branch is used only when there is no working state *and* the rotor is
+    descending (``wind_along_axis`` negative), because that is the only case
+    the branch is physical in: at a hover there is no root on it, and asking
+    would only find the negative thrust the equation gives where a real rotor
+    would simply have stopped making any.  Returns
+    ``(inflow_ratio, evaluations, converged)`` and reports the answer as
+    unconverged rather than guessing when neither branch has a bracket.
     """
-    low, high = 1e-9, 0.5
     evaluations = 0
 
     def residual(x):
@@ -432,24 +444,58 @@ def _solve_inflow_ratio(thrust_at, mu, wind_along_axis, ground_effect,
                 - r8 * ground_effect * thrust_at(x)
                 / math.sqrt(mu * mu + x * x))
 
+    def bisect(low, high):
+        """Root in ``[low, high]``: residual(low) < 0 < residual(high)."""
+        count = 0
+        for _ in range(max(int(iterations), 8)):
+            count += 2
+            middle = 0.5 * (low + high)
+            if residual(middle) < 0.0:
+                low = middle
+            else:
+                high = middle
+            if high - low < tolerance:
+                break
+        return -0.5 * (low + high), count
+
+    # The working state, x > 0: air down through the disc.  The momentum term
+    # blows up at x = 0, so a root, when the rotor is making thrust, is
+    # bracketed between there and a deep inflow.
+    high = 0.5
     for _ in range(60):
         evaluations += 1
         if residual(high) > 0.0:
             break
         high *= 2.0
     else:
-        return -low, evaluations, False
+        high = None
+    if high is not None:
+        evaluations += 1
+        if residual(1e-9) < 0.0:
+            inflow, count = bisect(1e-9, high)
+            return inflow, evaluations + count, True
 
-    for _ in range(max(int(iterations), 8)):
-        evaluations += 2
-        middle = 0.5 * (low + high)
-        if residual(middle) < 0.0:
-            low = middle
+    # No working state.  A descending rotor whose collective is down can be in
+    # the windmill brake state instead, the second root, x < 0: on that side the
+    # residual falls from the same blow up at x = 0 to -infinity, so it is
+    # bracketed from x = 0 down.  The branch is physical only for that
+    # configuration - a rotor still pulling with its collective up, or one that
+    # is not descending, has no windmill state to be in - which is what the
+    # thrust at zero inflow being non-positive and the descent together test.
+    if wind_along_axis < 0.0 and thrust_at(0.0) <= 0.0:
+        low = -0.5
+        for _ in range(60):
+            evaluations += 1
+            if residual(low) < 0.0:
+                break
+            low *= 2.0
         else:
-            high = middle
-        if high - low < tolerance:
-            break
-    return -0.5 * (low + high), evaluations, True
+            low = None
+        if low is not None:
+            inflow, count = bisect(low, -1e-9)
+            return inflow, evaluations + count, True
+
+    return -1e-9, evaluations, False
 
 
 @dataclass

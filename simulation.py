@@ -2230,37 +2230,52 @@ def _self_test():
     assert failed.crash_reason is None
     assert failed.telemetry().crash_message == ""
 
-    # The end of the envelope: the same pickup from thirty metres, which the
-    # model cannot fly - at 100 per cent rotor with the collective at the down
-    # stop the closed form's rotor pushes down by nearly two weights and there is
-    # no engine or rotor speed dynamics to fall back on, so the state runs away
-    # into a NaN inside one 60 Hz step.  The loop refuses that frame rather than
-    # passing it on: the last good state is kept, the aircraft is called crashed
-    # and every number a caller can read stays finite.
-    lost = Simulation()
-    lost.reset(altitude=30.0,
-               controls=PilotControls(long_stick=lost.trim_controls.long_stick,
-                                      lat_stick=lost.trim_controls.lat_stick,
-                                      pedal=lost.trim_controls.pedal))
-    kept = None
+    # The same pickup from thirty metres, with the collective at the down stop.
+    # With the rotor held at 100 per cent there the closed form's trim force is
+    # minus 74.6 kN against an aircraft of 38.7 kN - nearly two weights pushing
+    # down - so the entry falls from the first frame.  It used to be where the
+    # model ran out of envelope: with no state to give a descending rotor whose
+    # collective is down, the closed form returned nothing to solve, the state
+    # went non-finite, and the loop refused the frame.  It has that state now -
+    # the second root of the report's equation 10, the windmill brake state,
+    # which _solve_inflow_ratio finds for exactly this configuration (a descent
+    # with the collective down) and nothing else.  So the entry is flown rather
+    # than refused: the aircraft falls, the descent builds past 26 m/s, and the
+    # skids arrive on the ground faster than UH1_HARD_LANDING_MPS.  That is the
+    # floor's crash and the floor's words for it, not the model's refusal - and
+    # the refusal itself is still asserted above, by a velocity set on the state
+    # directly, and in main.py's caption.
+    dropped = Simulation()
+    dropped.reset(altitude=30.0,
+                  controls=PilotControls(
+                      long_stick=dropped.trim_controls.long_stick,
+                      lat_stick=dropped.trim_controls.lat_stick,
+                      pedal=dropped.trim_controls.pedal))
+    assert not dropped.crashed and not dropped.on_ground
+    peak = 0.0
+    lowest = dropped.airframe.state.altitude
     for _ in range(int(10.0 * 60)):
-        lost.step(SIM_TIME_STEP_S)
-        assert _finite(lost.airframe.state)
-        assert math.isfinite(lost.telemetry().thrust)
-        if lost.crashed:
-            if kept is None:
-                kept = lost.airframe.state.values()
-            else:
-                assert lost.airframe.state.values() == kept
-    assert kept is not None and lost.crashed and not lost.on_ground
-    # And this one is *not* a crash on the ground: the caption names the envelope
-    # the model refused to fly, which is what happened, at the altitude it
-    # happened at.  Nothing here ever left the air.
-    assert lost.crash_reason == CRASH_OUT_OF_ENVELOPE
-    assert lost.telemetry().crash_message == "OUT OF ENVELOPE"
-    assert "CRASHED" not in str(lost.telemetry())
-    assert " on the ground" not in str(lost.telemetry())
-    assert "nan" not in str(lost.telemetry())
+        dropped.step(SIM_TIME_STEP_S)
+        # No frame of the fall may leave the envelope or hand a caller a number
+        # that is not finite, which is the guarantee the refusal used to keep by
+        # ending the flight.  Now the flight keeps it by being one.
+        assert not _out_of_envelope(dropped.airframe.state)
+        assert _finite(dropped.airframe.state)
+        assert math.isfinite(dropped.telemetry().thrust)
+        if not dropped.on_ground:
+            peak = max(peak, dropped.airframe.state.ground_velocity().z)
+        lowest = min(lowest, dropped.airframe.state.altitude)
+    # It arrived on the ground, on the skid line, and the floor called it and
+    # the caption says so: a hard arrival on the skids is a crash, and the
+    # descent it arrived at is what made it one.
+    assert dropped.crashed and dropped.on_ground
+    assert dropped.crash_reason == CRASH_GROUND_CONTACT
+    assert dropped.telemetry().crash_message == "CRASHED"
+    assert dropped.airframe.state.altitude == UH1_CG_HEIGHT_ON_GROUND
+    assert lowest >= UH1_CG_HEIGHT_ON_GROUND - 1e-9
+    assert peak > UH1_HARD_LANDING_MPS
+    assert "OUT OF ENVELOPE" not in str(dropped.telemetry())
+    assert "nan" not in str(dropped.telemetry())
 
     # The same floor entered slowly is a landing and not a crash: thirty
     # centimetres above the skids, descending at a metre and a half a second, in
