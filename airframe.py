@@ -26,7 +26,11 @@ that means for the rest of this project:
   aerodynamic derivations (equations 42 to 60), with the UH-1B stabilizer
   incidence schedule of its table 1 because the UH-1H one was not available;
 * ground effect is its equation 10a, K_G = 1 - exp(-(Z/D)/G1), and component
-  interference is deliberately absent because the report has none.
+  interference is deliberately absent because the report has none.  Z is the
+  hub's height over a :class:`GroundPlane` - a flat patch with a level and a
+  normal - because a height over a surface does not have to be a height over a
+  horizontal one: the default is level ground at sea level, where the model is
+  bit for bit what it was before the ground was a parameter.
 
 Everything is quasi-steady, the rotor speed is constant, and there is no
 engine, no rotor governor and no ground contact: this is the airframe, not the
@@ -79,6 +83,13 @@ the rotor speed is held at 100 per cent unless an :class:`engine.Engine` is
 handed to :class:`Airframe`, which is where the governor, the droop band and
 the wind down after a failure live.  The inertia matrix carries the UH-1H's
 2007 kg m^2 product of inertia, which is what couples roll and yaw.
+
+The ground is one flat plane, not a landscape: :class:`GroundPlane` has a level
+and a lean and no shape, so a ridge, a valley, a step or a moving deck is not
+something this module can be flown over yet - and neither is the air underneath
+one, which is a wind field this model has no notion of.  What it can be flown
+over is level ground, a slope, a ramp or any other single flat area, parked on
+it and hovered in its cushion.
 
 Standard library only, so it runs and tests headless.
 """
@@ -293,6 +304,112 @@ def stabilizer_incidence_rad(long_stick_in):
     return _interpolate(UH1_STABILIZER_SCHEDULE, long_stick_in)
 
 
+# ---------------------------------------------------------------------------
+# The ground.  One flat patch of it, with a level and a normal.
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class GroundPlane:
+    """A flat patch of ground, at a level and under a normal.
+
+    A plane in the NED frame the flight state is carried in: :attr:`point` is
+    any point of the surface and :attr:`normal` the unit vector standing out of
+    it, away from the solid ground.  The default - a point at the NED origin
+    and a normal straight up - is therefore the horizontal plain at sea level
+    that every figure in TM-73254 is drawn over, where every height this hands
+    back is exactly the ``-position.z`` the model used before the ground was a
+    parameter at all.
+
+    It is a *plane* and not a landscape: a flat area of any inclination, which
+    is all equation 10a needs - K_G wants one number, the rotor's height over
+    the surface, and this is what measures it - and all the ground under a skid
+    can be.  Level terrain, a slope an aircraft is parked on, a ramp and a
+    moving deck are all this class with different numbers in it; several
+    patches, ridges and holes are not, and want a function of position in place
+    of this one object - which is why every caller here asks the ground for a
+    *height* and never reads a coordinate of its own, and why
+    :attr:`Airframe.ground` is a field a run may replace between frames.
+
+    A normal that is not a unit vector is normalised rather than refused, since
+    a caller writing one out of a survey of a ramp is doing nothing wrong; a
+    zero one is refused, since it describes no surface at all.
+    """
+
+    point: Vector3 = Vector3()
+    normal: Vector3 = Vector3(0.0, 0.0, -1.0)
+
+    def __post_init__(self):
+        length = self.normal.length()
+        if length == 0.0:
+            raise ValueError("a ground plane's normal cannot be zero")
+        if length != 1.0:
+            object.__setattr__(self, "normal", self.normal / length)
+
+    @classmethod
+    def level(cls, height=0.0):
+        """A horizontal surface *height* m above the NED origin, m.
+
+        The plane every caller in this project means by "the ground": NED's
+        down coordinate is negative above the origin, so a surface 200 m up is
+        a point at z = -200.
+        """
+        return cls(Vector3(0.0, 0.0, -float(height)))
+
+    def height(self, position):
+        """How far *position* stands above the surface, m, along the normal.
+
+        Positive above the ground and negative under it, and for a horizontal
+        plane this is exactly :attr:`FlightState.altitude`.  A sloping one
+        gives the clearance over the slope, measured perpendicular to it, which
+        is the distance a rotor's ground effect and a skid both want.
+        """
+        return (position - self.point).dot(self.normal)
+
+    def surface_point(self, position):
+        """The point of the surface nearest *position*, NED m."""
+        return position - self.normal * self.height(position)
+
+    def above(self, position, height):
+        """The point *height* m over the surface, over *position*, NED m.
+
+        *position* chooses the patch of the surface - the nearest point of it -
+        and the answer is that point plus *height* along the normal: where an
+        aircraft's c.g. stands when its skids are on the ground and it is
+        standing level on it.  ``ground.above(state.position, ...)`` and
+        ``ground.height(...)`` are the two halves of every ground question
+        :mod:`simulation` asks.
+        """
+        return self.surface_point(position) + self.normal * height
+
+    def level_attitude(self, yaw=0.0):
+        """The ``(roll, pitch, yaw)`` of an aircraft standing level on it.
+
+        An aircraft parked on a slope is not level in the earth frame, it is
+        level *on the slope*: its own down axis has to lie along the surface's
+        normal, and this is the attitude that does it, with the heading left
+        where the caller has it.  The third column of
+        :func:`direction_cosine_matrix` is the body's down axis in NED, and the
+        two angles fall out of setting that equal to ``-normal`` with the yaw
+        already turned out of it.
+
+        A surface with no lean in it needs no angles at all, and that case is
+        returned as two positive zeros rather than as whatever signs the
+        trigonometry hands back, so that an aircraft levelled on level ground
+        has the zeros it has always had, to the last bit.
+        """
+        if self.normal.x == 0.0 and self.normal.y == 0.0:
+            return Vector3(0.0, 0.0, yaw)
+        sin_yaw, cos_yaw = math.sin(yaw), math.cos(yaw)
+        # cos r sin t and sin r, which are the first two rows of that column
+        # with the heading rotated back out of them.
+        fore = -self.normal.x * cos_yaw - self.normal.y * sin_yaw
+        side = -self.normal.x * sin_yaw + self.normal.y * cos_yaw
+        roll = math.asin(max(-1.0, min(1.0, side)))
+        pitch = math.atan2(fore, -self.normal.z)
+        return Vector3(roll, pitch, yaw)
+
+
 def ground_effect_factor(rotor_height, radius=UH1_RADIUS):
     """Equation 10a: K_G = 1 - exp(-(Z/D)/G1), the reduction in inflow.
 
@@ -300,6 +417,13 @@ def ground_effect_factor(rotor_height, radius=UH1_RADIUS):
     rotor on the ground (Z = 0) has K_G = 0, i.e. no induced flow at all and
     the whole ground cushion; one diameter up it is 0.97, and only past a few
     diameters is it indistinguishable from 1.
+
+    Z is a height over a *surface*, and nothing in the report says the surface
+    is horizontal: it is what a :class:`GroundPlane` measures when it is asked
+    for the hub's own height, the hub's perpendicular distance from the plane.
+    Over a ramp that is the clearance the rotor has over the ramp - the
+    distance the cushion works over - and not the height the ramp's foot stands
+    at, which is the difference the plane is here to keep straight.
     """
     diameter = 2.0 * radius
     if diameter <= 0.0:
@@ -1213,12 +1337,33 @@ class FlightState:
         return -self.position.z
 
     @property
-    def rotor_height(self):
-        """Height of the main rotor hub above the ground, m.
+    def hub_position(self):
+        """The main rotor hub in NED, m.
 
-        The hub stands UH1_HUB_HEIGHT above the c.g. along the body z axis, so
-        a rolled or pitched aircraft has its hub a little lower than that; the
-        cosine of both angles projects it onto the vertical.
+        The hub stands UH1_HUB_HEIGHT above the c.g. along the body z axis,
+        which points down, so this is the c.g. offset up that axis and turned
+        into earth axes with the aircraft's own attitude.  It is what a
+        :class:`GroundPlane` is asked for a rotor's height over it: see
+        :meth:`Airframe.hub_height`.
+        """
+        return self.position + apply(
+            direction_cosine_matrix(self.attitude.x, self.attitude.y,
+                                    self.attitude.z),
+            Vector3(0.0, 0.0, -UH1_HUB_HEIGHT))
+
+    @property
+    def rotor_height(self):
+        """Height of the main rotor hub above level ground at sea level, m.
+
+        The horizontal case of :meth:`Airframe.hub_height` and the one every
+        figure in TM-73254 is drawn over: the hub is UH1_HUB_HEIGHT above the
+        c.g. along the body z axis, and the cosines of the two attitude angles
+        project that onto the vertical.  The self test pins it to the ground
+        plane's own answer for the same state - which it matches to the last
+        bit or one unit in the last place, the two grouping the same three
+        numbers differently - and a ground that is not level, or not at the
+        origin, is the airframe's own plane to measure, since this reads the
+        NED coordinates and nothing else.
         """
         return (self.altitude + UH1_HUB_HEIGHT
                 * math.cos(self.attitude.x) * math.cos(self.attitude.y))
@@ -1358,6 +1503,15 @@ class Airframe:
     twist_deg: float = UH1_TWIST_DEG
     rotor_time_constant: float = UH1_ROTOR_TIME_CONSTANT_S
     ground_effect: bool = True
+    #: The ground under the aircraft: one flat patch with a level and a normal,
+    #: which is what equation 10a's Z is measured against - see
+    #: :class:`GroundPlane` and :meth:`hub_height`.  The default is the
+    #: horizontal plain at sea level every figure in TM-73254 is drawn over,
+    #: where it hands back exactly the ``-position.z`` this model used before
+    #: the ground was a parameter; a run flying over a slope replaces it, and
+    #: :mod:`simulation` asks it where the skids and the skid line are as well
+    #: as where the rotor's cushion is.
+    ground: GroundPlane = field(default_factory=GroundPlane)
     rotor_inertia: float = UH1_ROTOR_INERTIA
     #: Torque at the main rotor shaft, N m, for this frame: ``None`` means
     #: there is no shaft balance to fly and the report's fixed rotor is what
@@ -1457,6 +1611,16 @@ class Airframe:
             tail_collective_rad=math.radians(seen.tail_collective_deg),
             long_stick_in=long_stick_in)
 
+    def hub_height(self, state=None):
+        """The main rotor hub's height above :attr:`ground`, m.
+
+        What equation 10a's Z is: the *hub* and not the c.g., measured
+        perpendicular to the ground plane, so a rotor over a slope gets the
+        clearance the slope gives it.  *state* defaults to the aircraft's own.
+        """
+        state = self.state if state is None else state
+        return self.ground.height(state.hub_position)
+
     def forces(self, control_pitch, state=None, wind=None, air_density=None):
         """The report's forces and moments for one instant, in body axes.
 
@@ -1464,7 +1628,9 @@ class Airframe:
         density is what asks for another.  The table 3 constants are taken at
         the state's own rotor speed, so a rotor that is turning slower makes
         less thrust for the collective in the pilot's hand, which is the whole
-        of what the rotor speed state does to the airframe.
+        of what the rotor speed state does to the airframe.  The ground effect
+        is whatever :meth:`hub_height` makes of :attr:`ground`, unless
+        :attr:`ground_effect` is off altogether.
         """
         state = self.state if state is None else state
         return body_forces(
@@ -1472,7 +1638,7 @@ class Airframe:
             state.rates,
             air_density=(self.air_density if air_density is None
                          else air_density),
-            rotor_height=(state.rotor_height if self.ground_effect
+            rotor_height=(self.hub_height(state) if self.ground_effect
                           else 10.0 * 2.0 * UH1_RADIUS),
             rotor_time_constant=self.rotor_time_constant,
             omega=state.rotor_speed, windmill=self.windmill)
@@ -1776,6 +1942,10 @@ class Airframe:
         is not one.  *torque_tolerance* is the shaft imbalance the seventh
         residual is allowed, in newton metres, in the same spirit as *tolerance*
         is newtons.
+
+        *altitude* is the height above :attr:`ground` the hover is solved at,
+        m, which matters only inside the cushion - and the ground is the
+        airframe's own plane, so a hover over a ramp is solved over the ramp.
         """
         air_density = self.air_density if air_density is None else air_density
         if weight is None:
@@ -1799,7 +1969,10 @@ class Airframe:
                  -math.atan2(-UH1_CG_AHEAD_OF_HUB, UH1_HUB_HEIGHT), 0.0]
         if solving:
             guess.append(rotor_speed)
-        position = Vector3(0.0, 0.0, -altitude)
+        # The ground under the hover: the airframe's own plane, so *altitude*
+        # is a height above whatever the aircraft is over rather than a NED
+        # coordinate of its own.
+        position = self.ground.above(Vector3(), altitude)
 
         def residual(values):
             controls = PilotControls(collective=values[0], pedal=values[1],
@@ -1816,7 +1989,7 @@ class Airframe:
             # of them.
             forces = body_forces(pitch, Vector3(), Vector3(),
                                  air_density=air_density,
-                                 rotor_height=trial.rotor_height,
+                                 rotor_height=self.hub_height(trial),
                                  rotor_time_constant=self.rotor_time_constant,
                                  constants=(rotor_constants(values[6]) if solving
                                             else constants))
@@ -1919,6 +2092,9 @@ class Airframe:
         the shaft balance, so that a level flight condition comes back at the
         speed the engine and the rotor settle at as well.  *torque_tolerance* is
         that seventh residual's own allowance, in newton metres.
+
+        *altitude* is the height above :attr:`ground` the condition is solved
+        at, m, on the same terms :meth:`trim_hover` takes it.
         """
         air_density = self.air_density if air_density is None else air_density
         if weight is None:
@@ -1944,7 +2120,7 @@ class Airframe:
         guess = [collective_in, 0.0, 0.0, 0.0, 0.0, 0.0]
         if solving:
             guess.append(rotor_speed)
-        position = Vector3(0.0, 0.0, -altitude)
+        position = self.ground.above(Vector3(), altitude)
 
         def trial_state(values):
             """The state a guess describes: level, north, at the airspeed asked."""
@@ -2067,6 +2243,12 @@ class Airframe:
         vertical autorotation, where equation 10's two roots meet (``mu`` is
         zero) - a real condition, and one this seven-by-seven solve is not built
         for.
+
+        *altitude* is the height above :attr:`ground` the condition is solved
+        at, m, on the same terms :meth:`trim_hover` takes it.  The descent rate
+        itself is still an earth-fixed velocity - the trim is level-headed and
+        north - so this is the ground the state stands over, not a path along
+        it.
         """
         air_density = self.air_density if air_density is None else air_density
         if not self.windmill:
@@ -2091,7 +2273,7 @@ class Airframe:
         # Newton step is short in all seven.
         guess = [collective_in, 0.0, 0.0, 0.0, 0.0, 0.0,
                  TRIM_DESCENT_GUESS_MPS]
-        position = Vector3(0.0, 0.0, -altitude)
+        position = self.ground.above(Vector3(), altitude)
 
         def trial_state(values):
             """The state a guess describes: descending north at *airspeed*."""
@@ -2287,6 +2469,81 @@ def _self_test():
                - (1.0 - math.exp(-1.0 / UH1_GROUND_EFFECT_RANGE))) < 1e-12
     assert ground_effect_factor(2.0 * radius) < ground_effect_factor(4.0 * radius)
     assert ground_effect_factor(20.0 * radius) > 0.999
+
+    # The ground the factor is measured over: a flat patch with a level and a
+    # normal, whose height is exact where the model's old arithmetic was.  A
+    # horizontal plane at the origin is the -z the model used to read, and the
+    # hub's own height over it is what the cosines of the attitude used to say.
+    level_ground = GroundPlane()
+    assert level_ground.normal.as_tuple() == (0.0, 0.0, -1.0)
+    assert GroundPlane.level(200.0).point.as_tuple() == (0.0, 0.0, -200.0)
+    assert GroundPlane.level(-3.0).point.as_tuple() == (0.0, 0.0, 3.0)
+    for state in (FlightState(position=Vector3(0.0, 0.0, -200.0)),
+                  FlightState(position=Vector3(120.0, -80.0, -3.0)),
+                  FlightState(position=Vector3(1.0, 2.0, -1.5),
+                              attitude=Vector3(0.2, -0.35, 1.1)),
+                  FlightState(position=Vector3(-9.0, 4.0, -0.2),
+                              attitude=Vector3(-0.5, 0.75, -2.0))):
+        assert level_ground.height(state.position) == state.altitude
+        # The hub's height over the level plane and the property's own
+        # arithmetic group the same three numbers differently - the DCM's
+        # cos r cos t times the arm against the arm times cos r times cos t - so
+        # they agree to the last bit or one unit in the last place, and equation
+        # 10a's factor moves by 1e-16 either way.
+        assert abs(level_ground.height(state.hub_position) - state.rotor_height) \
+            <= 1e-12 * max(1.0, abs(state.rotor_height))
+        assert level_ground.above(state.position, 0.0) \
+            == Vector3(state.position.x, state.position.y, 0.0)
+    # A normal that is not a unit vector is normalised, and one that is zero is
+    # refused: there is no surface for it to be the normal of.
+    tilted = GroundPlane(Vector3(0.0, 0.0, -5.0), Vector3(0.0, 0.4, -1.0))
+    assert abs(tilted.normal.length() - 1.0) < 1e-15
+    try:
+        GroundPlane(Vector3(), Vector3())
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("a ground plane with no normal was accepted")
+
+    # A ramp rising 30 deg to the south, its surface through the origin: the
+    # normal leans north and up, and a height over it is measured *perpendicular
+    # to the ramp*, which is the whole point of the plane - a point 100 m up
+    # over the origin is 100 cos 30 = 86.6 m above the ramp's surface, not 100.
+    ramp = GroundPlane(Vector3(), Vector3(0.5, 0.0, -math.sqrt(3.0) / 2.0))
+    assert abs(ramp.normal.length() - 1.0) < 1e-15
+    assert abs(ramp.height(Vector3(0.0, 0.0, -100.0))
+               - 100.0 * math.cos(math.radians(30.0))) < 1e-9
+    # A point of the surface has no height at all, and the *same* 100 m above it
+    # held over a point 100 m up the slope instead is a different clearance.
+    on_the_slope = Vector3(-100.0 * math.sqrt(3.0) / 2.0, 0.0, -50.0)
+    assert abs(ramp.height(on_the_slope)) < 1e-12
+    assert ramp.height(on_the_slope + Vector3(0.0, 0.0, -100.0)) \
+        != ramp.height(Vector3(0.0, 0.0, -100.0))
+    # Up the normal from a point of the surface: 50 m over it, and the surface
+    # point that puts it there is the one it was measured from.
+    over = ramp.point + ramp.normal * 50.0
+    assert abs(ramp.height(over) - 50.0) < 1e-12
+    assert (ramp.surface_point(over) - ramp.point).length() < 1e-12
+    # Standing on it: level *on the slope*, so the aircraft's own down axis lies
+    # along the ramp's normal, to the last bit, at any heading - and a ramp
+    # leaning north is a nose *down* pitch of 30 deg, not a roll.
+    for yaw in (0.0, 0.7, -2.4):
+        lean = ramp.level_attitude(yaw)
+        assert lean.z == yaw
+        matrix = direction_cosine_matrix(lean.x, lean.y, lean.z)
+        for row in range(3):
+            assert abs(matrix[row][2]
+                       + ramp.normal.as_tuple()[row]) < 1e-15
+    assert abs(math.degrees(ramp.level_attitude().y) + 30.0) < 1e-9
+    assert ramp.level_attitude().x == 0.0
+    side_ramp = GroundPlane(normal=Vector3(0.0, 0.5, -math.sqrt(3.0) / 2.0))
+    assert abs(math.degrees(side_ramp.level_attitude().x) - 30.0) < 1e-9
+    assert side_ramp.level_attitude().y == 0.0
+    # Level ground leans nothing, and the two zeros come back positive so that
+    # nothing downstream has to think about the sign of zero.
+    assert level_ground.level_attitude(-1.0).as_tuple() == (0.0, 0.0, -1.0)
+    assert math.copysign(1.0, level_ground.level_attitude().x) == 1.0
+    assert math.copysign(1.0, level_ground.level_attitude().y) == 1.0
 
     # The stabilizer schedule, at its own points and held flat past the ends.
     for stick, expected in UH1_STABILIZER_SCHEDULE:

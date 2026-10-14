@@ -92,6 +92,21 @@ rest rather than jumping.  The friction, the levelling, the crash threshold and
 the skid line are this project's own, are named here, and all live in one
 function so that a real spring-damper skid model has one place to replace.
 
+**Which ground.**  There is no coordinate this module calls zero: the ground is
+:attr:`airframe.Airframe.ground`, one flat patch of it carried as a plane with a
+level and a normal (:class:`airframe.GroundPlane`), and every question here -
+how high the c.g. is, where the skids stand, what the floor levels to, what
+``Telemetry.alt_agl`` reads - is asked of that plane.  The default is level
+ground at the origin, where each of those answers is exactly the number this
+module used before the ground was a parameter, so nothing about the report's
+own flights has moved.  Lean the plane and the same code gives a slope: the
+cushion is measured perpendicular to it, an aircraft parked on it stands level
+*on it* rather than level with the world, and a landing is a descent towards the
+slope.  A caller that wants the ground to move - a deck, a ridge the aircraft is
+about to cross - replaces ``sim.airframe.ground`` between frames, which is the
+one thing a plane cannot do on its own and the seam a terrain of several patches
+would be built into.
+
 **The renderer's world.**  main.py's world is x east, y up, z south: the OpenGL
 camera's own frame, since a level camera there looks along -z with +y up and +x
 right.  A NED vector therefore arrives as ``(east, -down, -north)``, which
@@ -118,8 +133,9 @@ from aerodynamics import (GRAVITY, UH1_COLLECTIVE_TRAVEL_IN,
                           UH1_RPM, UH1_RPM_LOW, UH1_ROTOR_TIME_CONSTANT_SIM_S,
                           Vector3)
 from airframe import (FOOT, KNOT, POUND, Airframe, BodyForces, FlightState,
-                      UH1_HUB_HEIGHT, UH1_OMEGA, UH1_SIM_MASS, UH1_TEST_MASS,
-                      apply, direction_cosine_matrix, transpose)
+                      GroundPlane, UH1_HUB_HEIGHT, UH1_OMEGA, UH1_SIM_MASS,
+                      UH1_TEST_MASS, apply, direction_cosine_matrix,
+                      transpose)
 from engine import Engine, UH1_ENGINE_POWER_W
 from rotor_control import PilotControls
 
@@ -234,7 +250,10 @@ def airframe_preset(name="simulation", engine=None, **overrides):
     ``rotor_time_constant=UH1_ROTOR_TIME_CONSTANT_S`` for the 0.072 s the blade
     inertia gives instead.  Any other :class:`Airframe` keyword goes straight
     through, so ``airframe_preset("flight test", ground_effect=False)`` is the
-    flight test aircraft flying out of the cushion.
+    flight test aircraft flying out of the cushion, and
+    ``airframe_preset(ground=GroundPlane(Vector3(), Vector3(0.0, 0.5, -1.0)))``
+    is one whose ground leans to starboard - see :class:`airframe.GroundPlane`
+    and :attr:`Simulation.ground`.
 
     *engine* is the opt-in that changes the aircraft rather than the trim:
     ``None``, the default, is no engine at all, i.e. the report's fixed rotor
@@ -909,8 +928,11 @@ class Simulation:
     #: a state the model refuses to fly in mid-air are not the same event;
     #: :attr:`Telemetry.crash_message` is the text for whichever it was.
     crash_reason: Optional[str] = None
-    #: Where the skids are standing, the NED x and y the aircraft touched down
-    #: at, while it is on the ground; ``None`` in the air.  See :meth:`_ground`.
+    #: Where the skids are standing, the *point of the ground's surface* they
+    #: touched down on, while it is on the ground; ``None`` in the air.  See
+    #: :meth:`_ground`.  A point of the surface and not a pair of coordinates:
+    #: on a sloping ground the skid line the c.g. is held on depends on where
+    #: the surface is, and on level ground this is the same thing it always was.
     ground_position: Optional[Vector3] = None
     trim_controls: Optional[PilotControls] = None
     trim_state: Optional[FlightState] = None
@@ -928,6 +950,19 @@ class Simulation:
             self.trim(self.start_altitude)
         else:
             self.reset(state=self.airframe.state, controls=self.controls)
+
+    @property
+    def ground(self):
+        """The ground the aircraft is over: its airframe's own plane.
+
+        One flat patch with a level and a normal - see
+        :class:`airframe.GroundPlane` - and the one place this module asks the
+        question, so that replacing it between frames moves the floor, the skid
+        line, the rotor's cushion and ``Telemetry.alt_agl`` together rather
+        than four of them disagreeing.  Read-only: a run flying over another
+        ground says ``sim.airframe.ground = plane``.
+        """
+        return self.airframe.ground
 
     def trim(self, altitude=200.0, iterations=40):
         """Trim to a hover and start from it, remembering it as the reference.
@@ -972,15 +1007,18 @@ class Simulation:
         as where a bare :meth:`reset` puts it back, so a HUD has a trim light at
         60 kt as well as in a hover: ``sim.trim_level_flight(60 * KNOT)``.
 
-        *altitude* defaults to where the aircraft is - the last trim's altitude,
-        or ``start_altitude`` - and matters only inside the ground effect, since
-        the trim is solved out of the cushion from 200 m up.  A speed the model
+        *altitude* defaults to where the aircraft is - the last trim's height
+        over the ground, or ``start_altitude`` - and matters only inside the
+        ground effect, since the trim is solved out of the cushion from 200 m
+        up.  A height here is a height over :attr:`ground`, so a trim over a
+        slope is solved over the slope.  A speed the model
         cannot hold at all comes back with a residual around it rather than as an
         error, and :meth:`airframe.Airframe.equilibrium_residual` is what says
         how big.
         """
         if altitude is None:
-            altitude = (self.trim_state.altitude if self.trim_state is not None
+            altitude = (self.ground.height(self.trim_state.position)
+                        if self.trim_state is not None
                         else self.start_altitude)
         controls, state = self.airframe.trim_level_flight(
             airspeed, altitude=altitude, iterations=iterations,
@@ -1054,10 +1092,13 @@ class Simulation:
             elif altitude is not None:
                 height = altitude
             elif start is not None:
-                height = start.altitude
+                height = self.ground.height(start.position)
             else:
                 height = self.start_altitude
-            state = FlightState(position=Vector3(0.0, 0.0, -height),
+            # A height *over the ground*, not a NED coordinate: the aircraft is
+            # placed on the plane's own normal, so a run reset over a slope
+            # starts over the slope at the height it asked for.
+            state = FlightState(position=self.ground.above(Vector3(), height),
                                 velocity=velocity,
                                 attitude=Vector3(roll, pitch, heading),
                                 rates=Vector3())
@@ -1099,7 +1140,7 @@ class Simulation:
         self.crashed = False
         self.crash_reason = None
         self.ground_position = None
-        self.on_ground = (self.airframe.state.altitude
+        self.on_ground = (self.ground.height(self.airframe.state.position)
                           <= UH1_CG_HEIGHT_ON_GROUND + GROUND_CLEARANCE_M)
         return self
 
@@ -1217,7 +1258,8 @@ class Simulation:
         self.airframe.reset(self.airframe.state, self.controls)
         if self.trim_state is None:
             return None
-        speed, altitude = self.trim_state.speed, self.trim_state.altitude
+        speed = self.trim_state.speed
+        altitude = self.ground.height(self.trim_state.position)
         solving = None if self.airframe.shaft_driven else UH1_OMEGA
         if speed > 0.0:
             controls, state = self.airframe.trim_level_flight(
@@ -1300,7 +1342,9 @@ class Simulation:
         the clock above it.
         """
         before = self.airframe.state
-        descent = before.ground_velocity().z
+        # Down positive, along the ground's own normal, so that a descent rate
+        # at touchdown is measured towards the surface whatever its lean.
+        descent = -before.ground_velocity().dot(self.ground.normal)
         self.forces = self.airframe.step(dt, controls, wind=self.wind,
                                         throttle=self.pilot.throttle())
         self.steps += 1
@@ -1326,11 +1370,11 @@ class Simulation:
         A floor, not a skid model: the c.g. is held on the skid line, the descent
         is taken out of the velocity, ``GROUND_FRICTION_PER_S`` takes out the
         residual ground speed and yaw rate, and roll and pitch are levelled again
-        at ``GROUND_LEVELLING_PER_S`` - the heading stays free, so pedal still
-        pivots it on its skids.  A descent faster than ``UH1_HARD_LANDING_MPS``
-        at the moment of touchdown sets ``crashed`` with
-        :data:`CRASH_GROUND_CONTACT` for its reason, which only a
-        :meth:`reset` clears.
+        at ``GROUND_LEVELLING_PER_S`` onto whatever level means on this ground -
+        the heading stays free, so pedal still pivots it on its skids.  A descent
+        faster than ``UH1_HARD_LANDING_MPS`` at the moment of touchdown sets
+        ``crashed`` with :data:`CRASH_GROUND_CONTACT` for its reason, which only
+        a :meth:`reset` clears.
 
         The skids carry the aircraft's weight, which is the one piece of physics
         in here: while the rotor's lift is no more than the weight's component
@@ -1347,9 +1391,19 @@ class Simulation:
         in this module TM-73254 does not contain.  *touchdown* is the position the
         frame started at, so that the skids are pinned where the frame found the
         aircraft rather than where the frame's own integration took it.
+
+        Every height and every place here is the ground plane's own: 1.40 m of
+        skid line is 1.40 m up its normal, so an aircraft on a slope is placed
+        over the slope rather than over the world's zero, and "levelled" is
+        :meth:`airframe.GroundPlane.level_attitude`, which is the floor's own
+        level ground case written out to the last bit.  The skids are pinned by
+        the *point of the surface* they are standing on (:attr:`ground_position`),
+        which is what a sloping ground needs and what a level one reduces to.
         """
+        ground = self.ground
         state = self.airframe.state
-        if state.altitude > UH1_CG_HEIGHT_ON_GROUND + GROUND_CLEARANCE_M:
+        if ground.height(state.position) > (UH1_CG_HEIGHT_ON_GROUND
+                                            + GROUND_CLEARANCE_M):
             self.on_ground = False
             self.ground_position = None
             return
@@ -1360,31 +1414,36 @@ class Simulation:
             self.crash_reason = CRASH_GROUND_CONTACT
         self.on_ground = True
         if self.ground_position is None:
-            self.ground_position = Vector3(touchdown.x, touchdown.y)
+            self.ground_position = ground.surface_point(
+                Vector3(touchdown.x, touchdown.y, touchdown.z))
         matrix = direction_cosine_matrix(state.attitude.x, state.attitude.y,
                                          state.attitude.z)
         fade = math.exp(-max(float(dt), 0.0) * GROUND_FRICTION_PER_S)
         level = math.exp(-max(float(dt), 0.0) * GROUND_LEVELLING_PER_S)
         # The ground velocity the skids see: NED, down positive.
-        ground = apply(matrix, state.velocity)
+        velocity = apply(matrix, state.velocity)
         lift = 0.0 if self.forces is None else self.forces.lift
         weight = (self.airframe.mass * GRAVITY * math.cos(state.attitude.x)
                   * math.cos(state.attitude.y))
         if lift <= weight:
             # The skids hold it: no sliding is modelled, so it stays standing
             # where it touched down until the rotor lifts more than it weighs.
-            ground = Vector3()
-            position = self.ground_position
+            velocity = Vector3()
+            under = self.ground_position
         else:
             # Climbing out: the skids' friction takes the ground speed out, and
             # an upward velocity is left alone.
-            ground = Vector3(ground.x * fade, ground.y * fade,
-                             min(ground.z, 0.0))
-            position = Vector3(state.position.x, state.position.y)
+            velocity = Vector3(velocity.x * fade, velocity.y * fade,
+                               min(velocity.z, 0.0))
+            under = state.position
+        leaning = ground.level_attitude(state.attitude.z)
         self.airframe.state = FlightState(
-            position=Vector3(position.x, position.y, -UH1_CG_HEIGHT_ON_GROUND),
-            velocity=apply(transpose(matrix), ground),
-            attitude=Vector3(state.attitude.x * level, state.attitude.y * level,
+            position=ground.above(under, UH1_CG_HEIGHT_ON_GROUND),
+            velocity=apply(transpose(matrix), velocity),
+            attitude=Vector3(state.attitude.x * level
+                             + leaning.x * (1.0 - level),
+                             state.attitude.y * level
+                             + leaning.y * (1.0 - level),
                              state.attitude.z),
             rates=Vector3(0.0, 0.0, state.rates.z * fade))
 
@@ -1471,18 +1530,26 @@ class Simulation:
                 <= tolerance_deg)
 
     def telemetry(self):
-        """A :class:`Telemetry` for the state the last step left behind."""
+        """A :class:`Telemetry` for the state the last step left behind.
+
+        The two heights are the ground plane's: ``alt_agl`` is how far the c.g.
+        stands above the surface along its normal and ``height_rate`` the rate
+        that distance is changing at, so both are clearances over the ground
+        rather than coordinates of the world - which on level ground is the
+        altitude and the vertical speed they have always been, exactly.
+        """
         state = self.airframe.state
         forces = self.forces
         angles = self.airframe.command_angles(self.controls)
         ground = state.ground_velocity()
+        plane = self.ground
         attitude = state.attitude_deg
         rates = state.rates_deg
         rotor = forces.rotor
         return Telemetry(
             sim_time=self.sim_time,
-            alt_agl=state.altitude,
-            height_rate=0.0 - ground.z,
+            alt_agl=plane.height(state.position),
+            height_rate=0.0 + ground.dot(plane.normal),
             airspeed=state.speed,
             airspeed_kt=state.speed / KNOT,
             ground_speed=ground.length(),
@@ -2296,6 +2363,105 @@ def _self_test():
         touched = touched or soft.on_ground
         assert not soft.crashed
     assert touched
+
+    # Which ground: one plane, with a level and a normal, and every ground
+    # question this module asks is the plane's own.  A ramp rising 15 deg to the
+    # south is a normal leaning north and up; a run over it trims and starts 200
+    # m *over the ramp*, which is 200 m along that normal and not 200 m of NED
+    # down coordinate - so its position is off the origin by the ramp's lean.
+    lean = math.radians(15.0)
+    ramp_ground = GroundPlane(normal=Vector3(math.sin(lean), 0.0,
+                                             -math.cos(lean)))
+    assert abs(ramp_ground.normal.length() - 1.0) < 1e-15
+    assert Simulation().ground.normal.as_tuple() == (0.0, 0.0, -1.0)
+    ramp = Simulation(airframe=airframe_preset(ground=ramp_ground))
+    assert ramp.ground is ramp.airframe.ground
+    assert ramp.ground.normal == ramp_ground.normal
+    assert abs(ramp.telemetry().alt_agl - 200.0) < 1e-9
+    assert abs(ramp.airframe.state.position.x - 200.0 * math.sin(lean)) < 1e-9
+    assert abs(ramp.airframe.state.position.z + 200.0 * math.cos(lean)) < 1e-9
+    assert ramp.in_trim()
+    # It holds that hover over the ramp, as it holds one over level ground: the
+    # trim is out of the cushion either way, so the ground is only where the
+    # aircraft stands.
+    for _ in range(120):
+        ramp.step(SIM_TIME_STEP_S)
+    assert ramp.in_trim() and not ramp.crashed and not ramp.on_ground
+    assert abs(ramp.telemetry().alt_agl - 200.0) < 1.0
+
+    # Parked on it: the skids are on the ramp, the c.g. is the skid line up the
+    # ramp's normal, and the floor levels the aircraft to *the ramp's* level - a
+    # nose down attitude that is level on this slope and level to nothing on a
+    # flat one.  The heading is free as ever, so the tail rotor walks it round
+    # while the skids hold it; what is asserted is that the roll and pitch are
+    # the plane's own level *at whatever heading it has drifted to*.
+    ramp.on_the_pad()
+    assert ramp.on_ground and not ramp.crashed
+    assert abs(ramp.ground.height(ramp.airframe.state.position)
+               - UH1_CG_HEIGHT_ON_GROUND) < 1e-12
+    standing = ramp.airframe.state.position
+    for _ in range(240):
+        ramp.step(SIM_TIME_STEP_S)
+    assert ramp.on_ground and not ramp.crashed
+    assert (ramp.airframe.state.position - standing).length() < 1e-9
+    assert abs(ramp.ground.height(ramp.airframe.state.position)
+               - UH1_CG_HEIGHT_ON_GROUND) < 1e-9
+    standing_lean = ramp.ground.level_attitude(ramp.airframe.state.attitude.z)
+    assert abs(math.degrees(standing_lean.y)) > 10.0
+    # Within the fifth of a degree the levelling lags the attitude a frame of
+    # flight integrates in between the floor's own steps - the same lag the pad
+    # sits at on level ground, where it is 0.03 deg of roll.
+    assert abs(math.degrees(ramp.airframe.state.attitude.y
+                            - standing_lean.y)) < 0.2
+    assert abs(math.degrees(ramp.airframe.state.attitude.x
+                            - standing_lean.x)) < 0.2
+    assert ramp.telemetry().on_ground
+    # The cushion a parked aircraft sits in is the same on either ground, since
+    # the floor holds it the same height *over the surface*: the whole point of
+    # measuring Z perpendicular to the plane.  The telemetry's K_G is the one
+    # the last frame's *integration* was flown at - the state a fraction of a
+    # millimetre and a hundredth of a degree before the floor caught it - so the
+    # two are compared at the states the floor left, with the zero length step
+    # that asks for the forces of a state rather than of a frame.
+    level_pad = Simulation()
+    level_pad.on_the_pad()
+    for _ in range(240):
+        level_pad.step(SIM_TIME_STEP_S)
+    for settled in (ramp, level_pad):
+        assert settled.on_ground
+        settled.forces = settled.airframe.step(0.0, settled.controls)
+    assert abs(ramp.airframe.hub_height()
+               - level_pad.airframe.hub_height()) < 1e-6
+    assert abs(ramp.telemetry().ground_effect
+               - level_pad.telemetry().ground_effect) < 1e-7
+
+    # And the same NED position over each ground is a different clearance over
+    # the leaning one - nearer the ground, so more of the cushion - which is
+    # what the plane buys and what an altitude alone cannot say.
+    low = Vector3(0.0, 0.0, -20.0)
+    over_level = Simulation()
+    over_level.reset(state=FlightState(position=low))
+    over_ramp = Simulation(airframe=airframe_preset(ground=ramp_ground))
+    over_ramp.reset(state=FlightState(position=low))
+    assert over_level.airframe.state.position == low
+    assert over_ramp.airframe.state.position == low
+    assert abs(over_level.telemetry().alt_agl - 20.0) < 1e-9
+    assert abs(over_ramp.telemetry().alt_agl - 20.0 * math.cos(lean)) < 1e-9
+    assert (over_level.ground.height(low) - over_ramp.ground.height(low)) \
+        > 20.0 * (1.0 - math.cos(lean)) - 1e-9
+    assert over_ramp.telemetry().ground_effect \
+        < over_level.telemetry().ground_effect
+
+    # A ground a caller moves between frames, which is the seam a deck or a ridge
+    # would arrive through: the floor, the skid line and the telemetry all move
+    # with it, because they are all the same plane.  A ground 50 m higher is 50 m
+    # nearer the aircraft, exactly.
+    moving = Simulation()
+    height = moving.airframe.state.altitude
+    moving.airframe.ground = GroundPlane.level(50.0)
+    assert moving.ground.height(moving.airframe.state.position) == height - 50.0
+    assert moving.telemetry().alt_agl == height - 50.0
+    assert not moving.on_ground
 
     # A steady wind is plumbed through to the model, and a helicopter hovering in
     # it drifts downwind.

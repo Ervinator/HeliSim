@@ -24,6 +24,27 @@ wiring that flying cannot test.
     the shape of those charts - a density scaling and a 50 psi full scale - and
     the rest of the level is digitising it.
 
+* **The ground is a plane, and the next level is a terrain.**  Everything that
+  touches the ground - equation 10a's cushion, the floor's skid line, the point
+  the skids are pinned by, the levelling, `Telemetry.alt_agl` - is measured
+  against one `airframe.GroundPlane`: a level and a normal, which a run may
+  replace between frames.  What that is not is a *landscape*: a ridge, a valley,
+  a step, a deck that pitches, or any surface whose level varies under the
+  aircraft is several planes and the seam between them, and the work left is to
+  choose where that seam lives - a terrain object that answers `height` and
+  `above` per frame by this same interface, with `GroundPlane` the single flat
+  patch it is built out of, or a plane-per-frame the way a deck would be.  Two
+  other things belong with it:
+
+  * *the renderer is still flat.*  `main.py`'s implicit grass plane and its grid
+    are horizontal at y = 0 and its scenery's hills are drawn, not flown, so a
+    leaning or a moving ground is the physics' own until a terrain is drawn and
+    the camera, the shadow and the grid read it;
+  * *the air over a terrain is a wind field.*  `aerodynamics.py` has the hook
+    (`airflow`, a callable of position) and `simulation.Simulation.wind` is one
+    steady vector, so the upwash off a ridge and the sink over a valley are the
+    same level's work as the ridge.
+
 ## Known limitations, from the modules themselves
 
 These are choices, not oversights: each is stated where it lives.
@@ -53,6 +74,15 @@ These are choices, not oversights: each is stated where it lives.
 * **The ground is a floor, not a contact model.**  `simulation.py` holds the
   c.g. on the skid line, takes the descent out of the velocity, and levels roll
   and pitch; the skids do not flex, slide or spring.
+* **The ground is one flat plane, not a terrain.**  `airframe.GroundPlane` has a
+  level and a normal and no shape, and it is what equation 10a's Z, the floor's
+  skid line, the levelling and `Telemetry.alt_agl` are all measured against.  A
+  level or a leaning ground, a ramp, a deck and a plane that moves under a
+  hovering aircraft are all in it; a ridge, a valley, a step or any surface whose
+  level varies under the aircraft is not - that is a terrain of several patches,
+  and `Next` records where the seam for one belongs.  `main.py`'s world is still
+  a horizontal plane at y = 0, so a leaning ground is the model's until a terrain
+  is drawn.
 * **The controls have no feel.**  `PilotInput` is rates rather than forces: full
   travels per second, so a cyclic crosses its stops in 0.6 s and the heavy
   collective takes 1.8 s over its 11 in of travel, and every axis ratchets.
@@ -77,6 +107,54 @@ These are choices, not oversights: each is stated where it lives.
   how long the window took to see the key.
 
 ## Done
+
+* 2026-10-14 - **the ground is a plane: a level and a normal, with equation 10a
+  measured over it.**  Ground effect has been in the model from the start - the
+  report's equation 10a, `K_G = 1 - exp(-(Z/D)/G1)` - but Z was the hub's height
+  above a horizontal plain at the NED origin, and the ground was a *coordinate*
+  rather than a thing: `simulation.py`'s floor placed the c.g. at
+  `z = -UH1_CG_HEIGHT_ON_GROUND`, levelled roll and pitch to the world's own
+  zero, and measured a hard arrival down the world's own down.  Nothing in the
+  report says a surface has to be flat-footed - the cushion and the skids both
+  want the distance to whatever the aircraft is standing over - so the ground is
+  now `airframe.GroundPlane`: one flat patch of it, a point and a unit normal,
+  with the four questions a caller asks it (`height`, `surface_point`, `above`
+  and `level_attitude`) and the `level` shortcut for the horizontal case.  A
+  normal that is not a unit vector is normalised rather than refused and a zero
+  one is refused, since it describes no surface at all.
+
+  `Airframe.ground` is a field, so a run replaces it between frames;
+  `Airframe.hub_height` is equation 10a's Z - the hub's perpendicular distance
+  from that plane, the hub and not the c.g., which is why
+  `FlightState.hub_position` now exists beside the flat-ground `rotor_height` the
+  self test still pins it to - and all three trims place the aircraft they solve
+  over `ground.above(Vector3(), altitude)`, so a trim over a ramp is solved over
+  the ramp.  In `simulation.py` the same plane answers everything:
+  `Simulation.ground`, the floor's skid line (`above(..., UH1_CG_HEIGHT_ON_GROUND)`),
+  the point of the surface the skids are pinned by, the descent rate a hard
+  arrival is measured at (along the normal, not down the world), the attitude the
+  levelling goes to (`level_attitude`, which lays the aircraft's own down axis
+  along the normal, so a parked aircraft on a slope is level *on the slope*), and
+  `Telemetry.alt_agl` with `Telemetry.height_rate`.
+
+  The default is the horizontal plain at the origin and every number that was
+  there before is exactly where it was: `height` is `-position.z` to the last bit
+  for such a plane, the floor's `above()` is `-UH1_CG_HEIGHT_ON_GROUND` exactly,
+  `level_attitude` hands back positive zeros rather than whatever signs `atan2`
+  would, and `FlightState.rotor_height` stays the flat case it always was.
+  Verified: `regression_tm73254.py` byte-identical to the previous commit's own
+  output and `simulation.py`'s demo likewise (103 lines), by running both trees'
+  copies and diffing; `_rt_check.py`'s three scripted missions passing with its
+  own transcript byte-identical; `aerodynamics.py`, `rotor_control.py`,
+  `engine.py`, `airframe.py`, `controls.py` and `scenery.py` all printing
+  `self test passed`; and `main.py --check`.  New in the two self tests: the
+  plane's geometry, normalisation and refusals; a ramp's perpendicular heights
+  against `cos 30` and `level_attitude` against the direction cosine matrix's own
+  third column, at three headings; a parked aircraft levelling to a 15 deg slope
+  at whatever heading the skids let the tail rotor drift it to; the cushion a
+  parked aircraft sits in equal on level and leaning ground to 1e-7, because the
+  floor holds it the same height over the surface; and the same NED position a
+  smaller clearance over a leaning ground than over a level one.
 
 * 2026-10-13 - **the autorotation trim, on the descent rate as the unknown, and
   the windmill root it needs.**  `trim_autorotation` is the third of the trim
