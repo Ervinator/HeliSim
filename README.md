@@ -18,19 +18,19 @@ Layered, each one importing only what sits below it:
 | `aerodynamics.py` | 1617 | quasi-steady blade element theory for one rotor: section data, flapping, hover and forward flight loads |
 | `rotor_control.py` | 1280 | the control path: inches of stick travel to swashplate angles, the mixing law and its rigging, the control lags |
 | `engine.py` | 805 | the T53-L-13 on the other end of the shaft: the twist grip, the N2 governor and its droop band, the torque available and what EMER and bleed air cost, and the gas producer's lag |
-| `airframe.py` | 3547 | TM-73254's force and moment model - main rotor, tail rotor, fuselage, fin, stabilizer - and the six degree of freedom equations of motion, with the rotor's own speed as a state when an engine is aboard, and the ground under it as one flat plane with a level and a normal |
-| `simulation.py` | 2787 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the trims, and what a renderer or a HUD asks for |
+| `airframe.py` | 3633 | TM-73254's force and moment model - main rotor, tail rotor, fuselage, fin, stabilizer - and the six degree of freedom equations of motion, with the rotor's own speed as a state when an engine is aboard, the second root of equation 10 read off a shaft with nothing driving it, and the ground under it as one flat plane with a level and a normal |
+| `simulation.py` | 2931 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the three trims, and what a renderer or a HUD asks for |
 | `regression_tm73254.py` | 661 | the report's figures 2 to 9 reflown: eight step inputs from 60 kt and from the hover, laid next to its published responses |
 | `scenery.py` | 603 | the XML scenery format and its loader - no pygame, no OpenGL, and the one module whose test needs no window and no physics |
-| `controls.py` | 1088 | the device map: which physical control flies which - keyboard or joystick, per control, with deadzone, invert and calibration - read from the XML of `default_controls.xml`, and likewise stdlib only |
-| `main.py` | 3770 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, the aircraft of `simulation.py` flown from its device map - keyboard, joystick or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it |
+| `controls.py` | 1105 | the device map: which physical control flies which - keyboard or joystick, per control, with deadzone, invert and calibration - read from the XML of `default_controls.xml`, and likewise stdlib only |
+| `main.py` | 4125 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, the aircraft of `simulation.py` flown from its device map - keyboard, joystick or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it, with one `--engine` switch that fits the T53 before the first frame and one line for the grip of a run that has none |
 
 Only `main.py` imports anything outside the standard library.
 
 ## Running
 
     pip install -r requirements.txt
-    python main.py [scenery.xml] [--log FILE | --no-log]
+    python main.py [scenery.xml] [--engine] [--log FILE | --no-log]
                    [--controls FILE | --no-controls]
     python main.py --check          # the wiring, headless, no window
 
@@ -41,18 +41,23 @@ are implicit and are deliberately not part of the description.
 
 The aircraft is `simulation.py`'s own: the report's 6158 lb instrumented UH-1H,
 which starts parked on the pad with the collective lever three quarters of the
-way up its travel, and the keys fly it:
+way up its travel, and the keys fly it.  The one thing about that aircraft a run
+may decide before it starts is its engine, and `--engine` is how it says so: the
+T53 is fitted before the first frame, so the grip has a governor behind it from
+the beginning rather than from the `F` that would fit it live.  Flying without
+one is what a run that says nothing gets, and it is what the report's own figures
+were computed with.
 
 | key | what it does |
 | --- | --- |
 | `W` / `S` | collective up / down |
-| `Q` / `E` | twist grip rolled off / open, the fifth control |
+| `Q` / `E` | twist grip rolled off / open, the fifth control, which says so the first time it moves on an aircraft with no engine behind it |
 | `Up` / `Down` | cyclic forward (nose down) / aft (nose up) |
 | `Left` / `Right` | cyclic left / right |
 | `A` / `D` | pedals: nose left / right, the anti torque control |
 | `R` | reset: back to the state and the stick positions the run began in |
 | `P` | park: skids on the pad, the collective lever at 75 % |
-| `F` | fit the engine this run did not begin with - or take it off again |
+| `F` | fit the engine this run did not begin with - or take it off again (`--engine` fits it at startup) |
 | `G` | the GOV AUTO/EMER switch, which needs an engine to govern |
 | `X` | an engine failure, and `X` again to clear it |
 | `C` | camera: behind the aircraft, or fixed on the pad |
@@ -69,7 +74,23 @@ TM 55-1520-210-10 (9-3), and `X` is the fuel going away - the wind down through
 the engine's own lag, which a hovering UH-1 has a couple of seconds of.  The
 caption gains the engine's own panel (rotor speed, N2, the torque gauge and the
 switch) the moment there is one to read, and gives it up again when `F` takes it
-off: the two aircraft are told apart by the gauges and by nothing else.
+off: the two aircraft are told apart by the gauges and by nothing else.  `F` is
+the whole of getting one live mid flight, and `--engine` on the command line fits
+it before the first frame instead - for a run that means to fly the grip from the
+start rather than from the tenth frame.
+
+The failure is not the end of a flight, either.  A rotor whose shaft has nothing
+driving it is offered the second root of the report's equation 10 - the windmill
+brake state, air up through the disc - so it draws its torque from the air rather
+than from the engine, and what the flight manual does about that is a descent of
+its own: `simulation.Simulation.trim_autorotation`, the third of the frame loop's
+trims, which solves the entry at 60 kt - collective 6.26 in, 9.1 m/s down,
+1792 fpm, against the 1800 to 2000 a UH-1H holds there - and leaves the run flying
+it with the rotor at 100 per cent.  `X` is what opens the door; the trim is what
+a script asks for, so a run that fails its engine by hand is on its own between
+the failure and the entry, and the model has no blade stall to be forgiving about
+it: a *vertical* descent with the collective still up is where equation 10's two
+roots meet, and that frame is one the loop refuses outright.
 
 Every one of those axes is a ratchet: a key slews its control while the key is
 held and a released key moves nothing at all, so every control stays where the
@@ -110,10 +131,19 @@ descriptions it refuses and its own self test.
 
 The throttle is mapped like the rest and is the one control that is not a stick:
 it is a twist grip, read as `simulation.PilotInput.throttle()` rather than as one
-of the four axes, and it goes to the engine's governor (`engine.py`). On the
-aircraft main.py flies it is carried and shown beside the telemetry and does
-nothing else, because that aircraft has no engine in the model - the report's
-fixed rotor; `airframe_preset(engine=True)` is where a throttle moves needles.
+of the four axes, and it goes to the engine's governor (`engine.py`).  The map
+this project ships has it on the keyboard's own `Q` and `E` - the pair
+`main.py`'s ten keys have always rolled it with - so the grip the window reads,
+and the pie that shows it on the collective's panel, follows those two keys; a
+joystick or a home made collective takes the pair over by naming `throttle` on
+its own device, the same one-control-at-a-time way as the four axes.  On the
+aircraft main.py flies it is carried and shown and does nothing else, because
+that aircraft has no engine in the model - the report's fixed rotor - so the first
+`Q` or `E` of a run prints one line saying so, and naming both cures: `F`, and
+`--engine`, which fits the T53 before the first frame.  It is said once and not
+once a frame, a grip no hand has touched is not told about at all, and the
+aircraft with a governor behind the grip is never told about it -
+`airframe_preset(engine=True)` is where a throttle moves needles.
 
 
 `R` is where the *run* began, not where the trim says the aircraft belongs: this
@@ -274,7 +304,9 @@ camera triples, the sixteen floats the renderer is handed, the rotor azimuths,
 the world's own scale, the arithmetic of the control position panel - the
 pedal lines, the cyclic disc, the collective lever and the attitude indicator's
 own ball, its horizon's chord and the ladder above and below it, the one pixel its
-lines are drawn at and the five colours of its dial - and the key log: the
+lines are drawn at and the five colours of its dial - the fourth value of the
+command line, the one line a grip with no engine behind it owes and the three
+cases that owe nothing - and the key log: the
 command line that names it, the names it gives a key and a hand, the columns of a
 line, the two clocks on it to a millisecond and the rate the flight is sampled
 at.  None of it needs an OpenGL context.

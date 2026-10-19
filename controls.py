@@ -3,10 +3,10 @@
 Design
 ------
 The sim reads four axes - the collective, the longitudinal and lateral cyclic
-and the pedals - and a fifth control a real UH-1 has but this model does not yet
-fly, the throttle.  *This* module does not read them: it says **where each one
-comes from**, on a device by device and control by control basis, so that a run
-can be flown from a keyboard, from a joystick, or from a partly built set of
+and the pedals - and a fifth control that is not one of them, the throttle twist
+grip on the collective.  *This* module does not read them: it says **where each
+one comes from**, on a device by device and control by control basis, so that a
+run can be flown from a keyboard, from a joystick, or from a partly built set of
 hardware with some controls on each.  The switching is per control, which is the
 point: a panel that arrives one axis at a time is one line at a time here.
 
@@ -39,16 +39,17 @@ Two kinds of source, because there are two kinds of device:
 
 The five control names are :data:`CONTROL_NAMES`: ``cyclic-long`` (cyclic up and
 down), ``cyclic-lat`` (cyclic left and right), ``pedals`` (the anti torque
-pedals), ``collective`` and ``throttle``.  The first four drive
-:class:`simulation.PilotInput`'s four *stick* axes - the mapping from a control
-name to that keyword is :data:`AXIS_FOR_CONTROL` - and ``throttle`` is the twist
-grip, which is the one control that is not a stick: it is read as
-:meth:`simulation.PilotInput.throttle` and goes to the engine's governor (see
-:mod:`engine`), so it is carried and logged separately by whoever flies the
-frame.  The map this module ships is the keyboard's, so main.py's own aircraft -
-the report's fixed rotor, with no engine in it - carries the position and shows
-it and does nothing else with it; an aircraft with ``engine=True`` is where it
-moves the needles.  A control a file does not name keeps
+pedals), ``collective`` and ``throttle``.  Each of the five drives its own
+keyword on :class:`simulation.PilotInput`, and the mapping from a control name to
+that keyword is :data:`AXIS_FOR_CONTROL`: the four *stick* axes a device is read
+through, and ``throttle``, which is the twist grip - the one control that is not
+a stick, read as :meth:`simulation.PilotInput.throttle` and handed to the
+engine's governor (see :mod:`engine`).  It rides in the same two shapes as
+everything else, so a caller need not remember that it is different: a ratcheted
+one - the keyboard's own keys - is a command for
+:meth:`simulation.PilotInput.step`, and an absolute one, on a lever or a grip a
+device can report the position of, is a position for
+:meth:`simulation.PilotInput.set_axes`.  A control a file does not name keeps
 :func:`default_control`'s own keyboard mapping, so a file may override one
 control and leave the rest alone.
 
@@ -98,15 +99,19 @@ CONTROL_NAMES = (CYCLIC_LONG, CYCLIC_LAT, PEDALS, COLLECTIVE, THROTTLE)
 BIPOLAR = (CYCLIC_LONG, CYCLIC_LAT, PEDALS)
 UNIPOLAR = (COLLECTIVE, THROTTLE)
 
-#: The :class:`simulation.PilotInput` *stick* keyword each control drives.
-#: ``throttle`` is deliberately absent: it is a twist grip and not a stick, so
-#: it has no place in :meth:`simulation.PilotInput.axes` and is read on its own
-#: by :meth:`simulation.PilotInput.throttle` (module docstring).
+#: The :class:`simulation.PilotInput` keyword each control drives.  The first
+#: four are the *stick* axes, which is what :meth:`simulation.PilotInput.axes`
+#: and :meth:`~simulation.PilotInput.set_axes` call them; ``throttle`` is the
+#: fifth, the twist grip, which both of those calls take as their own
+#: ``throttle`` keyword - kept out of :meth:`~simulation.PilotInput.axes`' four
+#: because a grip is not a stick position, and read on its own by
+#: :meth:`simulation.PilotInput.throttle` (module docstring).
 AXIS_FOR_CONTROL = {
     CYCLIC_LONG: "long_stick",
     CYCLIC_LAT: "lat_stick",
     PEDALS: "pedal",
     COLLECTIVE: "collective",
+    THROTTLE: "throttle",
 }
 
 KEYBOARD = "keyboard"
@@ -596,8 +601,8 @@ class ControlMap:
 
         A control the file does not name is not an error and not a gap: it is
         the project's own keyboard mapping for that control, so a map is always
-        complete.  ``None`` means neither - the throttle, before the model flies
-        it (module docstring).
+        complete.  ``None`` means neither - a control this project has no pair of
+        keys for at all (:func:`default_control`).
         """
         if name in self.controls:
             return self.controls[name]
@@ -746,13 +751,15 @@ def _indent(element, level=0, width="    "):
 #: The pair of keys each control is flown from unless a file says otherwise,
 #: written as ``(increase, decrease)`` and named the way pygame names the
 #: physical key positions - so a keyboard whose layout moves the letters does
-#: not move the controls.  The throttle is absent: the model does not fly one
-#: yet, and inventing keys for it would name a control that does nothing.
+#: not move the controls.  The twist grip's pair is the E and Q beside the W and
+#: S the collective is on, rolled open and rolled off, which is the pair the
+#: sandbox's own ten keys have always read it with.
 DEFAULT_KEYS = {
     COLLECTIVE: ("w", "s"),
     CYCLIC_LONG: ("up", "down"),
     CYCLIC_LAT: ("right", "left"),
     PEDALS: ("d", "a"),
+    THROTTLE: ("e", "q"),
 }
 
 
@@ -762,9 +769,10 @@ def default_control(name):
     This is what a file that does not mention a control leaves in its place, and
     it is the mapping ``main.py`` read before there was a file at all: W and S
     for the collective, the up and down arrows for the longitudinal cyclic, left
-    and right for the lateral one, and A and D for the pedals.  The throttle has
-    no default because the model has no throttle, so ``None`` says that rather
-    than inventing a pair of keys that fly nothing.
+    and right for the lateral one, A and D for the pedals, and E and Q for the
+    twist grip.  Every control of :data:`CONTROL_NAMES` has one, so ``None`` is
+    for a name that is not a control of this module's at all rather than for one
+    that is left out.
     """
     if name not in DEFAULT_KEYS:
         return None
@@ -774,11 +782,11 @@ def default_control(name):
 
 
 def default_control_map():
-    """The project's own map: the four controls of the keyboard, and nothing else.
+    """The project's own map: the five controls of the keyboard, and nothing else.
 
     What ``main.py`` flies with when it is told to read no file - the same four
-    axes, the same eight keys and the same sense the sandbox has always had.  The
-    throttle is not in it, because no key flies one.
+    axes, the same twist grip beside them and the same sense the sandbox has
+    always had.
     """
     control_map = ControlMap()
     for name in CONTROL_NAMES:
@@ -913,11 +921,20 @@ def _self_test():
     # which is the whole of what this feature must not change.
     control_map = default_control_map()
     assert control_map.mapped_names() == [CYCLIC_LONG, CYCLIC_LAT, PEDALS,
-                                          COLLECTIVE]
-    assert control_map.key_names() == ["a", "d", "down", "left", "right", "s",
-                                       "up", "w"]
-    assert control_map.control(THROTTLE) is None
-    assert default_control(THROTTLE) is None
+                                          COLLECTIVE, THROTTLE]
+    assert control_map.key_names() == ["a", "d", "down", "e", "left", "q",
+                                       "right", "s", "up", "w"]
+    # The twist grip is the fifth, and it is the same pair of keys the sandbox's
+    # own ten have always read: a run that reads the shipped file and a run that
+    # reads none at all fly the grip identically.
+    assert control_map.control(THROTTLE).increase == "e"
+    assert control_map.control(THROTTLE).decrease == "q"
+    assert not control_map.control(THROTTLE).bipolar
+    # Every control has a keyword, since AXIS_FOR_CONTROL is what a frame loop
+    # reads a control's name through: a sixth control added without one would
+    # otherwise be read as nothing at all for the whole run.
+    assert set(AXIS_FOR_CONTROL) == set(CONTROL_NAMES)
+    assert default_control("flaps") is None
     assert control_map.control(PEDALS).bipolar
     assert not control_map.control(COLLECTIVE).bipolar
     assert control_map.control(COLLECTIVE).increase == "w"
@@ -957,7 +974,7 @@ def _self_test():
     assert partial.control(CYCLIC_LAT).axis == 0
     assert partial.control(CYCLIC_LAT).deadzone == 0.05
     assert partial.control(CYCLIC_LONG).increase == "up"        # the fallback
-    assert partial.key_names() == ["a", "d", "down", "s", "up", "w"]
+    assert partial.key_names() == ["a", "d", "down", "e", "q", "s", "up", "w"]
 
     # A joystick axis as the aircraft's own axis.  A bipolar control reads -1 to
     # +1, is clipped to its stops, loses its deadzone about the centre and turns
@@ -1048,9 +1065,9 @@ def _demo():
     print(control_map.describe())
     print()
     print("  the keys it reads: %s" % (", ".join(control_map.key_names()),))
-    print("  the throttle: %s"
-          % ("mapped" if control_map.control(THROTTLE)
-             else "not mapped - the model flies no throttle yet",))
+    print("  the twist grip: rolled by %s and %s, on the keyboard"
+          % (control_map.control(THROTTLE).increase,
+             control_map.control(THROTTLE).decrease))
     print()
     print("written out again:")
     for line in control_map.to_xml_bytes().decode("utf-8").splitlines():

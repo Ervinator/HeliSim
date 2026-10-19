@@ -15,14 +15,29 @@ wiring that flying cannot test.
 
   * *main.py's own aircraft.*  It flies the report's fixed rotor, as it should -
     every figure in TM-73254 was computed with that - and what is left there is
-    around the engine: the device map names no throttle yet (see the note in
-    `default_controls.xml`), so a joystick or a home made collective cannot fly
-    the grip as the keyboard's Q and E now do, and the caption shows the engine's
-    panel but not the engine's own torque against the transmission limit;
+    around the engine: the caption shows the engine's panel but not the engine's
+    own torque against the transmission limit.  (The device map named no throttle
+    until 2026-10-16, so a mapped joystick or a home made collective could not
+    roll the grip the keyboard could; it names the keyboard's own `Q` and `E`
+    now, and one naming `throttle` on a device takes that pair over - see
+    `Done`.)
   * *the torque available chart.*  Figure 7.1-2 is the real answer to "how much
     torque is there at this altitude and temperature"; what `engine.py` ships is
     the shape of those charts - a density scaling and a 50 psi full scale - and
     the rest of the level is digitising it.
+
+* **An autorotation is a flight now; what is left of it is the *entry*.**  A
+  shaft with nothing driving it offers the rotor equation 10's second root -
+  see the `windmill` note under `Not in the model` - and
+  `Simulation.trim_autorotation` solves the manual's own 60 kt entry and leaves
+  a run flying it, rotor at 100 per cent.  What no key does yet is *put* an
+  aircraft on that condition, so a pilot who fails the engine with `X` and then
+  lowers the collective is on his own between the failure and the entry, which
+  is where the branch is at its least forgiving: a vertical descent with the
+  collective up is the frame the loop refuses outright, and only a script can
+  ask for the trimmed descent instead.  A key that asks for it the way `R` asks
+  for the run's own start is the obvious next thing.  The other half of the
+  level is the one below: nothing in the model holds a rotor *near* the trim.
 
 * **The ground is a plane, and the next level is a terrain.**  Everything that
   touches the ground - equation 10a's cushion, the floor's skid line, the point
@@ -58,19 +73,27 @@ These are choices, not oversights: each is stated where it lives.
   aircraft of TM-73254 have no engine, because every figure in the report was
   computed with the rotor speed held at 100 per cent and the regression against
   those figures has to reproduce them to the last bit.  `controls.py` maps a
-  `throttle` and `main.py` carries and shows its position; neither of those
-  aircraft reads it.  `Next` records what is left around the engine.
-* **The windmill root is opt-in, and it is unstable away from the trim.**
-  `Airframe.windmill` is off by default and the report's own aircraft never sees
-  the second root of equation 10, which is what keeps every figure in TM-73254
-  where it was.  An airframe that turns it on - `Airframe(windmill=True)` - is
-  one `trim_autorotation` can be asked of, and the steady autorotation it finds
-  is a real one: flown from it, the aircraft holds the condition.  What is *not*
-  in the model is anything that holds a rotor *near* that condition: there is no
-  blade stall and no flap limit, so a rotor taken well off the trim finds the
-  root doing more than the trim asked of it and overspeeds without bound.  That
-  is why the flag is per-airframe and off by default, and why `trim_autorotation`
-  raises rather than guessing when it is asked of an aircraft without it.
+  `throttle`, and `main.py` reads it, carries it and shows it - as the pie on the
+  collective's panel and beside the telemetry - but neither of those two aircraft
+  has an engine for the grip to be the hand on - which a run no longer has to
+  guess at: a grip moved with nothing behind it prints one line saying so and
+  naming both cures, `F` and `--engine`, and `--engine` on the command line fits
+  the T53 before the first frame instead of at the tenth (see `Done`).  `Next`
+  records what is left around the engine.
+* **The windmill root is read off the shaft, and it is unstable away from the
+  trim.**  An engine failure is what offers the rotor the second root of
+  equation 10: `Airframe.windmill` answers "has this shaft nothing driving it?"
+  - a governor that has failed, a grip rolled right off, or a fixed
+  `engine_torque` of zero - so there is no switch to throw, and the report's own
+  aircraft, with no shaft at all, still never sees the root and every figure in
+  TM-73254 stays where it was.  What that root makes possible is a *trimmed*
+  autorotation - `trim_autorotation`, and `Simulation.trim_autorotation` around
+  it - and what is *not* in the model is anything that holds a rotor *near* that
+  condition: there is no blade stall and no flap limit, so a rotor taken well off
+  the trim finds the root doing more than the trim asked of it and overspeeds
+  without bound.  A *vertical* descent with the collective up is the worst of
+  them - equation 10's two roots meet at zero airspeed - which is the frame
+  `simulation.py` refuses as out of its envelope rather than passing on.
 * **The ground is a floor, not a contact model.**  `simulation.py` holds the
   c.g. on the skid line, takes the descent out of the velocity, and levels roll
   and pitch; the skids do not flex, slide or spring.
@@ -107,6 +130,135 @@ These are choices, not oversights: each is stated where it lives.
   how long the window took to see the key.
 
 ## Done
+
+* 2026-10-16 - **a run says why the grip flies nothing: `--engine`, and one line
+  the first time `Q` or `E` is touched.**  The report was "set the throttle to
+  minimum and the helicopter still goes into the air", and the answer is that on
+  the aircraft a run begins on there is nothing for the grip to be a minimum *of*:
+  the report's own 6158 lb aircraft carries no engine in the model, so its rotor
+  is held at 100 per cent and `Q` rolls a lever with nothing on the other end of
+  it.  Nothing was wrong with the grip - `attic/_idle_grip.py` flies both
+  aircraft with the same stick and prints them side by side, +36.96 m either way
+  with no engine and +1.07 m against +36.49 m with the T53 fitted - but a run
+  gave no sign of it, so the most obviously broken looking control in the sandbox
+  was the one that was not broken at all.
+
+  * *`--engine` fits the T53 before the first frame.*  `command_line` takes the
+    switch, strips every one of it, and answers a fourth value -
+    `(scenery, log_path, controls_path, engine)` - and `main()` re-fits after
+    `on_the_pad()` and before the window, so a run that means to fly the grip
+    from the start says so once instead of pressing `F` on its tenth frame.
+    There is no `--no-engine`: engine-off is what a run that says nothing gets,
+    so the switch has one side and the default is the report's own aircraft,
+    untouched;
+  * *and a grip moved with no engine says so, once.*  `grip_notice(sim, was,
+    now)` answers the line - None unless the grip moved and no engine is fitted
+    to read it - and the frame loop reads `sim.throttle()` before the frame's own
+    input and again after it, prints the first line it is given and never asks
+    again.  One line and not one a frame, however long a key is held, and the line
+    names both cures: `F`, and `--engine`.  It says nothing at all for a grip no
+    hand touched, and nothing on the aircraft with a governor behind the grip, so
+    the fitted engine - by `F` or by `--engine` - is never warned about.
+
+  The keys line the window prints before it opens names all five controls now
+  (`Q`/`E` grip, `F` engine, `G` governor, `X` failure, beside the four axes).
+  Verified: `main.py --check` passing, with the new assertions written in the same
+  style - the four values `command_line` answers and the switch itself, including
+  that saying `--engine` twice leaves no flag behind to be mistaken for a scenery
+  path, and `grip_notice`'s own three readings (a grip that did not move, a
+  movement with no engine, and the same movement with the T53 fitted, which owes
+  nothing); `attic/_qe_wire.py` - scratch, not part of the project - flying the
+  loop's own reading across frames: silent with the hands off, one line when `Q`
+  is held for a second and still that same one line after four seconds more at
+  the stop, and none at all for a run that began with `--engine`.
+
+* 2026-10-16 - **the twist grip is a mapped control, and the panel shows it: Q
+  and E roll the grip the window is flying.**  Two things were wrong with the
+  fifth control and each hid the other:
+
+  * *the map did not name it.*  `default_controls.xml` named the four axes and
+    left the throttle out - its note said as much, and which name to use when a
+    device arrived - so `controls.default_control_map()` had no throttle in it,
+    `AXIS_FOR_CONTROL` had no keyword for the name, and `Devices.read` dropped
+    the control on the floor: a `Q` or an `E` held in the window reached
+    `pilot_keys`, which nothing in the frame loop calls.  The map is the
+    keyboard's five controls now (`DEFAULT_KEYS`, `("e", "q")` for the grip), the
+    keyword is `throttle` - which `PilotInput.step` and `set_axes` both take as
+    their own argument - and `read` answers `(absolute, ratchet)`, the two shapes
+    `PilotInput` already took, with the grip in whichever of them its device
+    makes it: ratcheted, on the keyboard, and absolute on a lever a device
+    reports the position of.  The frame loop needed no case for the one control
+    that is not a stick, and the third value the throttle used to be carried out
+    in - for nothing, since `fly_frame_axes` never wrote it - is gone;
+  * *the panel had nothing to show it with.*  The collective's panel carries a
+    205 deg pie now: a hundred degrees of yellow below its own horizon and a
+    hundred and five of green above it, split at that horizon, with a red hand on
+    the grip's own angle whose tail runs through the middle and out of the far
+    side.  It is drawn from `sim.throttle()` beside the lever's own field, so the
+    one control the aircraft cannot show is on the panel a pilot would look at.
+
+  The grip begins where it has always begun, full open, so `E` on a fresh run
+  moves nothing - it is already on its open stop - and `Q` is the key that shows
+  the pie working.
+  Verified: `main.py --check` passing, with the shipped map and `pilot_keys` read
+  as one another key by key for all ten and by flight - two aircraft flown
+  through `fly_frame` and through `fly_frame_axes` with `W` and `Q` held hold the
+  same grip at the end of them, 0.5 of its travel after two seconds of a key -
+  and with the grip arriving as a *position* from a stand-in lever that reports
+  one; `python controls.py` passing, the shipped file round-tripping byte for
+  byte with its five controls and its ten keys listed and rewritable; and
+  `attic/_qe_wire.py` - scratch, not part of the project - flying the window's
+  own loop headless (the map, the two dictionaries, `fly_frame_axes`) with the
+  grip watched out of `sim.throttle()`: full open on `105.0 deg`, a second of `Q`
+  giving grip 0.75 and a hand at `53.8 deg`, `Q` on to the closed stop and `E`
+  back to the open one, a tap worth one frame of a key (`0.0042` of the travel),
+  both keys at once moving nothing, and with a T53 fitted `Q` leaving the
+  governor at exactly the grip the window rolled.
+
+* 2026-10-14 - **the windmill root is read off the shaft, so the engine failure
+  the sandbox already had is flyable as an autorotation.**  `Airframe.windmill`
+  was a caller's switch and nothing in the project ever threw it - `simulation.py`
+  and `main.py` mentioned the word only in prose - so the one thing the failure
+  was *for* was out of reach: a rotor with nothing on its shaft taking its torque
+  from the air going up through the disc.  It is now a reading of the shaft:
+  true when a governor has failed, when the twist grip is rolled right off (which
+  `Governor.power_target` reads as the same physics), or when a fixed
+  `engine_torque` is zero; false on the report's own aircraft, which has no shaft
+  for anything to be driving.  The failure is the whole of the switch and a reset
+  or a grip rolled back open is the whole of the way back, and
+  `trim_autorotation`'s refusal is that same physical condition read the other way
+  round - so an airframe whose engine has just quit trims an autorotation with
+  nothing else done to it, which is the path the sandbox's X key takes.
+
+  `Simulation.trim_autorotation` is the third of the frame loop's trims, built
+  like the other two: it solves the entry at the airspeed asked for (the report's
+  60 kt by default), at the altitude the aircraft is over, at the rotor speed the
+  rotor is *doing*, and leaves the run flying it - the reference `in_trim` reads,
+  and where a bare `R` comes back to.  So the path is the sandbox's own switches,
+  `F` for a T53 and `X` for the failure and then the trim, and what comes back is
+  the flight manual's entry: collective 6.26 in, 9.11 m/s down, 1792 fpm, and a
+  rotor that holds 324.0 rpm for the ten seconds it was flown - because a rotor in
+  the windmill brake state carrying the aircraft is a flight and not a runaway.
+
+  One behaviour moved with it, and it is an improvement rather than a cost.  A
+  dead shaft whose working state runs out now *finds* equation 10's second root
+  where the old reading returned an unconverged solve for a caller to notice by
+  itself: at the hover, with the collective left up, that is the windmill branch at
+  203 rpm, and the rotor is then driven back up - the instability the branch's
+  docstring describes, and the frame `Simulation` refuses.  The airframe self test
+  that asserted a settled 0.50 to 0.65 of 100 per cent there was in fact riding on
+  that unconverged solve, which nothing asserted; it now pins the handover - the
+  wind down to 0.65, the second root found, and the rotor turned round - instead.
+
+  Verified: `python airframe.py`, `python simulation.py` and `python engine.py`
+  printing `self test passed` with the new assertions, and `python main.py
+  --check` printing `main.py check passed`; `regression_tm73254.py` printing
+  `self test passed` with all eight figures and every printed magnitude unchanged,
+  the report's own aircraft having no shaft and so still never seeing the second
+  root; `simulation.py`'s demo showing the failure trimmed at 60 kt - rotor
+  100.0 %, -1792 fpm, 62.6 kt, flying for ten seconds - where the same failure
+  used to reach the floor; and `airframe.py`'s demo printing the same 9.11 m/s,
+  1792 fpm trim it always did, now with nothing told to it but the dead shaft.
 
 * 2026-10-14 - **the ground is a plane: a level and a normal, with equation 10a
   measured over it.**  Ground effect has been in the model from the start - the
@@ -239,11 +391,11 @@ These are choices, not oversights: each is stated where it lives.
   so the aircraft of TM-73254's figures is told apart from the T53 by the gauges
   and by nothing else.
 
-  What is left is named where it lives rather than left to be found: the device
-  map names no throttle yet, so a mapped joystick or a home made collective
-  cannot roll the grip the keyboard now can - `default_controls.xml`'s own note
-  says as much, and which control name to use - and the caption's torque gauge is
-  not read against the 50 psi transmission limit.  See `Next`.
+  What is left is named where it lives rather than left to be found: the caption's
+  torque gauge is not read against the 50 psi transmission limit.  (The device map
+  named no throttle until 2026-10-16 and the note in `default_controls.xml` said
+  which control name to use when one arrived; the map names it on `Q` and `E` now
+  - see `Done`.)  See `Next`.
 
   Verified: `main.py --check` with the new assertions written in the same style -
   the grip as pilot_keys' fifth control and not one of the four axes, Q and E
@@ -543,13 +695,15 @@ These are choices, not oversights: each is stated where it lives.
   than scancodes); `Devices` holds the map, resolves its keys once, and reads a
   frame as `(absolute, ratchet, throttle)` - the two shapes `PilotInput` already
   took, since `set_axes` and `step` each touch only the axes they are given and
-  a control is one or the other; `fly_frame_axes` puts the positions and turns
-  the ratchets; and `fly_frame` is untouched, so the scripted pilot and
-  `--check` keep the entry point they had.  `--controls FILE` and
+  a control is one or the other (that third value went on 2026-10-16, when the
+  grip became a mapped control like the other four); `fly_frame_axes` puts the
+  positions and turns the ratchets; and `fly_frame` is untouched, so the scripted
+  pilot and `--check` keep the entry point they had.  `--controls FILE` and
   `--no-controls` join `--log`/`--no-log` on the command line, joysticks are
   re-found on `JOYDEVICEADDED`/`JOYDEVICEREMOVED` while the window is open, and
-  the `throttle` is mapped, carried and printed beside the telemetry while
-  flying nothing: the model still holds 100 per cent rotor speed.
+  the `throttle` is carried and printed beside the telemetry while flying
+  nothing: the model still holds 100 per cent rotor speed.  (The map this project
+  shipped named no throttle until 2026-10-16; see that entry.)
   Verified: `python controls.py` passing - the shipped file round-tripping byte
   for byte, a map naming one control leaving the rest to the keyboard, and 23
   descriptions written to be refused all refused; `main.py --check` passing,

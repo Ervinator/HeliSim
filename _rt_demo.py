@@ -20,6 +20,14 @@ ratchets of ``simulation.PilotInput`` and the panels - cannot tell the
 difference, which is the point: the panels in the window's corner move under the
 pilot's hands exactly as they move under a watcher's.
 
+One thing here is done with a key a watcher would press rather than by the pilot:
+the engine.  A run of ``main.py`` begins on the report's own aircraft, which has
+no engine and holds the rotor at a hundred per cent, and ``F`` fits the live
+T53.  The autorotation is watched on the fitted aircraft - an unattended pilot
+cannot press ``F``, and a rotor that is *held* at a hundred per cent cannot
+autorotate at all - which is the aircraft ``_rt_autoro_probe.py`` measures the
+mission on.  See the fit below, in :func:`fly`.
+
 Keys, on top of the pilot's own eight:
 
     C       camera: behind the aircraft, or fixed on the pad
@@ -108,9 +116,32 @@ def fly(scenery, mission=DEFAULT_MISSION, reaction=REACTION_S, frames=0):
     trims = trims_for(airframe_preset(AIRFRAME_PRESET), pilot_class)
     sim = Simulation(airframe=airframe_preset(AIRFRAME_PRESET))
     sim.on_the_pad()
+
+    # The engine, which is ``main.py``'s own F key.  A run of either begins on
+    # the report's own aircraft - no engine, the rotor held at a hundred per
+    # cent, which is what TM-73254's figures were computed with - and F fits the
+    # live T53, "the other aircraft... which is what makes the twist grip, the
+    # GOV switch and a failure things a pilot can *fly*".  A pilot flying this
+    # mission unattended cannot press it, and the mission is the one that needs
+    # it: the whole question an autorotation asks is what a rotor with nothing
+    # driving it does, and on the report's own aircraft the rotor never droops at
+    # all - the cut is a lever movement and nothing else, the cushion's pull has
+    # the torque of a live shaft behind it, and the machine flies away again
+    # instead of setting down.  :data:`AutorotationPilot.TRIM_AUTOROTATION_MPS`
+    # is the mission's own statement that its shaft ends up dead, so this is the
+    # mission's own answer to whether the engine is fitted rather than a name
+    # written out here.
+    if pilot_class.TRIM_AUTOROTATION_MPS:
+        sim.fit_engine()
+
     pilot = pilot_class(sim, trims, reaction=reaction)
     print("aircraft: the report's %s configuration, %.3f s rotor"
           % (AIRFRAME_PRESET, sim.airframe.rotor_time_constant))
+    if sim.airframe.shaft_driven:
+        print("  the T53 fitted live:  %s" % (sim.engine_telemetry(),))
+    else:
+        print("  no engine: the rotor is held at a hundred per cent - F fits"
+              " one, and this mission has none")
     trim = pilot.trims.at(0.0)
     print("  the pilot's own trim: collective %5.2f in (%4.1f %%), long %+5.2f,"
           " lat %+5.2f, pedal %+5.2f in | pitch %+5.2f deg"

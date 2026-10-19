@@ -27,7 +27,11 @@ needs is here instead:
   ``engine=True`` puts a T53 with its governor on the shaft, and
   :attr:`Telemetry.engine` is the N2 and torque that come with it.  With no
   engine the rotor speed is the report's fixed 100 per cent and every figure in
-  TM-73254 is reproduced to the last bit, which is what the default is for;
+  TM-73254 is reproduced to the last bit, which is what the default is for.  An
+  engine *failure* is a flyable autorotation and not only a wind down:
+  :meth:`Simulation.trim_autorotation` solves the entry the manual flies at
+  60 kt, the failure itself being what offers the rotor equation 10's second
+  root - see :attr:`airframe.Airframe.windmill`;
 * **the ground.**  :meth:`Simulation._ground` is this project's own addition and
   the only place in it that is not TM-73254.  See below;
 * **the renderer.**  :meth:`Simulation.render_position`,
@@ -1028,6 +1032,60 @@ class Simulation:
         self.reset(state=state, controls=controls)
         return controls, state
 
+    def trim_autorotation(self, airspeed=60.0 * KNOT, altitude=None,
+                          iterations=40, tolerance=0.1, rotor_speed=None):
+        """Trim to an autorotation at *airspeed* and start from it.
+
+        Returns ``(PilotControls, FlightState)`` from
+        :meth:`airframe.Airframe.trim_autorotation` - the same pair the other two
+        trims return - and leaves the aircraft flying it: the descent its shaft
+        balance closes on, at the airspeed asked for, with the hands on the
+        trimmed cyclic and pedals and the rotor at the speed the trim was solved
+        for.  The condition is remembered as the reference :meth:`in_trim`
+        compares against, and as where a bare :meth:`reset` puts the aircraft
+        back, so a run that loses its engine can come back to the entry rather
+        than to the hover it left.
+
+        This is the third of the airframe's trims and it needs the third of its
+        aircraft: something on the other end of the shaft, delivering nothing - an
+        :class:`engine.Engine` whose governor has failed, a twist grip rolled
+        right off, or a fixed ``engine_torque`` of zero.  A shaft still being
+        driven has no autorotation to trim, and the airframe says so rather than
+        returning a state that is not one - the reading it goes by is
+        :attr:`airframe.Airframe.windmill`, which is off the shaft itself, so
+        there is nothing else to tell the model.  The sandbox's own way in is
+        therefore its own engine failure: ``set_governor(failed=True)``, or the X
+        key, and then this.
+
+        *altitude* defaults to where the aircraft is - the last trim's height over
+        the ground, or ``start_altitude`` - on the same terms as
+        :meth:`trim_level_flight`, ground effect included.  *rotor_speed*
+        defaults to the speed the rotor is *doing*: an autorotation is a
+        condition the rotor is in rather than one at a nameplate speed, and a run
+        that has been flying has a speed of its own to solve at.  A caller asking
+        for the report's own condition passes ``UH1_OMEGA``.
+
+        What comes back at the report's 60 kt is the flight manual's own entry -
+        9.1 m/s down, 1792 fpm, inside the 1800 to 2000 a UH-1H holds there - and
+        the state is one the frame loop *flies*: a rotor in the windmill brake
+        state carrying the aircraft is a flight, not the model's runaway.  A
+        vertical autorotation is not one of these: an airspeed of zero is where
+        equation 10's two roots meet, and the seven-by-seven solve is not built
+        for it.
+        """
+        if altitude is None:
+            altitude = (self.ground.height(self.trim_state.position)
+                        if self.trim_state is not None
+                        else self.start_altitude)
+        if rotor_speed is None:
+            rotor_speed = self.airframe.state.rotor_speed
+        controls, state = self.airframe.trim_autorotation(
+            airspeed, altitude=altitude, iterations=iterations,
+            tolerance=tolerance, rotor_speed=rotor_speed)
+        self.trim_controls, self.trim_state = controls, state
+        self.reset(state=state, controls=controls)
+        return controls, state
+
     def reset(self, state=None, controls=None, on_ground=False, altitude=None,
               heading_deg=None, collective=None):
         """Start again: a level aircraft, no rates, the clock back to zero.
@@ -1386,6 +1444,14 @@ class Simulation:
         away, so a pickup is a smooth departure from rest rather than the jump an
         accumulating velocity would give.
 
+        The rotor speed is the state's own and the floor leaves it alone: what
+        drives the shaft is the engine's business, and a rotor with nothing
+        driving it arrives at the speed it arrived at.  Left to the
+        :class:`airframe.FlightState` default it would come back as the nominal
+        100 per cent on every frame the skids were down, which spins a
+        windmilling rotor up at the moment of touchdown and throws the aircraft
+        off the ground again on the lever the arrival was cushioned with.
+
         It replaces the state wholesale, which is fine because everything outside
         this policy reads the state through the airframe, and it is the one thing
         in this module TM-73254 does not contain.  *touchdown* is the position the
@@ -1445,7 +1511,11 @@ class Simulation:
                              state.attitude.y * level
                              + leaning.y * (1.0 - level),
                              state.attitude.z),
-            rates=Vector3(0.0, 0.0, state.rates.z * fade))
+            # The shaft is not the floor's business: the state is replaced for
+            # the places, the velocity and the attitudes the ground owns, and the
+            # rotor speed goes back in as the step left it.
+            rates=Vector3(0.0, 0.0, state.rates.z * fade),
+            rotor_speed=state.rotor_speed)
 
     # --- what a renderer asks for -----------------------------------------
 
@@ -1976,6 +2046,53 @@ def _self_test():
     assert panel.failed and panel.power < 0.001 * UH1_ENGINE_POWER_W, panel
     assert emer.telemetry().rotor_rpm < UH1_RPM_LOW, emer.telemetry().rotor_rpm
 
+    # The rotor that failure leaves is a rotor an autorotation can be trimmed
+    # at, and the failure is the whole of the switch: :attr:`airframe.Airframe.
+    # windmill` is read off the shaft, so nothing else has to be told, and what
+    # comes back is the manual's own entry - 9.1 m/s down at 60 kt with the
+    # rotor on the 100 per cent it was solved at.  Ten seconds of frames leave
+    # the rotor speed where it was and the descent at the rate the trim closed,
+    # because a rotor in the windmill brake state carrying the aircraft is a
+    # *flight*: what this model cannot hold is a vertical descent with the
+    # collective up, which is what the same failure looks like when nobody
+    # lowers the lever.
+    autorotation = Simulation()
+    autorotation.fit_engine()
+    assert not autorotation.airframe.windmill     # a live T53 is driving it
+    autorotation.set_governor(failed=True)
+    assert autorotation.airframe.windmill         # and the failure is the switch
+    assert not sim.airframe.windmill              # no shaft, so no second root
+    auto_controls, auto_state = autorotation.trim_autorotation(
+        60.0 * KNOT, altitude=300.0)
+    assert auto_controls.collective < 7.0, auto_controls.collective
+    assert abs(auto_state.rotor_speed - UH1_OMEGA) < 1e-9
+    assert autorotation.airframe.state.rotor_rpm > UH1_RPM_LOW
+    descent = auto_state.ground_velocity().z
+    assert 8.0 < descent < 11.0, descent
+    assert 1600.0 < descent / 0.00508 < 2200.0, descent / 0.00508
+    assert autorotation.trim_state is auto_state
+    assert autorotation.airframe.state.values() == auto_state.values()
+    for _ in range(600):
+        autorotation.step(SIM_TIME_STEP_S)
+    assert not autorotation.crashed and not autorotation.on_ground
+    held = autorotation.airframe.state
+    assert abs(held.rotor_rpm - auto_state.rotor_rpm) < 0.01, held.rotor_rpm
+    fallen = auto_state.altitude - held.altitude
+    assert abs(fallen - 10.0 * descent) < 0.2, fallen
+    # The two aircraft that cannot be flown this way say so through the airframe
+    # rather than through a list kept here: the report's own has no shaft to be
+    # dead, and a live engine is holding the rotor it would be trimmed against.
+    driving = Simulation()
+    driving.fit_engine()
+    for unready in (Simulation(), driving):
+        try:
+            unready.trim_autorotation(60.0 * KNOT)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("a shaft with nothing failed on it trimmed "
+                                 "an autorotation")
+
     # A simulation whose shaft is *driven* trims with the rotor speed solved for,
     # which is the other half of having an engine in the model: the hover a
     # powered run begins in is the one its own governor and rotor settle on -
@@ -2306,7 +2423,9 @@ def _self_test():
     # went non-finite, and the loop refused the frame.  It has that state now -
     # the second root of the report's equation 10, the windmill brake state,
     # which _solve_inflow_ratio finds for exactly this configuration (a descent
-    # with the collective down) and nothing else.  So the entry is flown rather
+    # with the collective down) whether or not something is driving the shaft,
+    # and for the dead shaft of an engine failure besides (see
+    # Airframe.windmill).  So the entry is flown rather
     # than refused: the aircraft falls, the descent builds past 26 m/s, and the
     # skids arrive on the ground faster than UH1_HARD_LANDING_MPS.  That is the
     # floor's crash and the floor's words for it, not the model's refusal - and
@@ -2727,6 +2846,31 @@ def _demo():
     print("  the skid line is %.3f m, so the floor held it and took the arrival"
           " out of the state; anything over %.1f m/s down is a crash here"
           % (UH1_CG_HEIGHT_ON_GROUND, UH1_HARD_LANDING_MPS))
+
+    print()
+    print("the same failure with the rotor given something to do: 60 kt, the")
+    print("engine out, and the descent rate that closes the shaft's own balance.")
+    print("The failure is the whole of the switch - Airframe.windmill is read off")
+    print("the shaft - and what comes back is the flight manual's entry:")
+    entry = Simulation()
+    entry.fit_engine()
+    entry.set_governor(failed=True)
+    entry_controls, entry_state = entry.trim_autorotation(60.0 * KNOT,
+                                                          altitude=300.0)
+    print("  sticks  " + str(entry_controls))
+    print("  %s" % entry_state)
+    for frame in range(0, int(10.0 * 60) + 1, 60):
+        for _ in range(0 if not frame else 60):
+            entry.step(SIM_TIME_STEP_S)
+        telemetry = entry.telemetry()
+        print("  %4.1f s  rotor %5.1f %% | alt %6.1f m | %+7.0f fpm | %5.1f kt"
+              " | %s" % (frame / 60.0, telemetry.rotor_percent,
+                         telemetry.alt_agl, telemetry.height_rate_fpm,
+                         telemetry.airspeed_kt,
+                         "crashed" if entry.crashed else "flying"))
+    print("  ten seconds of it: the rotor is where the trim put it and the")
+    print("  descent at the rate it closed, because a rotor in the windmill")
+    print("  brake state carrying the aircraft is a flight and not a runaway.")
 
     print()
     print("the same pickup from 30 m, which the model itself cannot fly: at 100 %")

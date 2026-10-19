@@ -23,24 +23,30 @@ Three ideas and nothing else:
   the pilot presses the key, watches the axis crawl, and lets go when it reaches
   the position asked for - :meth:`KeyHands.press`, a frame at a time.
 
-Two missions fly on it, each its own class below and each with its own loops:
+Three missions fly on it, each its own class below and each with its own loops:
 
 * :class:`HumanPilot` is the long one - from the pad to a hundred metres up and
   a kilometre out, which is the mission the playability runs flew;
 * :class:`HoverTurnPilot` is the short one - a hover twenty feet up over the pad,
   a full turn to the right about the vertical axis, and down again onto the
-  skids, which is a minute of flight anybody watching can see the whole of.
+  skids, which is a minute of flight anybody watching can see the whole of;
+* :class:`AutorotationPilot` is the one with the engine in it - five hundred feet
+  up at sixty knots, the twist grip rolled right off, and down again on the
+  rotor, which is the mission ``_rt_demo_autorotate`` opens a window on and
+  ``_rt_autoro_probe`` measures.
 
-Nothing but the eight keys is touched in either, and both read the aircraft at
-:data:`REACTION_S` rather than at the frame rate, so what a window shows is a
-person flying and not a script stepping.
+Nothing but the nine keys is touched in any of them - the eight the four axes are
+on, and the twist grip's own two, E and Q, which is a fifth position and not one
+of the axes - and all three read the aircraft at :data:`REACTION_S` rather than
+at the frame rate, so what a window shows is a person flying and not a script
+stepping.
 """
 
 import math
 
 import pygame
 
-from airframe import FOOT
+from airframe import FOOT, KNOT
 from simulation import (PAD_COLLECTIVE, SIM_TIME_STEP_S,
                         UH1_CG_HEIGHT_ON_GROUND, PilotInput)
 
@@ -83,6 +89,14 @@ AXIS_KEYS = (
 #: down here, so a step granularity changed in ``simulation`` moves this too.
 KEY_STEP = tuple(PilotInput().key_rates()[index] * SIM_TIME_STEP_S
                  for index in (0, 1, 1, 2))
+
+#: One frame of the twist grip's own key, in grip travel: the fourth of
+#: :meth:`simulation.PilotInput.key_rates`, which is the rate the fifth position
+#: turns at rather than the four axes above it - E rolling the grip on, Q off, the
+#: two scancodes ``main.pilot_keys`` holds.  The grip is not an axis: it is read
+#: on its own by :meth:`simulation.PilotInput.throttle`, and a pilot who cuts it
+#: holds a key for it exactly as they hold one for a stick.
+THROTTLE_STEP = PilotInput().key_rates()[3] * SIM_TIME_STEP_S
 
 #: The travels the inches below are axes in: ``rotor_control``'s own table 2.
 COLLECTIVE_TRAVEL_IN = 11.00
@@ -230,6 +244,172 @@ YAW_REF_DEG = 0.0
 PARKED_ALT_M = 2.0
 
 
+# ---------------------------------------------------------------------------
+# The engine-off mission: five hundred feet up at sixty knots, the twist grip
+# rolled right off, and down again on the rotor.
+# ---------------------------------------------------------------------------
+
+#: The condition the mission is flown at: sixty knots, which is the report's own
+#: autorotation speed - ``airframe.Airframe.trim_autorotation``'s docstring is
+#: where the 9.1 m/s at 60 kt comes from - and five hundred feet of skid, which is
+#: high enough for the descent to settle on its trim before the cushion rather
+#: than being flown into the ground out of the entry.
+AUTOROTATION_SPEED_KT = 60.0
+AUTOROTATION_SPEED_MPS = AUTOROTATION_SPEED_KT * KNOT
+CLIMB_SKID_FT = 500.0
+CLIMB_ALT_M = CLIMB_SKID_FT * FOOT + UH1_CG_HEIGHT_ON_GROUND
+
+#: The descent holds the lever and nothing else.  Banked rotor speed is the trade
+#: a pilot has and this model does not: the autorotation trim is the *equilibrium*
+#: lever, so taking the lever below it is buying sink, and the revolutions a
+#: surplus of driving torque would bank for it are not there to buy yet - the
+#: disc has to be descending hard enough to drive that much harder first, and the
+#: heave that pays for it takes seconds the flap of a descent does not have.  A
+#: loop that asked the descent for head speed instead bought the sink and lost the
+#: rotor both: two inches of lever below the trim, asked for a hundred and six per
+#: cent, arrived on a rotor at fifty-eight.
+
+#: How close to the climb's height and speed counts as up there and on the
+#: number: the loops hold both asymptotically, so the two goals are bands and the
+#: cut is made from inside them.  The speed band is the wider of the two, since
+#: the cut is a moment and the trim is flown either side of it.
+CLIMB_TOLERANCE_M = 3.0
+CLIMB_SPEED_TOLERANCE_MPS = 2.0
+
+#: The cut, held for as long as the grip takes to reach the stop: the twist grip
+#: is the fifth position and not one of the four axes, so it has a key of its own -
+#: ``main.pilot_keys``' Q rolling it off, which is what :meth:`AutorotationPilot.keys`
+#: presses.  The shaft is dead from the moment it is closed, so the lever is at
+#: the autorotation trim and the speed is held with the cyclic for the whole of
+#: the cut: the aircraft is on its way down as soon as the engine is off.
+CUT_GRIP_KEY = pygame.KSCAN_Q
+
+#: The lever's own rate on a held key, in inches a second: the fastest a hand
+#: under the cushion can move the collective, since the cushion is flown on the
+#: same key the whole mission is - the collective's own rate times the step
+#: granularity, read off the model, which is 1.51 in/s.  Nothing that asks the
+#: lever for more than this gets it: a demand that jumps further than a key can
+#: travel is a demand the hand chases for ever, and the lever answers with a
+#: limit cycle rather than a position - which is what the first cut of the
+#: cushion did, between full pull and the trim, three seconds to the cycle.  It
+#: is also what sets how long a flare has to be: four inches of lever is three
+#: seconds of hand whatever the loop asks for, and at eleven metres a second
+#: that is thirty metres of height and no less.
+CUSHION_KEY_RATE_IN = PilotInput().key_rates()[0] * COLLECTIVE_TRAVEL_IN
+
+#: The flare, and the cushion under it.  From :data:`FLARE_SKID_FT` of skid the
+#: sink the descent is asked for thins from the rate the descent was already at
+#: - the trim's own sink, which is what the table's descent row solved to - to
+#: :data:`CUSHION_SINK_MPS` on the skids, and the lever is asked to pay for the
+#: difference: :data:`CUSHION_GAIN_IN` inches a second of lever for every metre
+#: a second the sink is over the line, integrated into a position, limited to
+#: what a key can move the lever at and to :data:`CUSHION_PULL_IN` inches above
+#: the descent's own trim.  A schedule and not a height to pull at, which is
+#: what the first cut of the cushion was: the lever's own key rate means a pull
+#: big enough to arrest a descent takes seconds, so asking for it all at once
+#: asks for it too early - the sink stops fifty feet up, the lever then holds
+#: the aircraft against a rotor with no engine driving it, and the last of the
+#: revolutions go on hovering rather than on landing, which is how eleven inches
+#: from a hundred and forty feet ended in a fall from forty feet.  Asking for it
+#: as the descent gives time to be asked is the whole of the fix, so the pull
+#: opens with nothing to do and is still coming in when the skids meet.  The
+#: rate is the number that matters, and a rate under
+#: ``simulation.UH1_HARD_LANDING_MPS`` is the whole of what the landing owes.
+#:
+#: The flare is an *attitude* as well as a lever, and the schedule is the same
+#: shape: :data:`FLARE_PITCH_DEG` degrees of nose up on top of the descent's own
+#: attitude, coming up from none of it at the flare's height.  It has to be
+#: commanded, because a lever pulled on a sixty knot rotor is a nose up moment
+#: the pilot never asked for: the first cut of this cushion held the descent's
+#: own attitude and let the pull have its head, and the model pitched to
+#: twenty-seven degrees at eleven metres a second - the thrust tilted aft, the
+#: blades stalled on a collective the speed was still too high to carry, and the
+#: sink *rose* from 2 200 to 3 000 fpm for the first half of a two hundred foot
+#: cushion before a foot of it was arrested.  Flaring the attitude is also what
+#: keeps the rotor turning: an aft tilted disc at sixty knots has more air
+#: driving it, which is the model's own windmill brake state and the whole of
+#: why a real flare recovers the revolutions it spent getting there - twenty
+#: degrees of it at two hundred feet lands on a rotor two and a half per cent
+#: faster than holding the trim's attitude does.
+#:
+#: What it cannot do is *land* on it: a thrust tilted twenty degrees aft is a
+#: fifth of the cushion's lift pointing backwards, and a flare held all the way
+#: in arrives on whatever the tilt left - four metres a second in the same two
+#: hundred feet that lands at two with the attitude back on the trim.  The
+#: obvious answer, to peak the flare above the ground and take the nose back down
+#: to the trim for the last of the height, is worse than the problem: the model
+#: answers a nose up at sixty knots with the whole of the speed converted in
+#: seconds, so an attitude that comes off again lets the machine balloon - eight
+#: hundred feet a minute *up* at the peak of one - and then fall from it on a
+#: rotor with no height left under it, which is twelve metres a second at the
+#: ground and a rotor still at ninety-five.  The flare is monotone instead,
+#: :data:`FLARE_PITCH_DEG` at the skids and none of it at the height, and what
+#: the attitude does not arrest the lever does.
+#:
+#: The attitude's own height is not the cushion's, and need not be:
+#: :data:`FLARE_PITCH_FROM_FT`, when it is said, is the height the *nose* comes
+#: up from, and a flare begun above the cushion is revolutions bought out of the
+#: air driving the disc rather than out of the lever - which is the one place in
+#: this descent where rotor speed can be had without sink paid for it, since the
+#: ramp is monotone either way and the lever's cushion is untouched by it.  It is
+#: also what a real autorotation does: the cyclic flare first, at height, and the
+#: lever after it, which is why the one schedule is two.  ``None`` is the
+#: cushion's own height, which is the two schedules as they were first cut.
+
+#: The cushion is two seconds of heave on a lever a key moves at 1.51 in/s, and
+#: both of those numbers are spent out of the *height*: twelve feet of skid at
+#: the trim's eleven metres a second is one second of flight, so the lever has
+#: not crossed before the skids have - the cushion as it was first cut is worth
+#: nothing at all, 11.23 m/s at the ground, which is the trim's own sink and no
+#: less.  Six and a half inches of lever is four seconds of hand, and a hundred
+#: and fifty feet of skid is the height four seconds can be had from: from
+#: there the same schedule arrives at 2.26 m/s on a rotor still at eighty-seven.
+#: The pull and the height it opens at are one number: the height without the
+#: pull is *worse* than twelve feet of skid, 12.73 m/s, because a schedule with
+#: the height to finish over-flares the machine instead of arresting it, and the
+#: pull without the height is the same 11.23 m/s the mission already flew.
+#: The nose is asked for the gentler of the manual's two: eight degrees against
+#: the twelve, which is worth a fifth of a metre a second of arrival on the same
+#: rotor, the flare being monotone either way.
+FLARE_SKID_FT = 150.0
+FLARE_PITCH_DEG = 8.0
+#: The height the nose comes up *from*: ``None`` for the cushion's own height,
+#: and a number for a cyclic flare begun above the lever's cushion.  See the
+#: comment above this block.
+FLARE_PITCH_FROM_FT = 55.0
+#: The height the nose comes back *down* at: the manual's own level off, ten
+#: to fifteen feet, which is where the flare peaks and the attitude starts
+#: back towards the trim.  Above it the flare is monotone, as the long
+#: schedule was; at it the disc starts back level and the lever pays for the
+#: last of the height under a disc that is not tilted - which is the one
+#: place a nose up taken back down is not the balloon it is at height,
+#: because the height it would climb into is the twelve feet it has left.
+LEVEL_OFF_SKID_FT = 12.0
+#: See :data:`FLARE_SKID_FT`, which is the same number: what the pull is worth
+#: and the height it opens at are chosen together, and the schedule's original
+#: two inches arrive on the ground at the trim's own sink.
+CUSHION_PULL_IN = 6.5
+CUSHION_SINK_MPS = 2.0
+CUSHION_GAIN_IN = 1.0
+
+#: The descent is flown on the trim's own lever, and this is the one way it is
+#: not: :data:`DESCENT_LEVER_DOWN_IN` inches *under* that lever, held for the
+#: whole of the descent and given back by the cushion.  A rotor with no engine
+#: spins up when the lever comes down - the blades meet the air at a shallower
+#: angle, so the windmill drives them harder and the machine comes down faster -
+#: which is the model's own physics and the whole of the "lever down for RPM"
+#: every real autorotation is flown by.  It is the one place in this descent
+#: where revolutions are bought with the *attitude* untouched, and so without the
+#: speed being converted to height: a flare begun at height carries the machine
+#: up on its own sixty knots and drops it again - thirteen hundred feet a minute
+#: of rise at three hundred, in this model, arriving at nine metres a second on a
+#: rotor it had already charged - and what the lever costs instead is the sink it
+#: adds, which is the one thing the cushion is there to pay.  The cushion's pull
+#: starts where the lever the descent actually held is, so that the pull is a
+#: pull and not a step.
+DESCENT_LEVER_DOWN_IN = 0.0
+
+
 def clip(value, low, high):
     """*value* held between *low* and *high*."""
     return max(low, min(high, value))
@@ -238,6 +418,18 @@ def clip(value, low, high):
 def wrap(deg):
     """An angle in degrees, in (-180, 180]."""
     return (deg + 180.0) % 360.0 - 180.0
+
+
+def skid_ft(telemetry):
+    """How high the *skids* are, ft: what a pilot flares by.
+
+    The model measures its altitude from the c.g., which stands
+    ``simulation.UH1_CG_HEIGHT_ON_GROUND`` above the skids, so the height a
+    pilot calls theirs is that much less than ``telemetry.alt_agl``.  It is the
+    height a cushion is begun at and the height a hover is held at, and it is
+    the same subtraction :class:`HoverTurnPilot` makes of its hover.
+    """
+    return (telemetry.alt_agl - UH1_CG_HEIGHT_ON_GROUND) / FOOT
 
 
 class TrimTable:
@@ -251,9 +443,15 @@ class TrimTable:
     *airframe* is a scratch aircraft, not the one being flown: solving a trim
     moves an airframe's state, which is not something a pilot may do to the
     aircraft they are in.
+
+    A pilot with a *descent* in their mission - an autorotation, which is flown
+    on a dead shaft - gets one more row: see *autorotation_speed*, which is
+    zero for a pilot that never has the engine off and is where
+    :class:`AutorotationPilot`'s own mission reads its lever position from.
     """
 
-    def __init__(self, airframe, speeds=TRIM_SPEEDS, altitude=ALT_REF_M):
+    def __init__(self, airframe, speeds=TRIM_SPEEDS, altitude=ALT_REF_M,
+                 autorotation_speed=0.0):
         self.speeds = tuple(float(speed) for speed in speeds)
         self.rows = []
         for speed in self.speeds:
@@ -262,6 +460,37 @@ class TrimTable:
             self.rows.append((controls.collective, controls.long_stick,
                               controls.lat_stick, controls.pedal,
                               state.attitude_deg.y))
+
+        #: The descent's own row - ``(collective, long, lat, pedal, pitch,
+        #: sink)`` - or None for a pilot with no engine-off phase in their
+        #: mission.  It is a *different* solve and not an interpolation of the
+        #: rows above: an engine failure leaves the rotor free, and what the
+        #: model then settles at in a sixty knot descent is
+        #: :meth:`airframe.Airframe.trim_autorotation`'s answer with the torque
+        #: taken off the shaft, which no level flight row can be.  The sink rate
+        #: comes back with it, positive down, because it is what the whole
+        #: mission is judged by and what ``_rt_demo_autorotate`` prints.
+        self.autorotation = None
+        if autorotation_speed:
+            airframe.engine_torque = 0.0
+            controls, state = airframe.trim_autorotation(
+                float(autorotation_speed), altitude=altitude)
+            self.autorotation = (controls.collective, controls.long_stick,
+                                 controls.lat_stick, controls.pedal,
+                                 state.attitude_deg.y,
+                                 state.ground_velocity().z)
+
+    def descent(self):
+        """``(collective, long, lat, pedal, pitch, sink)`` of the autorotation.
+
+        Raises :exc:`ValueError` for a pilot whose table was built without an
+        *autorotation_speed*, so a mission that reads it before it has one says
+        so where it happens rather than multiplying a None.
+        """
+        if self.autorotation is None:
+            raise ValueError("this trim table has no autorotation row: it was"
+                             " built with autorotation_speed=0.0")
+        return self.autorotation
 
     def at(self, speed):
         """``(collective, long, lat, pedal, pitch)`` the model flies *speed* on."""
@@ -341,8 +570,12 @@ class KeyboardPilot:
     #: read at: a pilot's force trim is the baseline every loop below is written
     #: around, and it is the model's own answer for where this mission flies.
     #: See :func:`trims_for`, which builds the table off a scratch aircraft.
+    #: And the third: the speed the table solves a *descent* row at, m/s, which
+    #: is zero for the two missions that never have the engine off and is what
+    #: :class:`AutorotationPilot` sets.
     TRIM_SPEEDS_MPS = TRIM_SPEEDS
     TRIM_ALT_M = ALT_REF_M
+    TRIM_AUTOROTATION_MPS = 0.0
 
     def __init__(self, sim, trims, reaction=REACTION_S, log=None):
         self.reaction = float(reaction)
@@ -815,10 +1048,416 @@ class HoverTurnPilot(KeyboardPilot):
                 " %d decisions" % (self.decisions,))
 
 
+class AutorotationPilot(KeyboardPilot):
+    """The mission with the engine in it: five hundred feet, sixty knots, down.
+
+    The long mission's own climb, on the same four loops, at the mission's own
+    speed:
+
+    * the collective holds the height through a climb rate, the same shape
+      :class:`HumanPilot` flies a hundred metres on;
+    * the long stick holds sixty knots, on the pitch the model trims that speed
+      at, so the climb is a cruise flown steeply;
+    * the lateral stick holds the line north of the pad through a bank, and the
+      pedals hold the nose, which are those missions' two loops unchanged.
+
+    Then what the other two never do:
+
+    * the twist grip is rolled right off - the fifth position, which is not one
+      of the four axes and turns on a key of its own, E on and Q off - and the
+      shaft is dead from there on;
+    * the descent is flown on the model's *autorotation* trim, which is not the
+      level flight trim of sixty knots and could not be: the rotor is free, and
+      what that trim solves for instead is the *descent rate* the machine
+      settles at with the torque off the shaft.  See :meth:`TrimTable.descent`;
+    * and the collective comes up into ground effect at :data:`FLARE_SKID_FT` of
+      skid, spending what the rotor has left - at most :data:`CUSHION_PULL_IN`
+      inches - on :data:`CUSHION_SINK_MPS` rather than on a lever position,
+      which is what turns a nine metre a second descent into an arrival rather
+      than a wreck, and which stops pulling as soon as the sink has been paid
+      for, rather than ballooning the aircraft back up on a rotor already
+      running down.
+
+    Nine keys and nothing else: the eight the four axes are on, and the grip's
+    own two.  The grip is the one control here that is read every frame rather
+    than every decision: :meth:`keys` holds E or Q until the grip reaches the
+    position the mission asked for, exactly as :class:`KeyHands` holds an axis
+    key, and the mission asks for full open until the cut and closed after it.
+    """
+
+    DESCRIPTION = ("five hundred feet up at 60 kt, the twist grip rolled right"
+                   " off, and down again on the rotor")
+
+    #: The trim table's own speeds and height: the two ends of the climb, so the
+    #: baseline under the climb's loops is the trim of the speed the aircraft is
+    #: *at*, and the height the whole mission is flown at.  And the third: the
+    #: speed the table solves its *descent* row at, which is what
+    #: :meth:`airframe.Airframe.trim_autorotation` is asked for.
+    TRIM_SPEEDS_MPS = (0.0, 0.5 * AUTOROTATION_SPEED_MPS,
+                       AUTOROTATION_SPEED_MPS)
+    TRIM_ALT_M = CLIMB_ALT_M
+    TRIM_AUTOROTATION_MPS = AUTOROTATION_SPEED_MPS
+
+    def __init__(self, sim, trims, reaction=REACTION_S, log=None):
+        KeyboardPilot.__init__(self, sim, trims, reaction=reaction, log=log)
+        self.phase = "pickup"
+        self.climb_alt = CLIMB_ALT_M
+        self.took_off = None          # s, the skids off the pad
+        self.climb_settled = None     # s, height and speed both held
+        self.cut_at = None            # s, the twist grip rolled off
+        self.descent_at = None        # s, the grip closed, the shaft dead
+        self.cushion_at = None        # s, the lever pulled in ground effect
+        self.cushion_in = None        # in, the cushion's own lever position
+        self.cushion_sink = None      # m/s, the sink the cushion opened on
+        self.lowest_rotor = 100.0     # %, the slowest the rotor was seen
+        self.last_airborne_rate = 0.0  # m/s, the last rate read off the ground
+        self.touchdown = None         # s, when the skids met the ground
+        self.touchdown_rate = None    # m/s, the rate the pilot last read aloft
+        self.landed_since = None      # s, since the skids were down
+        self.want_throttle = 1.0      # the grip's own position, not an axis
+        # Where the pad holds the four controls, which is where the mission
+        # leaves them: the run's own trim with the lever at
+        # ``simulation.PAD_COLLECTIVE``, which is what
+        # :meth:`simulation.Simulation.on_the_pad` parks the aircraft in - and
+        # what a machine whose engine has stopped has to be left in, since the
+        # pad's own lever is *below* the hover trim and so holds it down.
+        self.pad_axes = list(sim.trim_controls.collective_at(
+            PAD_COLLECTIVE).to_axes())
+
+    def keys(self, sim, dt):
+        """The frame's keys: the four axes' hands, and the twist grip's two.
+
+        :class:`KeyHands` has nothing to say about the grip - it is not a stick
+        position - so the fifth control is held here, on the same terms and at
+        the same rate: E while the grip is below what the mission asked for, Q
+        while it is above, and neither inside :data:`THROTTLE_STEP` of it, which
+        is one frame of a key.
+        """
+        keys = KeyboardPilot.keys(self, sim, dt)
+        if self.done is not None:
+            return keys
+        error = self.want_throttle - sim.pilot.throttle()
+        if error > THROTTLE_STEP:
+            keys[pygame.KSCAN_E] = 1.0
+        elif error < -THROTTLE_STEP:
+            keys[CUT_GRIP_KEY] = 1.0
+        return keys
+
+    # -- the mission's own bookkeeping -----------------------------------
+
+    def phase_of(self, sim):
+        """What the mission is doing, from where the aircraft is.
+
+        One step per look, like the other missions': off the skids, into the
+        band of five hundred feet and sixty knots, the grip on its way to the
+        stop, the grip within one frame of travel of it, the skids down to the
+        cushion's height, and the skids on the ground.  Nothing here reads the
+        frame.
+        """
+        telemetry = sim.telemetry()
+        alt = telemetry.alt_agl
+        speed = telemetry.ground_speed
+        now = sim.sim_time
+        if self.took_off is None and not sim.on_ground:
+            self.took_off = now                      # the skids are off the pad
+        if self.phase == "pickup":
+            # The loops do the pickup; the name lasts until the aircraft is
+            # properly off - the long mission's own guard, since on the pad the
+            # lever is the only control with any weight on it.
+            if not (sim.on_ground and alt < PARKED_ALT_M):
+                self.phase = "climb"
+        if self.phase == "climb":
+            if (abs(alt - self.climb_alt) <= CLIMB_TOLERANCE_M
+                    and abs(speed - AUTOROTATION_SPEED_MPS)
+                    <= CLIMB_SPEED_TOLERANCE_MPS):
+                if self.climb_settled is None:
+                    self.climb_settled = now
+                elif now - self.climb_settled >= HOVER_SETTLE_S:
+                    self.phase = "cut"
+                    self.cut_at = now
+                    self.want_throttle = 0.0         # roll the grip off
+            else:
+                self.climb_settled = None
+        if self.phase == "cut" and sim.pilot.throttle() <= THROTTLE_STEP:
+            # Within one frame of travel of the stop is *closed*: the ratchet
+            # turns the grip toward the stop a step at a time and the step is
+            # clipped, not snapped, so a grip held down parks a rounding residue
+            # above the stop - and an exact test against zero would leave the
+            # mission in the cut for ever.  :data:`THROTTLE_STEP` is the same
+            # tolerance the hands use to say they have arrived.
+            self.phase = "descent"
+            self.descent_at = now
+        if self.phase in ("cut", "descent", "cushion"):
+            self.lowest_rotor = min(self.lowest_rotor,
+                                    telemetry.rotor_percent)
+            self.last_airborne_rate = telemetry.height_rate
+        if self.phase == "descent" and skid_ft(telemetry) <= FLARE_SKID_FT:
+            # Into the cushion: the pull starts from the trim it is holding, so
+            # the loop below opens on the lever the descent was flown at rather
+            # than on the last flight's answer to the same question.
+            self.phase = "cushion"
+            self.cushion_at = now
+            self.cushion_in = None
+        if self.phase in ("cut", "descent", "cushion") and sim.on_ground:
+            self.phase = "landed"
+            self.touchdown = now
+            self.touchdown_rate = self.last_airborne_rate
+            self.landed_since = now
+        if self.phase == "landed" and not sim.on_ground:
+            # Light on its skids again: the lever is at the pad's own, which is
+            # above the autorotation trim and no use to a rotor with nothing
+            # driving it - so the arrival is not over after all, and the last
+            # thirty feet are flown again.
+            self.phase = "descent"
+            self.landed_since = None
+
+    # -- the pilot's own loops -------------------------------------------
+
+    def decide(self, sim):
+        """Where the four axes ought to be, from what the instruments say.
+
+        Two things change with the phase and nothing else does: the *baseline*
+        the loops are written around - the level flight trim of the speed the
+        aircraft is at while it climbs, the autorotation trim once the shaft is
+        dead - and whether the lever is at that trim or the pull above it.  The
+        three cyclic loops are the long mission's own, unchanged.
+        """
+        telemetry = sim.telemetry()
+        state = sim.airframe.state
+        alt = telemetry.alt_agl
+        speed = telemetry.ground_speed
+        self.phase_of(sim)
+        if self.phase == "landed":
+            # Down and staying down: the lever back to the pad's own and the
+            # cyclic and pedals back on the trim, which is where a mission
+            # starts - the pad's own sticks, as the short mission also lands on.
+            # The pull is not held: it is spent, and a lever held up on a rotor
+            # with nothing driving it is a machine lifted off its skids again.
+            return list(self.pad_axes)
+        if self.phase == "pickup":
+            # On the skids the cyclic and the pedals do nothing; the pickup is
+            # the lever's doing, and the trim's hover fraction is where it goes.
+            return [self.trims.hover_fraction()] + list(sim.pilot.axes()[1:])
+
+        if self.phase == "climb":
+            collective_t, long_t, lat_t, pedal_t, __ = self.trims.at(speed)
+            rate_want = clip(RATE_GAIN_MPS * (self.climb_alt - alt),
+                             -CLIMB_LIMIT_MPS, CLIMB_LIMIT_MPS)
+            collective = (collective_t
+                          + K_RATE_IN * (rate_want - telemetry.height_rate))
+            pitch_t = self.trims.at(AUTOROTATION_SPEED_MPS)[4]
+            pitch_want = clip(
+                pitch_t - K_SPEED_DEG * (AUTOROTATION_SPEED_MPS - speed),
+                pitch_t - PITCH_LIMIT_DEG, pitch_t + PITCH_LIMIT_DEG)
+        else:
+            # The descent, from the cut to the skids: the autorotation's own
+            # lever, sticks and attitude, held at the trim - a rotor with no
+            # engine has nothing to loop a height rate around, and the trim of
+            # the speed the aircraft is at *is* the rate it comes down at.  What
+            # is looped instead is the last of that rate: the cushion's pull is
+            # a lever *rate* proportional to how much more sink there is than
+            # :data:`CUSHION_SINK_MPS`, integrated into a position and limited
+            # to what a key can move the lever at, so the pull stops where the
+            # rate asked for is held and comes off again if the ground effect
+            # holds more than that.
+            collective_t, long_t, lat_t, pedal_t, pitch_t, __ = \
+                self.trims.descent()
+            collective = collective_t
+            # The cyclic flare's own height, which is not the lever's: the
+            # cushion's unless the mission said otherwise, and see the constants
+            # above for what a flare begun above the cushion buys.  It is read
+            # here, above the lever's own branch, because the *attitude* half of
+            # the flare is not the cushion's to command - the descent is flown
+            # through it - and the two branches below are therefore the flare and
+            # the descent's own sixty knot attitude: inside the flare's height the
+            # nose is on the schedule, above it the speed is held.
+            if self.phase == "descent":
+                # The lever down for the descent's own length, under the trim's
+                # own lever: see :data:`DESCENT_LEVER_DOWN_IN` for what it buys
+                # and what it costs.  It is not held through the cushion - the
+                # pull starts under it - nor in the cut, where the shaft is still
+                # turning.
+                collective = collective_t - DESCENT_LEVER_DOWN_IN
+            flare_from = (FLARE_SKID_FT if FLARE_PITCH_FROM_FT is None
+                          else FLARE_PITCH_FROM_FT)
+            if self.phase == "cushion":
+                # The rate the descent is asked for as a *height rate*, which
+                # is what the instruments are in: the sink the descent came in
+                # with, thinning to -CUSHION_SINK_MPS on the skids, and the
+                # lever's own key rate as the only limit on how fast the
+                # the difference may be paid for - see the constants above for
+                # why the schedule is a schedule and not a height.
+                if self.cushion_in is None:
+                    # The pull starts where the lever *is* - the descent's own
+                    # trim, less whatever of it the descent was held under - so
+                    # that the first frame of the cushion is a pull and not a
+                    # step.  See :data:`DESCENT_LEVER_DOWN_IN`.
+                    self.cushion_in = collective_t - DESCENT_LEVER_DOWN_IN
+                    # And the rate the schedule thins from: the sink the
+                    # descent actually arrived with, and the trim's own, whichever
+                    # is the faster: see below.  A descent flown
+                    # on its trim arrives at the trim's own sink, and the
+                    # schedule is the one it always was; a descent held under
+                    # the trim arrives faster than the trim's number, and a
+                    # schedule anchored on the trim's would open with the
+                    # aircraft already below it - a large error on the very
+                    # first frame, the pull at its key rate and still climbing
+                    # when the sink was beaten, which is the balloon that took
+                    # two thousand feet a minute back off the rotor it had just
+                    # been paid.  Anchored here, the first frame's error is
+                    # zero and the pull only ever follows the schedule down.
+                    # The trim's is kept when the aircraft arrives *slower* than
+                    # it, because the other way round is a slow version of the
+                    # same failure: an error that never goes away creeps into the
+                    # cap over the whole of a two hundred foot cushion, and the
+                    # flight that anchors on the slower number balloons seven
+                    # hundred feet a minute where the trim's own schedule lands
+                    # it at two point eight.
+                    # See :data:`DESCENT_LEVER_DOWN_IN`.
+                    self.cushion_sink = max(-telemetry.height_rate,
+                                            self.trims.descent()[5],
+                                            CUSHION_SINK_MPS)
+                want = -max(CUSHION_SINK_MPS,
+                            self.cushion_sink * skid_ft(telemetry)
+                            / FLARE_SKID_FT)
+                error = want - telemetry.height_rate
+                # The pull only ever comes *up*: a flare is a lever raised, and
+                # the first cut - which let the loop take the lever back down as
+                # soon as the sink was beaten - oscillated, because the lever's
+                # answer lags the sink by the two seconds of heave and the loop
+                # was still spending when the sink had already gone.  One way,
+                # the pull eases itself off as the schedule is met and never
+                # starts pulling again.
+                self.cushion_in = min(
+                    self.cushion_in
+                    + clip(CUSHION_GAIN_IN * error, 0.0, CUSHION_KEY_RATE_IN)
+                    * self.reaction,
+                    min(collective_t + CUSHION_PULL_IN, COLLECTIVE_TRAVEL_IN))
+                collective = self.cushion_in
+                # The attitude half of the flare: the manual's own beat, nose up
+                # from the flare's height to FLARE_PITCH_DEG at the level off and
+                # back to the trim under that, so the speed is bled at fifty feet
+                # and the disc is level again for the last twelve - see the
+                # constants above.  The cyclic below flies it against the pull's
+                # own nose up moment.
+                pitch_want = clip(
+                    pitch_t + FLARE_PITCH_DEG
+                    * clip(
+                        min((flare_from - skid_ft(telemetry))
+                            / (flare_from - LEVEL_OFF_SKID_FT),
+                            skid_ft(telemetry) / LEVEL_OFF_SKID_FT),
+                        0.0, 1.0),
+                    pitch_t, pitch_t + FLARE_PITCH_DEG)
+            elif skid_ft(telemetry) <= flare_from:
+                # The cyclic flare, above the cushion's own height: the same
+                # schedule the cushion flies, flown where there is height to
+                # spend on it rather than revolutions - an aft tilted disc at
+                # sixty knots has more air driving it, which is the model's own
+                # windmill brake state, and the chimney the flare's revolutions
+                # come up.  It rises to the level off's own height and holds
+                # nothing: see the constants above for where the nose comes back
+                # down, and why that is safe there and nowhere else.
+                pitch_want = clip(
+                    pitch_t + FLARE_PITCH_DEG
+                    * clip(
+                        min((flare_from - skid_ft(telemetry))
+                            / (flare_from - LEVEL_OFF_SKID_FT),
+                            skid_ft(telemetry) / LEVEL_OFF_SKID_FT),
+                        0.0, 1.0),
+                    pitch_t, pitch_t + FLARE_PITCH_DEG)
+            else:
+                pitch_want = clip(
+                    pitch_t - K_SPEED_DEG * (AUTOROTATION_SPEED_MPS - speed),
+                    pitch_t - PITCH_LIMIT_DEG, pitch_t + PITCH_LIMIT_DEG)
+
+        long_stick = (long_t
+                      + K_PITCH_IN * (telemetry.pitch_deg - pitch_want)
+                      + K_PITCH_RATE_IN * telemetry.pitch_rate_deg)
+        east = state.position.y - TRACK_EAST_REF_M
+        bank_want = clip(-K_BANK_DEG * east, -BANK_LIMIT_DEG, BANK_LIMIT_DEG)
+        lat_stick = (lat_t
+                     + K_ROLL_IN * (bank_want - telemetry.roll_deg)
+                     - K_ROLL_RATE_IN * telemetry.roll_rate_deg)
+        pedal = (pedal_t
+                 - K_YAW_IN * wrap(telemetry.yaw_deg - YAW_REF_DEG)
+                 - K_YAW_RATE_IN * telemetry.yaw_rate_deg)
+        return inches_to_axes(collective, long_stick, lat_stick, pedal)
+
+    # -- the frame loop's view of it -------------------------------------
+
+    def mission_done(self, sim):
+        """The skids on the ground and staying there, or the flight wrecked.
+
+        A rotor that has stopped has stopped: there is no long settling the other
+        missions wait for, so the arrival is the end - once the aircraft is down,
+        has stayed down a settling's worth of seconds, and the sticks are back
+        within a key of the pad's own, which is where the mission left them.  A
+        crash is the end too: the flight is over, and a pilot still on the keys
+        of a wreck is a pilot walking away from it.
+        """
+        if self.done is None:
+            if sim.crashed:
+                self.done = sim.sim_time
+            elif self.phase == "landed" and sim.on_ground:
+                axes = sim.pilot.axes()
+                on_the_pad = all(abs(axis - want) <= step
+                                 for axis, want, step
+                                 in zip(axes, self.pad_axes, KEY_STEP))
+                if (on_the_pad and self.landed_since is not None
+                        and sim.sim_time - self.landed_since
+                        >= LANDING_SETTLE_S):
+                    self.done = sim.sim_time
+        return self.done is not None
+
+    def note(self, sim):
+        """Where the pilot is in the mission, in their own words."""
+        telemetry = sim.telemetry()
+        skid = skid_ft(telemetry)
+        if sim.crashed:
+            return ("%s at %.1f s, %s" % (self.phase, sim.sim_time,
+                                          telemetry.crash_message))
+        if self.done is not None:
+            return ("flown in %.0f s: %.0f ft up at %.0f kt, the rotor down to"
+                    " %.0f %%, down at %+.0f fpm"
+                    % (self.done, CLIMB_SKID_FT, AUTOROTATION_SPEED_KT,
+                       self.lowest_rotor, self.touchdown_rate / FOOT * 60.0))
+        if self.phase == "pickup":
+            return ("picking up off the pad, %4.1f ft of skid, %d decisions"
+                    % (skid, self.decisions))
+        if self.phase == "climb":
+            return ("climbing to %.0f ft at %.0f kt, %4.1f ft of skid,"
+                    " %+5.0f fpm, %.0f kt, %d decisions"
+                    % (CLIMB_SKID_FT, AUTOROTATION_SPEED_KT, skid,
+                       telemetry.height_rate_fpm, telemetry.airspeed_kt,
+                       self.decisions))
+        if self.phase == "cut":
+            return ("rolling the grip off, %4.2f open, rotor %.0f %% at %4.1f ft"
+                    " of skid, %d decisions"
+                    % (sim.pilot.throttle(), telemetry.rotor_percent, skid,
+                       self.decisions))
+        if self.phase == "descent":
+            return ("autorotating, %4.1f ft of skid, %+5.0f fpm, %.0f kt,"
+                    " rotor %.0f %%, %d decisions"
+                    % (skid, telemetry.height_rate_fpm, telemetry.airspeed_kt,
+                       telemetry.rotor_percent, self.decisions))
+        if self.phase == "cushion":
+            return ("the cushion, %4.1f ft of skid, %+5.0f fpm, collective"
+                    " %5.2f in, rotor %.0f %%, %d decisions"
+                    % (skid, telemetry.height_rate_fpm,
+                       telemetry.collective_in, telemetry.rotor_percent,
+                       self.decisions))
+        return ("down on its skids, lever coming back to the pad's own,"
+                " %d decisions" % (self.decisions,))
+
+
+
+
+
 #: The missions a caller may ask for by name, and the one that is flown when
 #: nobody says: the short one, since it is a minute of flight and the whole of
 #: it happens over the pad.
-MISSIONS = {"hover-turn": HoverTurnPilot, "cruise": HumanPilot}
+MISSIONS = {"hover-turn": HoverTurnPilot, "cruise": HumanPilot,
+            "autorotate": AutorotationPilot}
 DEFAULT_MISSION = "hover-turn"
 
 
@@ -829,7 +1468,8 @@ def trims_for(airframe, pilot_class):
     which is why it is never the one being flown.  See :class:`TrimTable`.
     """
     return TrimTable(airframe, speeds=pilot_class.TRIM_SPEEDS_MPS,
-                     altitude=pilot_class.TRIM_ALT_M)
+                     altitude=pilot_class.TRIM_ALT_M,
+                     autorotation_speed=pilot_class.TRIM_AUTOROTATION_MPS)
 
 
 

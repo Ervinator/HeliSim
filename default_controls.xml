@@ -4,9 +4,9 @@
 
   This is the project's own default, and it is the mapping the sandbox has
   always been flown from: W and S for the collective, the up and down arrows for
-  the longitudinal cyclic, left and right for the lateral one, and A and D for
-  the pedals.  main.py reads it unless the command line names another file, and
-  controls.py's own self test flies it.
+  the longitudinal cyclic, left and right for the lateral one, A and D for the
+  pedals, and E and Q for the throttle twist grip.  main.py reads it unless the
+  command line names another file, and controls.py's own self test flies it.
 
   Every control may be moved to another device on its own, so a home made panel
   can arrive one axis at a time: name a <device> and point a <control> at it,
@@ -28,14 +28,16 @@
   from its rest the device has to read before it is believed, and minimum and
   maximum calibrate a lever that does not reach the ends of its own range.
 
-  The throttle is deliberately absent: the map this project ships names it while
-  there is nothing on the other end of it.  The model's own aircraft has no engine
-  - the report's fixed rotor, which is what TM-73254's figures were computed with
-  - so a run begins without one and `main.py`'s `F` key fits a T53 to the shaft in
-  flight (see simulation.Simulation.fit_engine).  The keyboard's `Q` and `E` roll
-  the grip today; the control to name here when a joystick or a home made
-  collective has one is "throttle", and that is the next thing the device map
-  wants.
+  The twist grip is the fifth control and its own pair of keys, E to roll it open
+  and Q to roll it off - the pair main.py's ten keys have always read it with.
+  Naming it here is what lets a joystick or a home made collective take it over
+  the same way as the four axes: point <control name="throttle"> at a device with
+  an axis for it, or a pair of buttons, and the keys stop reading it.  The grip
+  flies anything only on an aircraft with an engine: the model's own begins
+  without one - the report's fixed rotor, which is what TM-73254's figures were
+  computed with - and main.py's `F` key fits a T53 to the shaft in flight (see
+  simulation.Simulation.fit_engine).  Until then the grip is still a control the
+  window reads and shows, on the collective panel's own pie.
 -->
 <controls version="1.0">
     <device name="keyboard" kind="keyboard" />
@@ -44,4 +46,5 @@
     <control name="cyclic-lat" source="keyboard" increase="right" decrease="left" />
     <control name="pedals" source="keyboard" increase="d" decrease="a" />
     <control name="collective" source="keyboard" increase="w" decrease="s" />
+    <control name="throttle" source="keyboard" increase="e" decrease="q" />
 </controls>

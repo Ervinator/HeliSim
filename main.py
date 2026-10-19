@@ -32,7 +32,7 @@ the camera: the envelopes of simulation.py are the limits.
 Usage::
 
     python main.py [scenery.xml] [--log FILE | --no-log]
-                   [--controls FILE | --no-controls]
+                   [--controls FILE | --no-controls] [--engine]
     python main.py --check          # the wiring, headless, no window
 
 Keys:
@@ -79,11 +79,11 @@ stick placeable rather than something only thrown from one stop to the other; a
 joystick or a script is not scaled, since a position that is told where to be
 has no keypress to step.
 
-**The engine is fitted in flight, not at startup.**  A run begins on the report's
-own aircraft - no engine, the rotor held at 100 per cent - because that is what
-every figure in TM-73254 was computed with, and it is what the regression against
-those figures has to reproduce.  `F` fits a T53 to the shaft it is flying: see
-:meth:`simulation.Simulation.fit_engine`, which is a re-fit and not a reset -
+**The engine is fitted in flight, or at startup on request.**  A run begins on the
+report's own aircraft - no engine, the rotor held at 100 per cent - because that is
+what every figure in TM-73254 was computed with, and it is what the regression
+against those figures has to reproduce.  `F` fits a T53 to the shaft it is flying:
+see :meth:`simulation.Simulation.fit_engine`, which is a re-fit and not a reset -
 nothing of the aircraft moves, and what moves is the trim reference the caption's
 light reads, to the hover the governor settles at (322.98 rpm on the 8700 lb
 aircraft rather than the report's 324).  From there `Q` and `E` roll the twist
@@ -93,6 +93,18 @@ UH-1 has a couple of seconds of.  The caption gains the engine's panel the momen
 there is one to read and gives it up again when `F` takes it off, so the aircraft
 of the report's figures is told apart from the T53 by the gauges and by nothing
 else.
+
+That default is the one thing about the engine a pilot cannot see from the
+cockpit: the grip is a lever on the panel whether or not anything is on the other
+end of it, so on the report's aircraft `Q` and `E` turn a pie that flies nothing
+and a run that never touches `F` reads the grippiest looking control in the
+sandbox as the broken one.  Two things say so.  The keys line printed before the
+window names `Q`, `E`, `F`, `G` and `X` with the four axes; and the frame loop
+prints :func:`grip_notice`'s line the first time the grip moves with no engine
+fitted, which says there is nothing for it to be a minimum *of* and names both
+cures - `F`, and `--engine` on the command line, which fits the T53 before the
+first frame instead of at the tenth, for a run that means to fly the grip from
+the start.
 
 **The controls are read from a device map.**  `controls.py` and its
 `default_controls.xml` say which physical control flies which - the cyclic up
@@ -108,10 +120,12 @@ put where it is read, at the hand's own rate and without the keyboard's step
 granularity, which is the "not scaled" above; a *ratchet* control is two keys or
 two buttons and turns exactly as the ten keys do.  A device that is not
 plugged in reads as no input at all, so half a panel still flies, and a joystick
-plugged in while the window is open is picked up as it appears.  The map this
-file ships names no throttle yet - it was left out while the model had no engine
-for one to fly, and the keyboard's `Q` and `E` are what roll the grip today - so
-naming it is what the first home made collective will want.
+plugged in while the window is open is picked up as it appears.  The twist grip
+is the fifth control and is mapped like the other four: the map this file ships
+has it on the keyboard's own `Q` and `E`, so the grip the window reads - and the
+pie that shows it on the collective's panel - follows those two keys, and a home
+made collective with a lever for it takes the pair over by naming the control on
+its own device.
 
 The window's caption is this sandbox's instrument panel, and it carries all
 four control positions: the collective in per cent, the longitudinal and
@@ -782,11 +796,14 @@ def load_scenery(path):
 # The caption says where the controls are in the model's own units; these say it
 # again without a word, and in the shapes the mockup gives them: a red line for
 # each pedal, moving oppositely, a red disc for the cyclic, and a red collective
-# lever in a green field.  Each panel is drawn from PilotInput's own axes - the
-# hands, the same four control *positions* the caption prints - so a key the
-# aircraft cannot show (a pedal against a pair of skids on the pad) still moves
-# something a pilot can see, and nothing here reads a trimmed control or the
-# model's inches.
+# lever in a green field, with the same hand's twist grip as a small pie beside
+# it.  Each panel is drawn from PilotInput's own axes - the hands, the same four
+# control *positions* the caption prints - so a key the aircraft cannot show (a
+# pedal against a pair of skids on the pad) still moves something a pilot can
+# see, and nothing here reads a trimmed control or the model's inches.  The one
+# number on these panels that is not one of those four axes is the grip:
+# :meth:`simulation.Simulation.throttle`, on the collective's own panel, which is
+# what the pie's two colours and its hand are.
 #
 # The fourth panel is not a control at all.  It is an attitude indicator, and the
 # one thing on this HUD that no hand holds: it is drawn from the model's own roll
@@ -841,6 +858,15 @@ PANEL_COLUMN_COUNT = 4
 PANEL_MOCKUP_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "attic", "controls_simple.png")
 
+#: The collective panel's own reference: the twist grip's pie above the lever's
+#: field, which is where its two colours and its hand are read off -
+#: attic/collective_and_throttle.png.  Named and treated the same way as the
+#: mockup above: a picture a reader may not have, described in the comments
+#: around THROTTLE_PIE_LOW_DEG rather than left to the file.
+PANEL_THROTTLE_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "attic",
+    "collective_and_throttle.png")
+
 #: The attitude indicator's own reference, named and treated the same way: a small
 #: instrument whose case carries the aircraft's reference over the middle of it,
 #: with the sky, the ground, the horizon and the pitch lines of a moving horizon
@@ -870,10 +896,13 @@ PANEL_VSI = 5
 PANEL_AIRSPEED = 6
 
 #: The mockup's own colours: black panels, one red for all four axes - it is one
-#: hand's worth of positions - and the green of the collective's field.
+#: hand's worth of positions, and the twist grip's own hand with them - the green
+#: of the collective's field and of the throttle pie's upper half, and the yellow
+#: of its lower one.
 PANEL_BACK_COLOUR = (0.03, 0.03, 0.04, 0.72)
 PANEL_RED = (0.90, 0.08, 0.10)
 PANEL_GREEN = (0.16, 0.92, 0.18)
+PANEL_YELLOW = (0.95, 0.86, 0.12)
 
 #: The attitude indicator's own colours: a grey case, the sky blue over the ground
 #: brown, and one green for the ball's own lines - the horizon and the rungs of
@@ -923,6 +952,37 @@ QUADRANT_PIVOT_Y = 0.035
 QUADRANT_RADIUS = 0.965
 QUADRANT_LEVER_HALF = 0.032
 QUADRANT_SEGMENTS = 32
+
+#: The collective panel's throttle: the twist grip, painted into the same panel
+#: as the lever, above the field - the mockup of attic/collective_and_throttle.png
+#: has the two of them together because they are the one hand's two controls.  The
+#: grip is a pie of 205 degrees, and those degrees are its whole travel: the lower
+#: hundred of them - everything below the panel's own horizontal - is yellow, and
+#: the upper hundred and five - everything above it - is green, the two halves
+#: being the grip's own two halves of travel, the winding up and the range over
+#: it.  Over the two of them is the red hand, which is where the grip is, so the
+#: panel says one number twice: as a colour under the hand and as the angle of the
+#: hand itself.  The 155 degrees the pie does not use is left open, and it faces
+#: the panel's own left, which is the one direction there is nothing to say in.
+#: These are panel fractions and degrees above the panel's horizontal, the same
+#: convention as the quadrant's angles above.
+THROTTLE_PIE_CENTRE_X = 0.24
+THROTTLE_PIE_CENTRE_Y = 0.78
+THROTTLE_PIE_RADIUS = 0.15
+THROTTLE_PIE_LOW_DEG = -100.0
+THROTTLE_PIE_YELLOW_DEG = 100.0
+THROTTLE_PIE_GREEN_DEG = 105.0
+THROTTLE_PIE_SPAN_DEG = THROTTLE_PIE_YELLOW_DEG + THROTTLE_PIE_GREEN_DEG
+
+#: The hand: half its own thickness across, and this much of the radius behind the
+#: middle of the pie, so it is a pointer rather than a needle - it crosses the pie
+#: and its tail leaves it, as the mockup's does.
+THROTTLE_PIE_HAND_HALF = 0.030
+THROTTLE_PIE_HAND_TAIL = 0.60
+
+#: One sector's own triangles: the yellow and the green are each drawn as a fan of
+#: this many of them, so the pieces are smooth at a panel 132 px wide.
+THROTTLE_PIE_SEGMENTS = 32
 
 #: The attitude panel: the moving horizon instrument of attic/attitude.png, in
 #: panel fractions and the classic layout.  The dial is the case's own circle and
@@ -996,8 +1056,23 @@ INSTRUMENT_TICK_SHORT_INNER = 0.385
 INSTRUMENT_TICK_HALF = 0.5 * 1.4 / PANEL_PX
 INSTRUMENT_NEEDLE_HALF = 0.5 * 2.2 / PANEL_PX
 INSTRUMENT_THIN_NEEDLE_HALF = 0.5 * 1.2 / PANEL_PX
-INSTRUMENT_NUMERAL_RADIUS = 0.300
-INSTRUMENT_NUMERAL_PX = 10
+INSTRUMENT_NUMERAL_RADIUS = 0.255
+#: The size of those numbers, in the panel's own pixels: the three faces' numerals
+#: - the altimeter's nought to nine, the vertical speed indicator's thousands and
+#: the airspeed indicator's twenty to a hundred and sixty - and nothing else, the
+#: labels being :data:`INSTRUMENT_LABEL_PX` and :data:`INSTRUMENT_SMALL_LABEL_PX`.
+#: It is twice the size the faces' own reference pictures carry them at, which is
+#: why the radius above is nearer the middle than the reference's own: the numerals
+#: are read against the ring of ticks, and the widest of them all - the airspeed
+#: indicator's "160", 21 px wide and 13 tall - reaches 45.1 px from the middle,
+#: where the long ticks begin at 46.2.  The clear space between the numerals is what
+#: that radius costs: the airspeed indicator's eight are 45 degrees apart and keep
+#: 2.3 px of it, the altimeter's ten 36 degrees and 6.8 px, and the vertical speed
+#: indicator's seven 50 degrees and 15.8 px - and each face's own words clear the
+#: numerals too.  `attic/_instrument_hud.py` is the readback those numbers came
+#: from: it draws the three faces into a hidden window exactly as the HUD draws
+#: them and holds every one of those clearances to half a pixel.
+INSTRUMENT_NUMERAL_PX = 20
 INSTRUMENT_LABEL_PX = 9
 INSTRUMENT_SMALL_LABEL_PX = 8
 
@@ -1085,6 +1160,32 @@ def collective_lever_deg(collective_axis):
     """
     return QUADRANT_LOW_DEG + (QUADRANT_HIGH_DEG - QUADRANT_LOW_DEG) * _clamp_axis(
         collective_axis, 0.0, 1.0)
+
+
+def throttle_pie_spans():
+    """The throttle pie's two coloured halves, ``(low, split, high)`` degrees.
+
+    The split is the panel's own horizontal, which is where the two colours meet:
+    the yellow runs up from a hundred degrees below it to it, and the green from
+    it to a hundred and five above.  It is the one angle on the pie worth naming,
+    because the hand is read against it - the colour beside the grip and the
+    angle of the grip are the same statement twice.
+    """
+    split = THROTTLE_PIE_LOW_DEG + THROTTLE_PIE_YELLOW_DEG
+    return (THROTTLE_PIE_LOW_DEG, split, split + THROTTLE_PIE_GREEN_DEG)
+
+
+def throttle_hand_deg(throttle):
+    """The throttle pie's hand, degrees above the panel's own horizontal.
+
+    The pie is the grip's travel and nothing else, so the hand is the grip: it
+    lies on the bottom of the yellow with the twist grip closed, on the top of
+    the green at full open, and on the horizon the two colours meet at with the
+    grip wound through 100 of its 205 degrees.  The two ends of the pie are the
+    stops, so the hand is never off its own arc.
+    """
+    return (THROTTLE_PIE_LOW_DEG
+            + THROTTLE_PIE_SPAN_DEG * _clamp_axis(throttle, 0.0, 1.0))
 
 
 def attitude_ball_axes(roll_deg):
@@ -1367,6 +1468,28 @@ def draw_panel_rect(box, centre_x, centre_y, half_x, half_y):
     glEnd()
 
 
+def draw_panel_fan(box, centre_x, centre_y, radius, low_deg, high_deg, segments,
+                   colour):
+    """A filled sector of a panel, in fractions from its own centre: a fan.
+
+    One triangle to each segment between the two angles, so the area drawn is
+    exactly the sector's own - its two straight edges are the radii at those
+    angles and its arc is the circle the radius cuts - which is what makes the
+    collective's field its lever's travel and the throttle's pie the grip's, and
+    not an approximation of either.  The angles are degrees above the panel's
+    horizontal, the convention every angle on this HUD is read in.
+    """
+    glColor3f(*colour)
+    glBegin(GL_TRIANGLE_FAN)
+    glVertex2f(*panel_point(box, centre_x, centre_y))
+    for index in range(segments + 1):
+        angle = math.radians(low_deg + (high_deg - low_deg) * index / segments)
+        glVertex2f(*panel_point(box,
+                                centre_x + radius * math.cos(angle),
+                                centre_y + radius * math.sin(angle)))
+    glEnd()
+
+
 def draw_pedal_panel(box, pedal_axis):
     """The mockup's first panel: one red line for each pedal, moving oppositely."""
     left_y, right_y = pedal_line_heights(pedal_axis)
@@ -1391,28 +1514,24 @@ def draw_cyclic_panel(box, lat_axis, long_axis):
     glEnd()
 
 
-def draw_collective_panel(box, collective_axis):
-    """The mockup's third panel: the green field, and the red lever on it.
+def draw_collective_panel(box, collective_axis, throttle):
+    """The mockup's third panel: the green field and the red lever on it, and the
+    twist grip's own pie above them.
 
     The field is the lever's travel, drawn from the pivot out one triangle per
     segment of the arc between the two stops, so the green a pilot sees is exactly
     the sector the lever can be in and its own edges are the stops.  The lever is
-    drawn last, on top, as a thick red line from the pivot to the arc at the angle
-    the collective is at: the mockup's lever, and the whole of what this panel has
-    to say.
+    drawn on top of it as a thick red line from the pivot to the arc at the angle
+    the collective is at: the mockup's lever, and the whole of what the field has
+    to say.  The twist grip, which is the same hand's other control, is its own
+    small pie in the corner the field's own upper edge leaves free - the one
+    place on this panel the lever can never be - with its two colours and its
+    hand painted over them, so the panel says both of the hand's numbers at one
+    glance.
     """
-    glColor3f(*PANEL_GREEN)
-    glBegin(GL_TRIANGLE_FAN)
-    glVertex2f(*panel_point(box, QUADRANT_PIVOT_X, QUADRANT_PIVOT_Y))
-    for index in range(QUADRANT_SEGMENTS + 1):
-        angle = math.radians(QUADRANT_LOW_DEG
-                             + (QUADRANT_HIGH_DEG - QUADRANT_LOW_DEG)
-                             * index / QUADRANT_SEGMENTS)
-        glVertex2f(*panel_point(
-            box,
-            QUADRANT_PIVOT_X + QUADRANT_RADIUS * math.cos(angle),
-            QUADRANT_PIVOT_Y + QUADRANT_RADIUS * math.sin(angle)))
-    glEnd()
+    draw_panel_fan(box, QUADRANT_PIVOT_X, QUADRANT_PIVOT_Y, QUADRANT_RADIUS,
+                   QUADRANT_LOW_DEG, QUADRANT_HIGH_DEG, QUADRANT_SEGMENTS,
+                   PANEL_GREEN)
 
     angle = math.radians(collective_lever_deg(collective_axis))
     # Across the lever rather than along it, so its thickness is the same at the
@@ -1427,6 +1546,46 @@ def draw_collective_panel(box, collective_axis):
                  (tip_x + across_x, tip_y + across_y),
                  (tip_x - across_x, tip_y - across_y),
                  (QUADRANT_PIVOT_X - across_x, QUADRANT_PIVOT_Y - across_y)):
+        glVertex2f(*panel_point(box, x, y))
+    glEnd()
+
+    draw_throttle_pie(box, throttle)
+
+
+def draw_throttle_pie(box, throttle):
+    """The twist grip on the collective panel: its two colours and its hand.
+
+    The yellow hundred degrees below the panel's horizon and the green hundred
+    and five above it are the grip's own travel, and the red hand lies across
+    them at the position the grip is at: the two halves are the two halves of
+    that travel, so the colour beside the hand and the angle of the hand say the
+    same thing twice.  The hand is painted last and over both, and its tail
+    passes through the middle of the pie and out of the far side, as the
+    mockup's does: a twist grip is read from either end of its pointer.
+    """
+    low, split, high = throttle_pie_spans()
+    draw_panel_fan(box, THROTTLE_PIE_CENTRE_X, THROTTLE_PIE_CENTRE_Y,
+                   THROTTLE_PIE_RADIUS, low, split, THROTTLE_PIE_SEGMENTS,
+                   PANEL_YELLOW)
+    draw_panel_fan(box, THROTTLE_PIE_CENTRE_X, THROTTLE_PIE_CENTRE_Y,
+                   THROTTLE_PIE_RADIUS, split, high, THROTTLE_PIE_SEGMENTS,
+                   PANEL_GREEN)
+
+    angle = math.radians(throttle_hand_deg(throttle))
+    across_x = -math.sin(angle) * THROTTLE_PIE_HAND_HALF
+    across_y = math.cos(angle) * THROTTLE_PIE_HAND_HALF
+    tail_x = (THROTTLE_PIE_CENTRE_X - THROTTLE_PIE_HAND_TAIL
+              * THROTTLE_PIE_RADIUS * math.cos(angle))
+    tail_y = (THROTTLE_PIE_CENTRE_Y - THROTTLE_PIE_HAND_TAIL
+              * THROTTLE_PIE_RADIUS * math.sin(angle))
+    head_x = THROTTLE_PIE_CENTRE_X + THROTTLE_PIE_RADIUS * math.cos(angle)
+    head_y = THROTTLE_PIE_CENTRE_Y + THROTTLE_PIE_RADIUS * math.sin(angle)
+    glColor3f(*PANEL_RED)
+    glBegin(GL_QUADS)
+    for x, y in ((tail_x + across_x, tail_y + across_y),
+                 (head_x + across_x, head_y + across_y),
+                 (head_x - across_x, head_y - across_y),
+                 (tail_x - across_x, tail_y - across_y)):
         glVertex2f(*panel_point(box, x, y))
     glEnd()
 
@@ -1758,13 +1917,16 @@ def draw_control_panel(sim):
     The four control numbers drawn are :meth:`simulation.PilotInput.axes` and
     nothing else: the hands, which is what the caption's own control positions are
     read from too, so the window says the same thing twice in two languages.  The
-    attitude indicator and the three instruments are the panels that cannot be
-    drawn from a hand at all, so they are drawn from
-    :meth:`simulation.Simulation.telemetry` - the aircraft's roll and pitch, its
-    height above the ground, its rate of climb and its airspeed, which is what
-    the instruments are for.
+    collective's panel carries one number that is not one of those four axes - the
+    twist grip, :meth:`simulation.Simulation.throttle`, which is the same hand's
+    other control and is drawn as its own pie on that panel.  The attitude
+    indicator and the three instruments are the panels that cannot be drawn from
+    a hand at all, so they are drawn from :meth:`simulation.Simulation.telemetry`
+    - the aircraft's roll and pitch, its height above the ground, its rate of
+    climb and its airspeed, which is what the instruments are for.
     """
     collective, long_stick, lat_stick, pedal = sim.pilot.axes()
+    throttle = sim.throttle()
     attitude = sim.telemetry()
 
     glMatrixMode(GL_PROJECTION)
@@ -1786,7 +1948,7 @@ def draw_control_panel(sim):
         draw_panel_background(box)
     draw_pedal_panel(boxes[PANEL_PEDALS], pedal)
     draw_cyclic_panel(boxes[PANEL_CYCLIC], lat_stick, long_stick)
-    draw_collective_panel(boxes[PANEL_COLLECTIVE], collective)
+    draw_collective_panel(boxes[PANEL_COLLECTIVE], collective, throttle)
     draw_attitude_panel(boxes[PANEL_ATTITUDE], attitude.roll_deg,
                         attitude.pitch_deg)
     draw_altimeter_panel(boxes[PANEL_ALTIMETER], attitude.alt_ft)
@@ -2088,15 +2250,23 @@ class Devices:
     def read(self, keyboard, tapped):
         """One frame of every device, in ``PilotInput``'s own two shapes.
 
-        Answers ``(absolute, ratchet, throttle)``: the positions for
-        :meth:`simulation.PilotInput.set_axes`, the commands for
-        :meth:`simulation.PilotInput.step`, and the throttle position, which is
-        carried for a caller to show and flies nothing yet - the model holds 100
-        per cent rotor speed and has no engine in it.  A ratcheted throttle has
-        no position to carry, so only an absolute one reaches the third.  An
-        axis no device is mapped to is in neither dictionary, and that absence
-        is what leaves it where the last frame put it: each of the two calls
-        touches only the axes it was given.
+        Answers ``(absolute, ratchet)``: the positions for
+        :meth:`simulation.PilotInput.set_axes` and the -1/0/+1 commands for
+        :meth:`simulation.PilotInput.step`.  Either dictionary may hold any of the
+        five controls, the twist grip among them, and each control arrives in the
+        one its device makes it: a keyboard is a ratchet, so a keyboard control is
+        a command for :meth:`~simulation.PilotInput.step`, while a joystick is
+        either - a lever it reports the position of is a position for
+        :meth:`~simulation.PilotInput.set_axes`.  That is what
+        :meth:`simulation.PilotInput.step`'s own ``throttle`` and
+        :meth:`~simulation.PilotInput.set_axes`' own ``throttle`` exist for, and
+        it is why the grip needs no case of its own here: the two calls that fly
+        the frame take it exactly as they take the four axes.
+
+        A control whose device is not plugged in is in neither dictionary, and so
+        is one no device is mapped to at all.  That absence is what leaves it
+        where the last frame put it: each of the two calls touches only the
+        controls it was given.
         """
         def held(key_name):
             """Is the key the map names *key_name* down this frame?"""
@@ -2104,30 +2274,24 @@ class Devices:
             return bool(code in tapped) or bool(_held(keyboard, code))
 
         absolute, ratchet = {}, {}
-        throttle = None
         for name in controls.CONTROL_NAMES:
             control = self.control_map.control(name)
             if control is None:
                 continue
-            axis = controls.AXIS_FOR_CONTROL.get(name)
+            axis = controls.AXIS_FOR_CONTROL[name]
             device = self.control_map.device_for(control)
             if device.kind == controls.KEYBOARD:
-                if axis is not None:
-                    ratchet[axis] = controls.key_command(control, held)
+                ratchet[axis] = controls.key_command(control, held)
                 continue
             joystick = self.joysticks.get(device.name)
             if joystick is None or not joystick.get_init():
                 continue                        # unplugged: no input at all
             if control.absolute:
-                value = self._absolute(joystick, control)
-                if axis is None:
-                    throttle = value
-                else:
-                    absolute[axis] = value
-            elif axis is not None:
+                absolute[axis] = self._absolute(joystick, control)
+            else:
                 ratchet[axis] = controls.button_command(
                     control, lambda index: bool(joystick.get_button(index)))
-        return absolute, ratchet, throttle
+        return absolute, ratchet
 
     def _absolute(self, joystick, control):
         """One absolute control's reading, from the joystick it sits on."""
@@ -2169,18 +2333,46 @@ def fly_frame_axes(sim, camera, frame_dt, absolute, ratchet,
     where their devices are, :meth:`simulation.PilotInput.step` turns the
     ratchets, and the frame is then flown exactly as the keyboard path flies it.
 
-    The two calls touch different axes - a control is one or the other, and each
-    call leaves every axis it was not given alone - so a run with one axis on a
-    joystick and the rest on the keyboard needs nothing here but the two
-    dictionaries the map produced.  With the project's own map there is nothing
-    absolute to set, and this is :func:`fly_frame` with an empty first call in
-    front of it.
+    The two calls touch different controls - a control is one or the other, and
+    each call leaves every control it was not given alone - so a run with one
+    axis on a joystick and the rest on the keyboard needs nothing here but the
+    two dictionaries the map produced.  The twist grip is one of them: a mapped
+    keyboard rolls it through the ratchet dictionary exactly as :func:`fly_frame`
+    does, and a lever a device reports the position of arrives in the absolute
+    one, so neither path has to remember that the grip is not a stick.  With the
+    project's own map there is nothing absolute to set, and this is
+    :func:`fly_frame` with an empty first call in front of it.
     """
     if absolute:
         sim.pilot.set_axes(dt=frame_dt, **absolute)
     sim.step(frame_dt, sim.pilot.step(frame_dt, **ratchet))
     camera.update(frame_dt, sim.render_position(), sim.render_basis())
     return sim
+
+
+def grip_notice(sim, was, now):
+    """The line the twist grip owes a pilot when there is no engine behind it.
+
+    The grip is a lever on the panel whether or not anything is on the other end
+    of it, so on the report's own aircraft - which has no engine in the model -
+    ``Q`` and ``E`` roll a control that flies nothing, and the sandbox's most
+    obviously broken looking control is the one that is not broken at all: there
+    is nothing for the grip to be a *minimum* of, since nothing is reading it.
+    *was* and *now* are :meth:`simulation.Simulation.throttle` before and after a
+    frame's own input, and the answer is None unless this frame is one that owes
+    the line: the grip moved, and no engine is fitted to read it.
+
+    A movement is all the information there is and a second movement is no
+    newer than the first, so the caller asks once per run - the window's loop
+    prints the first line it is given and does not ask again - and a pilot told
+    once has been told.  That is the whole of the one-shot here: this function
+    is a reading of the two positions and of the shaft, and nothing else.
+    """
+    if sim.airframe.engine is not None or now == was:
+        return None
+    return ("  the twist grip has no engine on the other end of it: nothing for"
+            " it to be\n  a minimum of.  F fits the T53; --engine fits it before"
+            " the first frame")
 
 
 def window_title(sim, view, focused=True):
@@ -2415,14 +2607,14 @@ def log_key(log, sim, kind, event, keyboard):
 
 
 def command_line(args):
-    """``(scenery path, key log path, controls path)`` from the command line.
+    """``(scenery path, key log path, controls path, engine)`` from the command line.
 
     The scenery file is the one bare argument, ``sample_scenery.xml`` when there
     is none, exactly as it always was.  The other two halves each have two
     options of their own:
 
     * the key log: ``--log FILE`` writes it to *FILE* and ``--no-log`` flies
-      without one, which leaves its half of the triple None;
+      without one, which leaves its half None;
     * the controls: ``--controls FILE`` reads the device map from *FILE* and
       ``--no-controls`` flies on the built-in keyboard mapping without reading a
       file at all, which likewise leaves its half None.
@@ -2431,12 +2623,24 @@ def command_line(args):
     default stands, and a file named beats the ``--no-`` option beside it, since
     it is the option that says where the thing comes from.
 
+    The fourth half is a switch rather than a pair, and the only one here that
+    is: ``--engine`` fits the T53 before the first frame, where `F` fits it in
+    the tenth, and there is no ``--no-engine`` because the engine is *off* by
+    default - a run that says nothing about it flies the report's own aircraft,
+    which is the option.  A run that means to fly the twist grip from the start
+    says so here rather than pressing `F` once the window is up.
+
     ``--check`` never reaches here: it is read at the bottom of the file, before
     ``main()`` is called at all.
     """
     args = list(args)
     log_path = DEFAULT_KEYLOG_FILE
     controls_path = DEFAULT_CONTROLS_FILE
+    engine = "--engine" in args
+    while "--engine" in args:
+        # Every one of them, so that saying it twice leaves no ``--engine`` in
+        # the arguments to be mistaken for the scenery path below.
+        args.remove("--engine")
     if "--no-log" in args:
         args.remove("--no-log")
         log_path = None
@@ -2458,13 +2662,13 @@ def command_line(args):
         else:
             del args[index]
     return ((args[0] if args else DEFAULT_SCENERY_FILE), log_path,
-            controls_path)
+            controls_path, engine)
 
 
 def main():
     global SCENERY
 
-    path, log_path, controls_path = command_line(sys.argv[1:])
+    path, log_path, controls_path, engine = command_line(sys.argv[1:])
     loaded = load_scenery(path)
     if loaded is None:
         sys.exit(2)
@@ -2499,12 +2703,23 @@ def main():
              sim.airframe.rotor_time_constant))
     print("  the run's own trim: %s" % (sim.trim_controls,))
     sim.on_the_pad()
+    if engine:
+        # --engine: the T53 fitted before the first frame rather than in the
+        # tenth, which is the same re-fit F makes - nothing of the pad's state
+        # moves - and the one way a run can begin with a rotor that is not held
+        # at 100 per cent, since the governor is then a hand on the shaft from
+        # the start.  It is printed with everything else the run says about
+        # itself, because which aircraft is being flown is the first thing a
+        # pilot needs to be told and the last thing the cockpit shows.
+        sim.fit_engine()
+        print("engine: fitted at startup (--engine); F takes it off again")
     print("  parked on the pad:  %s" % (sim.telemetry(),))
     print("  R resets to the state this run began in - the pad, the lever at %d %% -"
           % (100.0 * PAD_COLLECTIVE,))
     print("  and the world is %.0f km across"
           % (2.0 * GROUND_HALF_M / 1000.0,))
-    print("keys: W/S collective, arrows cyclic, A/D pedals, R reset, P park,"
+    print("keys: W/S collective, arrows cyclic, A/D pedals, R reset, P park,")
+    print("  Q/E the twist grip, F the engine, G the governor, X a failure,"
           " C camera, Esc quit")
     print("  those are the built-in mapping, which the controls above name when"
           " this run")
@@ -2518,6 +2733,9 @@ def main():
     print("  two red lines for the pedals, a red disc for the cyclic, and a red")
     print("  lever for the collective in a green field - the mockup %s"
           % (PANEL_MOCKUP_FILE,))
+    print("  that panel carries the twist grip too, as a pie of 205 degrees")
+    print("  above the lever's field - yellow under the horizon, green over it,")
+    print("  one red hand across both - %s" % (PANEL_THROTTLE_FILE,))
     print("  under them an attitude indicator, the aircraft's own roll and pitch")
     print("  on a moving horizon, blue over brown with green lines, and its")
     print("  reference fixed over its middle - %s" % (PANEL_ATTITUDE_FILE,))
@@ -2563,6 +2781,11 @@ def main():
     # frame and were let go again before it ended.  A press shorter than a frame
     # is the one a ratchet must not lose, and the event queue never misses one.
     keyboard = {}
+    # Has the grip's own warning been made this run?  See grip_notice: the first
+    # movement with no engine answers a line and this remembers that it has, so
+    # the warning is a thing a run says once rather than every frame a key is
+    # held down - and it is a *run*'s memory, so a fresh one says it again.
+    grip_noticed = False
     keyboard_was = pygame.key.get_focused()
     if not keyboard_was:
         print("  no keyboard: click the window, or the keys go nowhere")
@@ -2677,8 +2900,19 @@ def main():
             print("  keyboard: %s" % ("the window has it" if focused
                                       else "click the window, it has not"))
             keyboard_was = focused
-        absolute, ratchet, throttle = devices.read(keyboard, tapped)
+        absolute, ratchet = devices.read(keyboard, tapped)
+        # The grip is read off the aircraft before the frame's own input is put
+        # into it and again after, which is what tells a frame that *moved* the
+        # grip from sixty a second that merely find it where the last one left
+        # it: `Q` and `E` are ratchets and are heard here exactly as a lever on a
+        # device is, since both paths end at PilotInput's own throttle.
+        grip_was = sim.throttle()
         fly_frame_axes(sim, camera, frame_dt, absolute, ratchet, view)
+        if not grip_noticed:
+            notice = grip_notice(sim, grip_was, sim.throttle())
+            grip_noticed = notice is not None
+            if notice is not None:
+                print(notice)
         draw_scene(sim, camera, view)
         pygame.display.flip()
 
@@ -2694,9 +2928,11 @@ def main():
         if sim.frames % 15 == 0:
             pygame.display.set_caption(window_title(sim, view, focused))
         if sim.frames % 60 == 0:
+            # The grip is read back off the aircraft rather than off the
+            # devices: it is the position the frame's own input left it at,
+            # whether Q and E rolled it or a lever on a device set it.
             print("  " + str(sim.telemetry())
-                  + ("" if throttle is None
-                     else " | throttle %3.0f %%" % (100.0 * throttle,)))
+                  + " | throttle %3.0f %%" % (100.0 * sim.throttle(),))
 
     if log is not None:
         log.close()
@@ -2870,6 +3106,20 @@ def _self_check():
     sim.pilot.step(SIM_TIME_STEP_S, **pilot_keys({pygame.KSCAN_E: True}))
     assert sim.pilot.throttle() == grip          # back on its own stop
 
+    # The grip's own warning, which is the one thing about the default the panel
+    # cannot say: this aircraft's grip is a lever with nothing on the other end of
+    # it, so a pilot who rolls it and sees nothing happen has not broken it.  A
+    # movement with no engine owes the line - one line, and both cures named in it
+    # - and neither a grip that did not move nor a grip moved with the T53 fitted
+    # owes anything at all.  The one-shot itself is the loop's, and it is here as
+    # a flag rather than as a count: the second movement is no newer than the
+    # first, so what a run says is decided by whether it has already spoken.
+    assert grip_notice(sim, grip, grip) is None           # a grip that did not move
+    assert grip_notice(sim, 1.0, 0.75) is not None
+    notice = grip_notice(sim, 1.0, 0.75)
+    assert "F" in notice and "--engine" in notice, notice  # both cures
+    assert grip_notice(sim, 0.75, 1.0) == notice        # either way it is turned
+
     # F fits the engine the sandbox does not begin with, which is the whole of
     # how a run gets one: the report's own aircraft is what a run starts on, and
     # this is the other one, fitted live.  No bit of the aircraft moves - it is a
@@ -2883,6 +3133,10 @@ def _self_check():
     sim.fit_engine()
     assert sim.airframe.shaft_driven and sim.telemetry().engine.has_engine
     assert sim.airframe.state.values() == pad_start          # not a bit moved
+    # And the grip's warning is not owed on *this* aircraft: the lever now has a
+    # governor on the other end of it, and rolling it is flying the engine rather
+    # than turning something nothing reads.
+    assert grip_notice(sim, 1.0, 0.75) is None               # fitted: it flies
     caption = window_title(sim, VIEW_CHASE)
     assert "| rotor 100.0 %" in caption, caption             # held, on the pad
     assert "| N2 " in caption and "| Q " in caption and "| AUTO" in caption
@@ -3127,6 +3381,72 @@ def _self_check():
     assert QUADRANT_PIVOT_Y > QUADRANT_LEVER_HALF
     assert QUADRANT_LOW_DEG < QUADRANT_HIGH_DEG < 90.0
 
+    # The throttle pie: the twist grip's own 205 degrees, the hundred below the
+    # panel's horizon yellow and the hundred and five above it green, with the
+    # hand over them - closed on the bottom of the yellow, full open on the top of
+    # the green, and on the horizon the two halves meet at with the grip wound
+    # through a hundred of its degrees.  The pie is the grip's travel and nothing
+    # else, so the hand is the grip and its two ends are the stops.
+    low, split, high = throttle_pie_spans()
+    assert low == THROTTLE_PIE_LOW_DEG
+    assert abs(split) < 1e-12                  # the two colours meet at it
+    assert abs(split - (low + THROTTLE_PIE_YELLOW_DEG)) < 1e-12
+    assert abs(high - (split + THROTTLE_PIE_GREEN_DEG)) < 1e-12
+    assert abs((split - low) - 100.0) < 1e-12  # the lower hundred, yellow
+    assert abs((high - split) - 105.0) < 1e-12 # the upper hundred and five
+    assert abs((high - low) - 205.0) < 1e-12   # and the grip's own travel
+    assert throttle_hand_deg(0.0) == low
+    assert throttle_hand_deg(1.0) == high
+    assert throttle_hand_deg(0.5) == 0.5 * (low + high)
+    assert throttle_hand_deg(-1.0) == low              # a stop is a stop
+    assert throttle_hand_deg(4.0) == high
+    assert throttle_hand_deg(0.0) < throttle_hand_deg(0.25)
+    assert throttle_hand_deg(0.25) < throttle_hand_deg(0.75)
+    assert throttle_hand_deg(0.75) < throttle_hand_deg(1.0)
+    for throttle in (0.0, 0.25, 0.5, 0.75, 1.0):
+        assert low <= throttle_hand_deg(throttle) <= high
+    # The pie is on the panel whole, its hand and the hand's own tail included.
+    assert 0.0 < THROTTLE_PIE_CENTRE_X - THROTTLE_PIE_RADIUS
+    assert THROTTLE_PIE_CENTRE_X + THROTTLE_PIE_RADIUS <= 1.0
+    assert 0.0 < THROTTLE_PIE_CENTRE_Y - THROTTLE_PIE_RADIUS
+    assert THROTTLE_PIE_CENTRE_Y + THROTTLE_PIE_RADIUS <= 1.0
+    assert 0.0 < THROTTLE_PIE_HAND_HALF < THROTTLE_PIE_RADIUS
+    assert 0.0 < THROTTLE_PIE_HAND_TAIL < 1.0
+    assert THROTTLE_PIE_SEGMENTS >= 16
+    for throttle in (0.0, 0.3, 0.6, 1.0):
+        angle = math.radians(throttle_hand_deg(throttle))
+        along = (math.cos(angle), math.sin(angle))
+        across = (-math.sin(angle) * THROTTLE_PIE_HAND_HALF,
+                  math.cos(angle) * THROTTLE_PIE_HAND_HALF)
+        tail = (THROTTLE_PIE_CENTRE_X - THROTTLE_PIE_HAND_TAIL
+                * THROTTLE_PIE_RADIUS * along[0],
+                THROTTLE_PIE_CENTRE_Y - THROTTLE_PIE_HAND_TAIL
+                * THROTTLE_PIE_RADIUS * along[1])
+        head = (THROTTLE_PIE_CENTRE_X + THROTTLE_PIE_RADIUS * along[0],
+                THROTTLE_PIE_CENTRE_Y + THROTTLE_PIE_RADIUS * along[1])
+        # The hand reaches the pie's own arc with its whole length: its head is on
+        # the circle the pie's colours are drawn out to, and so is every other
+        # point of it between the tail and the head.
+        for end in (tail, head):
+            assert math.hypot(end[0] - THROTTLE_PIE_CENTRE_X,
+                              end[1] - THROTTLE_PIE_CENTRE_Y
+                              ) <= THROTTLE_PIE_RADIUS + 1e-12
+            for sign in (1.0, -1.0):
+                assert 0.0 <= end[0] + sign * across[0] <= 1.0
+                assert 0.0 <= end[1] + sign * across[1] <= 1.0
+        assert abs(math.hypot(head[0] - THROTTLE_PIE_CENTRE_X,
+                              head[1] - THROTTLE_PIE_CENTRE_Y)
+                   - THROTTLE_PIE_RADIUS) < 1e-12
+    # The pie and the lever's field share the panel without touching: the field's
+    # own upper edge is the ray at QUADRANT_HIGH_DEG from its pivot, and the whole
+    # of the pie is further from that ray than its own radius.
+    edge = math.radians(QUADRANT_HIGH_DEG)
+    clear = ((THROTTLE_PIE_CENTRE_X - QUADRANT_PIVOT_X) * -math.sin(edge)
+             + (THROTTLE_PIE_CENTRE_Y - QUADRANT_PIVOT_Y) * math.cos(edge))
+    assert clear > THROTTLE_PIE_RADIUS
+    assert THROTTLE_PIE_CENTRE_X > QUADRANT_PIVOT_X
+    assert THROTTLE_PIE_CENTRE_Y > QUADRANT_PIVOT_Y
+
     # The attitude panel: the dial is on the panel, the ball inside the dial and
     # the aircraft's own reference inside the ball, so no part of the instrument
     # can be drawn off its own square.
@@ -3361,6 +3681,8 @@ def _self_check():
                                                    boxes[0][3] + 0.5)
     assert "attic" in PANEL_MOCKUP_FILE and PANEL_MOCKUP_FILE.endswith(
         "controls_simple.png")
+    assert "attic" in PANEL_THROTTLE_FILE and PANEL_THROTTLE_FILE.endswith(
+        "collective_and_throttle.png")
     # The attitude indicator is the foot of the column - the last of the four -
     # and the three instruments finish the row beside it, each drawn from the file
     # its own face is pictured in; five files in all describe this HUD.
@@ -3527,16 +3849,17 @@ def _self_check():
     # the name a key is given, the columns of a log line, the two clocks on it
     # and the rate that keeps the flight sampled rather than written every frame.
     assert command_line([]) == (DEFAULT_SCENERY_FILE, DEFAULT_KEYLOG_FILE,
-                                DEFAULT_CONTROLS_FILE)
+                                DEFAULT_CONTROLS_FILE, False)
     assert command_line(["scene.xml"]) == ("scene.xml", DEFAULT_KEYLOG_FILE,
-                                           DEFAULT_CONTROLS_FILE)
+                                           DEFAULT_CONTROLS_FILE, False)
     assert command_line(["scene.xml", "--log", "run.csv"]) == (
-        "scene.xml", "run.csv", DEFAULT_CONTROLS_FILE)
+        "scene.xml", "run.csv", DEFAULT_CONTROLS_FILE, False)
     assert command_line(["--log", "run.csv"]) == (
-        DEFAULT_SCENERY_FILE, "run.csv", DEFAULT_CONTROLS_FILE)
+        DEFAULT_SCENERY_FILE, "run.csv", DEFAULT_CONTROLS_FILE, False)
     assert command_line(["--no-log"])[1] is None
     assert command_line(["scene.xml", "--no-log"]) == ("scene.xml", None,
-                                                       DEFAULT_CONTROLS_FILE)
+                                                       DEFAULT_CONTROLS_FILE,
+                                                       False)
     assert command_line(["--log"])[1] == DEFAULT_KEYLOG_FILE  # no file named
     assert command_line(["--no-log", "--log", "run.csv"])[1] == "run.csv"
     # The device map has the same two options, and the same rule that a file
@@ -3548,6 +3871,18 @@ def _self_check():
     assert command_line(["--controls"])[2] == DEFAULT_CONTROLS_FILE
     assert command_line(["--no-controls", "--controls", "panel.xml"])[2] == \
         "panel.xml"
+    # The engine is a switch and not a pair, and the only one of the four that
+    # is: --engine fits the T53 before the first frame and a run that says
+    # nothing about it flies the report's own aircraft, which is the whole of
+    # the default - there is no --no-engine to write - and the flag is stripped
+    # rather than left in the arguments as a scenery path would be.
+    assert command_line(["--engine"]) == (DEFAULT_SCENERY_FILE,
+                                          DEFAULT_KEYLOG_FILE,
+                                          DEFAULT_CONTROLS_FILE, True)
+    assert command_line(["scene.xml", "--engine", "--no-log"]) == (
+        "scene.xml", None, DEFAULT_CONTROLS_FILE, True)
+    assert command_line([])[3] is False and command_line(["--engine"])[3] is True
+    assert command_line(["--engine", "--engine"])[3] is True   # as often as said
 
     # A flight key is named by the position the controls read it from, and every
     # other key - the four command keys among them - by pygame's own name.
@@ -3616,7 +3951,12 @@ def _self_check():
     board = Devices(board_map)
     assert board_map.mapped_names() == [controls.CYCLIC_LONG,
                                         controls.CYCLIC_LAT,
-                                        controls.PEDALS, controls.COLLECTIVE]
+                                        controls.PEDALS, controls.COLLECTIVE,
+                                        controls.THROTTLE]
+    # The grip's pair of keys is that mapping's own, and they are the two the
+    # ten flight keys read it with.
+    assert board.scancodes["e"] == pygame.KSCAN_E
+    assert board.scancodes["q"] == pygame.KSCAN_Q
     # A key is resolved by its physical position, from pygame's own constants.
     assert key_scancode("w") == pygame.KSCAN_W
     assert key_scancode("s") == pygame.KSCAN_S
@@ -3636,52 +3976,57 @@ def _self_check():
             continue
         raise AssertionError("a key name pygame has no key for was accepted: %r"
                              % (name,))
-    # Nothing on the built-in map is absolute: a keyboard has no positions.  The
-    # map's four axes and pilot_keys' fifth control are two different things
-    # here, and deliberately so: the map this project ships names no throttle yet
-    # (see the note in default_controls.xml), so a keyboard flies the grip and a
-    # mapped device does not - until the map has a throttle to point somewhere,
-    # which is the next thing a home made collective will want.
-    def mapped_axes(keys):
-        """pilot_keys without the twist grip: the four controls the map names."""
-        return dict((name, value) for name, value in pilot_keys(keys).items()
-                    if name != "throttle")
-
-    axes_only = {"collective": 0.0, "long_stick": 0.0, "lat_stick": 0.0,
-                 "pedal": 0.0}
-    absolute, ratchet, throttle = board.read({}, set())
-    assert absolute == {} and throttle is None
-    assert ratchet == axes_only == mapped_axes({})
-    for code in FLIGHT_SCANCODES[:8]:
-        _absolute, mapped, _throttle = board.read({}, {code})
-        assert mapped == mapped_axes(frame_keys({}, {code})), code
-    for code in FLIGHT_SCANCODES[8:]:
-        _absolute, mapped, _throttle = board.read({}, {code})
-        assert mapped == axes_only and _throttle is None, code
+    # Nothing on the built-in map is absolute: a keyboard has no positions.  Its
+    # five controls are the ten flight keys and nothing else, the twist grip
+    # among them, so a run flown through the map and a run flown through
+    # pilot_keys are the same run - which is what makes Q and E move the grip the
+    # window shows, and the pie under it on the collective's panel with it.
+    all_five = {"collective": 0.0, "long_stick": 0.0, "lat_stick": 0.0,
+                "pedal": 0.0, "throttle": 0.0}
+    absolute, ratchet = board.read({}, set())
+    assert absolute == {}
+    assert ratchet == all_five == pilot_keys({})
+    for code in FLIGHT_SCANCODES:
+        _absolute, mapped = board.read({}, {code})
+        assert mapped == pilot_keys(frame_keys({}, {code})), code
     # And a tap counts for its frame here too, or the collective ratchet loses
     # it exactly as it would through the keys themselves.
-    _absolute, tapped, _throttle = board.read({}, {pygame.KSCAN_W})
+    _absolute, tapped = board.read({}, {pygame.KSCAN_W})
     assert tapped["collective"] == 1.0
-    _absolute, mapped, _throttle = board.read({pygame.KSCAN_W: True,
-                                               pygame.KSCAN_S: True}, set())
+    _absolute, mapped = board.read({pygame.KSCAN_W: True,
+                                    pygame.KSCAN_S: True}, set())
     assert mapped["collective"] == 0.0                 # the two cancel
+    # The grip is the fifth of the ten and is read here as it is there: E rolls
+    # it open, Q rolls it off, and either way the mapped keyboard is pilot_keys.
+    for scancode, command in ((pygame.KSCAN_E, 1.0), (pygame.KSCAN_Q, -1.0)):
+        _absolute, mapped = board.read({}, {scancode})
+        assert mapped["throttle"] == command, scancode
+        assert mapped == pilot_keys(frame_keys({}, {scancode})), scancode
+    _absolute, mapped = board.read({pygame.KSCAN_E: True,
+                                    pygame.KSCAN_Q: True}, set())
+    assert mapped["throttle"] == 0.0                   # the two cancel
 
     # The two frame paths fly the same flight: the same keys through fly_frame
     # and through the map this project ships, on two aircraft that began
-    # identically, are the same aircraft to the last bit.
+    # identically, are the same aircraft to the last bit - the twist grip among
+    # them, since it is one of the labels pilot_keys answers with.
     by_keys = Simulation(airframe=airframe_preset(AIRFRAME_PRESET))
     by_map = Simulation(airframe=airframe_preset(AIRFRAME_PRESET))
     keys_camera = ChaseCamera()
     map_camera = ChaseCamera()
     for _ in range(120):
-        held = {pygame.KSCAN_W: True}
+        held = {pygame.KSCAN_W: True, pygame.KSCAN_Q: True}
         fly_frame(by_keys, keys_camera, SIM_TIME_STEP_S,
                   frame_keys(held, set()))
-        _absolute, mapped, _throttle = board.read(held, set())
+        _absolute, mapped = board.read(held, set())
         fly_frame_axes(by_map, map_camera, SIM_TIME_STEP_S, _absolute, mapped)
     assert by_keys.airframe.state.values() == by_map.airframe.state.values()
     assert by_keys.frames == by_map.frames == 120
     assert by_keys.pilot.axes() == by_map.pilot.axes()
+    assert by_keys.pilot.throttle() == by_map.pilot.throttle()
+    # Q rolled the grip off for those two seconds - a key is worth a quarter of
+    # the grip's travel a second - and both paths read the same grip at the end.
+    assert abs(by_map.pilot.throttle() - 0.5) < 1e-9
 
     # A joystick, without a joystick: a stand-in answers what pygame's own would,
     # so the routing and the axis arithmetic are checked with no hardware - which
@@ -3706,8 +4051,9 @@ def _self_check():
         def get_hat(self, index):
             return self.hat
 
-    # Two controls on the stick and two left on the keyboard: the whole point of
-    # the map, which is that a panel arrives one axis at a time.
+    # Two controls on the stick and three left on the keyboard - the grip among
+    # them: the whole point of the map, which is that a panel arrives one axis at
+    # a time.
     stick_map = controls.ControlMap.from_xml_string(
         '<controls version="1.0">'
         '<device name="huey" kind="joystick" index="0" match="Arduino"/>'
@@ -3717,18 +4063,22 @@ def _self_check():
     stick = Devices(stick_map)
     assert stick.joysticks["huey"] is None             # nothing is plugged in
     stick.joysticks["huey"] = StandIn({0: 0.5, 1: -1.0})
-    absolute, ratchet, throttle = stick.read({}, set())
+    absolute, ratchet = stick.read({}, set())
     assert absolute["lat_stick"] == -0.5               # inverted
     assert absolute["long_stick"] == -1.0
-    assert throttle is None
     assert "collective" not in absolute and "pedal" not in absolute
+    assert "throttle" not in absolute               # the grip is the keyboard's
     assert ratchet["collective"] == 0.0                # still the keyboard's
     assert ratchet["pedal"] == 0.0
-    _absolute, ratchet, _throttle = stick.read({}, {pygame.KSCAN_D})
+    assert ratchet["throttle"] == 0.0
+    _absolute, ratchet = stick.read({}, {pygame.KSCAN_D})
     assert ratchet["pedal"] == 1.0                     # a key on the same frame
+    # ...and the grip's own key is read with the stick's axes that same frame.
+    _absolute, ratchet = stick.read({}, {pygame.KSCAN_Q})
+    assert ratchet["throttle"] == -1.0
     # A deadzone is taken out about the centre of a bipolar control...
     stick.joysticks["huey"] = StandIn({0: 0.0, 1: 0.04})
-    absolute, _ratchet, _throttle = stick.read({}, set())
+    absolute, _ratchet = stick.read({}, set())
     assert absolute["long_stick"] == 0.0
     # ...and a button pair turns a ratchet, for a build whose lever is switches.
     button_map = controls.ControlMap.from_xml_string(
@@ -3739,15 +4089,17 @@ def _self_check():
         '</controls>')
     buttons = Devices(button_map)
     buttons.joysticks["huey"] = StandIn(buttons=(2,))
-    _absolute, ratchet, _throttle = buttons.read({}, set())
+    _absolute, ratchet = buttons.read({}, set())
     assert ratchet["collective"] == 1.0
     buttons.joysticks["huey"] = StandIn(buttons=(2, 3))
-    _absolute, ratchet, _throttle = buttons.read({}, set())
+    _absolute, ratchet = buttons.read({}, set())
     assert ratchet["collective"] == 0.0                # the two cancel
     buttons.joysticks["huey"] = None
-    _absolute, ratchet, _throttle = buttons.read({}, set())
+    _absolute, ratchet = buttons.read({}, set())
     assert "collective" not in ratchet                 # unplugged: no input
-    # A hat is a trim's own shape, and a throttle is carried and flies nothing.
+    # A hat is a trim's own shape, and an absolute grip is a position: a device
+    # with an axis for it puts it where its lever is, and the frame loop hands
+    # that to set_axes as it hands the collective's own axis there.
     hat_map = controls.ControlMap.from_xml_string(
         '<controls version="1.0">'
         '<device name="huey" kind="joystick" index="0"/>'
@@ -3755,11 +4107,14 @@ def _self_check():
         '<control name="throttle" source="huey" axis="2"/>'
         '</controls>')
     hat = Devices(hat_map)
-    assert hat.read({}, set())[2] is None              # no hardware, no throttle
+    assert hat.read({}, set())[0] == {}                # no hardware, no input
     hat.joysticks["huey"] = StandIn({2: 1.0}, hat=(1, 0))
-    absolute, _ratchet, throttle = hat.read({}, set())
+    absolute, ratchet = hat.read({}, set())
     assert absolute["lat_stick"] == 1.0
-    assert throttle == 1.0                             # carried, and no more
+    assert absolute["throttle"] == 1.0    # the grip, at the lever's position
+    # The grip is one control or the other and not both: a device that reports
+    # its position leaves it out of the ratchet dictionary entirely.
+    assert "throttle" not in ratchet
 
 
 if __name__ == "__main__":

@@ -586,8 +586,9 @@ def _solve_inflow_ratio(thrust_at, mu, wind_along_axis, ground_effect,
     positive, and there the equation can hold a windmill root that a full
     momentum model has but a model with no blade stall cannot stabilise: a
     hovering rotor whose collective is left up and whose speed is run down walks
-    into it and diverges, which is why it is not the default and why only the
-    autorotation trim and the airframe it is asked of turn it on.
+    into it and diverges, which is why the airframe reads this switch off the
+    shaft rather than leaving it open - see :attr:`Airframe.windmill`, which
+    turns the branch on for a rotor with nothing driving it and for no other.
 
     Within either regime the branch is taken only when the equation has a root
     on it, so the near end of the bracket is checked rather than assumed and a
@@ -1486,11 +1487,12 @@ class Airframe:
     settles a little under its selected speed, by however much of the 40 rpm
     droop band its power demand is worth.
 
-    ``windmill`` is the last of the airframe's own switches and the one that
-    makes a *steady* autorotation reachable - see :meth:`trim_autorotation`.
-    It is off by default and the report's own aircraft never sees the second
-    root of equation 10; only an airframe being flown as an autorotation should
-    turn it on.
+    ``windmill`` is the airframe's own reading of the shaft and the one that
+    makes a *steady* autorotation reachable - see :meth:`trim_autorotation`.  It
+    is not a switch a caller throws: a rotor with nothing driving it - an engine
+    that has quit, or a fixed torque of zero - is a rotor that takes its torque
+    from the airstream, and the report's own aircraft, which has no engine to
+    fail, never sees the second root of equation 10 at all.
     """
 
     mass: float = UH1_SIM_MASS
@@ -1521,21 +1523,9 @@ class Airframe:
     #: The engine: ``None`` by default, which is the report's fixed rotor to
     #: the last bit.  Give it an :class:`engine.Engine` and the shaft balance
     #: is driven by a T53 with a governor, the throttle comes in through the
-    #: pilot's hand, and an engine failure is a torque that goes away.
+    #: pilot's hand, and an engine failure is a torque that goes away - the
+    #: rotor left to :attr:`windmill`, which the failure itself turns on.
     engine: Optional[Engine] = None
-    #: May the rotor use the second root of equation 10 - the windmill brake
-    #: state - for any descending rotor that has one?  ``False`` by default,
-    #: the report's own aircraft, which offers that root only to a descending
-    #: rotor whose collective is down and is otherwise the report's one working
-    #: state exactly as every figure in TM-73254 was computed.  ``True`` lets
-    #: :meth:`forces` (and so :meth:`derivatives`, :meth:`step`,
-    #: :meth:`equilibrium_residual` and :meth:`trim_autorotation`) see the
-    #: root of a rotor that is *carrying* the aircraft - an autorotation, whose
-    #: collective is not down - as well.  It is off by default because that
-    #: root is unstable in a model with no blade stall: a hovering rotor whose
-    #: collective is left up and whose speed is run down finds it and overspeeds,
-    #: so only an aircraft being flown as an autorotation should have it.
-    windmill: bool = False
 
     @property
     def throttle(self):
@@ -1567,6 +1557,42 @@ class Airframe:
         :meth:`shaft_torque`, which has nothing to report when this is ``False``.
         """
         return self.engine is not None or self.engine_torque is not None
+
+    @property
+    def windmill(self):
+        """May the rotor use the second root of equation 10, the windmill state?
+
+        ``True`` when nothing is driving the shaft, which this model has in two
+        shapes: an :attr:`engine` that has quit - :attr:`engine.Governor.failed`,
+        or a twist grip rolled right off, which
+        :meth:`engine.Governor.power_target` reads as the same physics and
+        :meth:`engine.Engine.advance` decays away - and a fixed
+        :attr:`engine_torque` of zero, the dead shaft a caller writes by hand.
+        The report's own aircraft, with no shaft at all to be driven, is neither
+        of them: its engine holds whatever speed the rotor is doing, and every
+        figure in TM-73254 was computed without the second root.
+
+        :func:`_solve_inflow_ratio` is what this answers - see its docstring for
+        equation 10's two roots and which descending rotors each is offered to -
+        and it is *read off the shaft rather than set* because the second root is
+        a fact about the rotor and not a mode the model is put into: a rotor with
+        nothing turning it takes its torque from the airstream whenever its
+        descent puts it in that state, and that is the only such state there is.
+        The failure itself is what turns the root on, and an engine that is
+        reset, or a grip rolled back open, is what turns it off again.
+
+        A *powered* rotor is deliberately not offered it, and that is the whole
+        of why this is a reading and not a constant.  The branch is unstable in
+        a model with no blade stall - a hovering rotor whose collective is left
+        up and whose speed is run down finds the root and overspeeds without
+        bound - and a hovering rotor is exactly what a live engine is holding,
+        which is no autorotation at all; the report's one working state is what
+        every figure in TM-73254 is drawn at.
+        """
+        if self.engine is not None:
+            return bool(self.engine.governor.failed
+                        or self.engine.governor.throttle <= 0.0)
+        return self.engine_torque == 0.0
 
     def command_angles(self, controls):
         """The mixing stage on its own: stick positions in, control angles out."""
@@ -2217,13 +2243,15 @@ class Airframe:
         things.  It must have something on the other end of the shaft, so
         :meth:`shaft_residual` has a balance to close (:attr:`engine` or
         :attr:`engine_torque`), and for an *autorotation* that something must be
-        delivering nothing - a failed :class:`engine.Engine` or an
-        ``engine_torque`` of zero, which is what makes the seventh residual
-        ``-Q`` rather than an engine's torque less it.  And it must have
-        :attr:`windmill` on, because the rotor that carries an aircraft in a
-        steady autorotation is in the windmill brake state - air up through the
+        delivering nothing - a failed :class:`engine.Engine`, a twist grip rolled
+        right off, or an ``engine_torque`` of zero, which is what makes the
+        seventh residual ``-Q`` rather than an engine's torque less it.  And the
+        rotor must be one that may windmill, which is that same condition read
+        the other way round: :attr:`windmill` is the airframe's own reading of a
+        shaft with nothing driving it, and the rotor that carries an aircraft in
+        a steady autorotation is in the windmill brake state - air up through the
         disc, the second root of equation 10 - while its collective is *not* at
-        the down stop, and the report's own aircraft offers that root only to a
+        the down stop, where the report's own aircraft offers that root only to a
         descending rotor whose collective is down.  Asking an airframe without
         either raises, rather than returning a state that is not one.
 
@@ -2253,9 +2281,11 @@ class Airframe:
         air_density = self.air_density if air_density is None else air_density
         if not self.windmill:
             raise ValueError(
-                "trim_autorotation needs Airframe(windmill=True): an "
-                "autorotating rotor is in the windmill brake state with its "
-                "collective up, which the report's own aircraft does not allow")
+                "trim_autorotation needs a rotor with nothing driving it - an "
+                "engine that has failed, a twist grip rolled right off, or an "
+                "engine_torque of zero - because an autorotating rotor is in "
+                "the windmill brake state with its collective up, and a shaft "
+                "something is still turning does not offer that root")
         if weight is None:
             weight = self.mass * GRAVITY
         law = self.law
@@ -2970,22 +3000,50 @@ def _self_test():
     assert abs(held.state.altitude - trim_state.altitude) < 0.002
 
     # Take the engine's torque away and it winds down at the rate Q / I: a
-    # seventh of the speed in the first second, and then it settles, because the
-    # collective is still at the hover setting and what it settles at is a rotor
-    # turning the air over rather than one carrying an aircraft.  Twice the drag
-    # instead and it winds up, by the same arithmetic.
+    # seventh of the speed in the first second, and less and less of it as the
+    # rotor turns the air over instead of carrying the aircraft.  What it is
+    # *not* is an end of the story.  Four seconds in, the working state runs out
+    # - thrust at zero inflow is positive with the collective still in the
+    # pilot's hand - and a rotor with nothing driving it is offered equation 10's
+    # second root, the windmill brake state, which it takes: air up through the
+    # disc, a positive inflow ratio, and a torque that drives the rotor rather
+    # than the rotor driving it.  The wind down turns around, and the rotor
+    # speeds back up from there.  That is the instability
+    # :func:`_solve_inflow_ratio` describes and not a fault in this arithmetic:
+    # a *vertical* descent with the collective up is where equation 10's two
+    # roots meet, and a model with no blade stall cannot hold a rotor in it -
+    # ``Simulation`` is what refuses such a frame, and this is the airframe
+    # saying which state it found rather than returning an unconverged solve for
+    # a caller to notice on its own.  Twice the drag instead and it winds up, by
+    # the same arithmetic.
     cut = Airframe(engine_torque=0.0)
     assert abs(cut.rotor_acceleration(trimmed, trim_state)
                + drag / cut.rotor_inertia) < 1e-12
     cut.reset(trim_state, controls)
     previous = UH1_OMEGA
-    for _ in range(6):
+    for _ in range(4):
         for _ in range(60):
             cut.step(1.0 / 60.0, controls)
         assert cut.state.rotor_speed < previous
         previous = cut.state.rotor_speed
-    assert 0.5 * UH1_OMEGA < cut.state.rotor_speed < 0.65 * UH1_OMEGA
+    assert 0.62 * UH1_OMEGA < cut.state.rotor_speed < 0.68 * UH1_OMEGA, \
+        cut.state.rotor_rpm
     assert cut.state.rotor_rpm < UH1_RPM_LOW      # out of the green arc with it
+    # The fifth second is the handover and the sixth is the windmill state
+    # carrying the rotor: slower than it was by a little, and then faster.
+    for _ in range(60):
+        cut.step(1.0 / 60.0, controls)
+    slowest = cut.state.rotor_speed
+    assert slowest < previous
+    handover = cut.forces(
+        ControlPitch.from_angles(cut.command_angles(controls),
+                                 controls.long_stick))
+    assert handover.rotor.converged
+    assert handover.rotor.inflow_ratio > 0.0        # the windmill branch
+    assert handover.rotor.torque < 0.0              # driving the rotor
+    for _ in range(60):
+        cut.step(1.0 / 60.0, controls)
+    assert cut.state.rotor_speed > slowest, cut.state.rotor_rpm
     surge = Airframe(engine_torque=2.0 * drag)
     assert abs(surge.rotor_acceleration(trimmed, trim_state)
                - drag / surge.rotor_inertia) < 1e-12
@@ -3052,7 +3110,10 @@ def _self_test():
     # than a warning band's worth of speed, because a hovering rotor with no
     # engine is a rotor with 16 kN m of drag and nothing driving it.  Six
     # seconds in, the rotor is out of the green arc, and the collective the
-    # trim left in the pilot's hand is what has it there.
+    # trim left in the pilot's hand is what has it there.  The failure is also
+    # what puts equation 10's second root in play - :attr:`windmill` is read off
+    # this same governor - so the rotor a run has just lost its engine from is
+    # the rotor :meth:`trim_autorotation` can be asked for a descent of.
     failed = Airframe(engine=Engine())
     failed.reset(trim_state, controls)
     failed.engine.governor.failed = True
@@ -3172,8 +3233,9 @@ def _self_test():
     # own - 9.1 m/s, 1792 fpm, against the 1800 to 2000 a UH-1H holds there -
     # on a rotor in the windmill brake state (a positive inflow ratio, air up
     # through the disc) with a collective four inches below the hover's and the
-    # 100 per cent it was asked for.
-    autorotating = Airframe(engine_torque=0.0, windmill=True)
+    # 100 per cent it was asked for.  The dead shaft is all the airframe is told:
+    # ``windmill`` is read off it rather than switched - see below.
+    autorotating = Airframe(engine_torque=0.0)
     assert autorotating.windmill and autorotating.shaft_driven
     auto_controls, auto_state = autorotating.trim_autorotation(60.0 * KNOT)
     ground = auto_state.ground_velocity()
@@ -3207,19 +3269,40 @@ def _self_test():
     fallen = trimmed_altitude - autorotating.state.altitude
     assert abs(fallen - 5.0 * descent) < 0.1, fallen
 
-    # The two things the airframe has to be, and it says so rather than
-    # returning a state that is not one.  The report's own aircraft offers the
-    # windmill root only to a collective-down rotor, so it has no autorotation
-    # to trim; and a shaft merely driven is not enough either, because the
-    # rotor of a trim that is being *flown* as an autorotation needs that root.
-    assert not Airframe().windmill and not Airframe(engine_torque=0.0).windmill
-    for undecided in (Airframe(engine_torque=0.0), Airframe(engine=Engine())):
+    # Nothing driving the shaft is what the windmill root is *for*, and the
+    # airframe reads that off the shaft rather than being told it.  The two
+    # shapes are a fixed torque of zero and an engine with no fuel, the second
+    # through the governor the sandbox's X key throws, and the failure *is* the
+    # switch: an engine that quits in the air leaves an airframe that
+    # trim_autorotation can be asked of, with nothing else done to it.  An
+    # aircraft whose shaft is being driven has no such root, which is what keeps
+    # every figure in TM-73254 on the report's one working state: the report's
+    # own aircraft has no shaft at all, a torque above zero is an engine driving
+    # it, and a live T53 is holding a rotor no autorotation could be trimmed at.
+    assert not Airframe().windmill                        # no shaft at all
+    assert not Airframe(engine_torque=drag).windmill      # a driving torque
+    assert not Airframe(engine=Engine()).windmill         # a live engine
+    quit_engine = Engine()
+    quit_engine.governor.failed = True
+    assert Airframe(engine=quit_engine).windmill
+    gripped = Engine()
+    gripped.governor.throttle = 0.0
+    assert Airframe(engine=gripped).windmill
+    quitting = Airframe(engine=quit_engine)
+    quit_controls, quit_state = quitting.trim_autorotation(60.0 * KNOT)
+    assert abs(quit_state.rotor_speed - UH1_OMEGA) < 1e-9
+    assert 8.0 < quit_state.ground_velocity().z < 11.0, quit_state
+    assert abs(quit_controls.collective - auto_controls.collective) < 1e-3, \
+        quit_controls.collective
+    # And a shaft something is still turning has no autorotation to trim: the
+    # aircraft says so rather than returning a state that is not one.
+    for driven in (Airframe(engine_torque=drag), Airframe(engine=Engine())):
         try:
-            undecided.trim_autorotation(60.0 * KNOT)
+            driven.trim_autorotation(60.0 * KNOT)
         except ValueError:
             pass
         else:
-            raise AssertionError("an aircraft with no windmill root trimmed "
+            raise AssertionError("an aircraft with a driven shaft trimmed "
                                  "an autorotation")
 
 
@@ -3510,7 +3593,10 @@ def _demo():
 
     print()
     print("an autorotation, trimmed on the descent rate, at the report's 60 kt:")
-    autorotation = Airframe(engine_torque=0.0, windmill=True)
+    print("nothing driving the shaft is all the airframe is told, and it reads")
+    print("the windmill root off that rather than being switched into it:")
+    autorotation = Airframe(engine_torque=0.0)
+    assert autorotation.windmill
     auto_controls, auto_state = autorotation.trim_autorotation(60.0 * KNOT)
     auto_pitch = ControlPitch.from_angles(
         autorotation.command_angles(auto_controls), auto_controls.long_stick)
