@@ -131,6 +131,52 @@ These are choices, not oversights: each is stated where it lives.
 
 ## Done
 
+* 2026-10-19 - **the skids have the heading: below 4 deg of rotor, full pedal on
+  the ground now yaws nothing at all.**  The report was that a parked UH-1 with
+  the lever low turns its nose on the pedals anyway, and the aircraft was right:
+  the yaw *rate* was being taken out of every frame by `GROUND_FRICTION_PER_S` -
+  which is what a helicopter on its skids does - but a heading is not a rate.  The
+  Euler kinematics turn a body rate into a heading at a rate of their own, so a
+  frame whose yaw rate had just been zeroed still came out of the floor a fraction
+  of a degree round, and two seconds of right pedal at the stop walked the nose 22
+  deg the pilot never asked for.  A pedal has nothing to react against while the
+  disk is not lifting the aircraft: the weight is on the skids, and the skids are
+  what the yaw moment goes into.  So the floor says so:
+
+  * *`simulation.GROUND_GRIP_ANGLE_DEG` is 4.0 deg of rotor, and under it the
+    heading comes back exactly as the frame found it.*  `Simulation._ground()` is
+    handed the state the frame began at and answers `before.attitude.z`, so what
+    the floor owns is the heading itself and not only the rate - which is the
+    whole of the fix, because damping the rate alone leaves the walk, the walk
+    being in the attitude the frame is handed back;
+  * *the gate reads the pilot's own number.*  It compares
+    `Telemetry.collective_deg` - the mixing law's angle, the one the caption and a
+    HUD show - rather than a lever fraction, so what the floor reads and what a
+    hand sees cannot disagree, and the lever that lands on it is 0.253866 of the
+    travel rather than anything round;
+  * *and above the gate nothing changed.*  The 6158 lb aircraft's pad lever is
+    11.8 deg of rotor, so a run up on the pedals still pivots it on its skids
+    exactly as it did, which is what a pickup uses.  The gate is a gate and not a
+    brake on the floor: what it owns is a stationary aircraft's heading, and only
+    while the disk is too slow to be lifting it.
+
+  Verified: `python simulation.py` printing `self test passed`, with a new
+  boundary block in its self test beside the block that already holds the pad's
+  own two levers - it bisects the lever travel for the one that lands on the gate
+  (on `Telemetry.collective_deg` itself, the mixing law's angle being monotone in
+  the lever) and flies a frame's worth either side of it with the pedal at the
+  stop for two seconds: 3.984 deg of rotor holding the heading to the last bit
+  (walk under 1e-9 deg, yaw rate and body rate exactly 0.0) and 4.016 deg turning
+  it 23 deg, both on the ground at the end and neither crashed; `python main.py
+  --check` and `python regression_tm73254.py`, both unchanged, the eight figures
+  still reading as they did before the gate; and `attic/_grip_probe.py` - scratch,
+  not part of the project - walking the whole travel with the pedal held at the
+  stop for two seconds at a lever: 0.000 to 0.250 of the travel (0.000 to 3.939
+  deg of rotor) with no walk and no rate at all, 0.300 to 0.900 (4.727 to 14.181
+  deg) turning 20 to 27 deg in those same two seconds with the skids down
+  throughout, and 1.000 (15.756 deg) the one lever where the rotor lifts it off
+  the ground, which is the floor handing the heading back.
+
 * 2026-10-16 - **a run says why the grip flies nothing: `--engine`, and one line
   the first time `Q` or `E` is touched.**  The report was "set the throttle to
   minimum and the helicopter still goes into the air", and the answer is that on

@@ -19,7 +19,7 @@ Layered, each one importing only what sits below it:
 | `rotor_control.py` | 1280 | the control path: inches of stick travel to swashplate angles, the mixing law and its rigging, the control lags |
 | `engine.py` | 805 | the T53-L-13 on the other end of the shaft: the twist grip, the N2 governor and its droop band, the torque available and what EMER and bleed air cost, and the gas producer's lag |
 | `airframe.py` | 3633 | TM-73254's force and moment model - main rotor, tail rotor, fuselage, fin, stabilizer - and the six degree of freedom equations of motion, with the rotor's own speed as a state when an engine is aboard, the second root of equation 10 read off a shaft with nothing driving it, and the ground under it as one flat plane with a level and a normal |
-| `simulation.py` | 2931 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the three trims, and what a renderer or a HUD asks for |
+| `simulation.py` | 3083 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the three trims, and what a renderer or a HUD asks for |
 | `regression_tm73254.py` | 661 | the report's figures 2 to 9 reflown: eight step inputs from 60 kt and from the hover, laid next to its published responses |
 | `scenery.py` | 603 | the XML scenery format and its loader - no pygame, no OpenGL, and the one module whose test needs no window and no physics |
 | `controls.py` | 1105 | the device map: which physical control flies which - keyboard or joystick, per control, with deadzone, invert and calibration - read from the XML of `default_controls.xml`, and likewise stdlib only |
@@ -197,10 +197,14 @@ arriving on the ground over `UH1_HARD_LANDING_MPS`, and the second is a state th
 model refused to fly - an overload in mid-air, at whatever altitude the frame was
 refused, which is why it is not called a crash.  The control positions are there
 because the aircraft cannot always show a key by itself: on the pad the skids
-hold it level and still, so the cyclic and the pedals move nothing until it is
-off the ground.  A window with no keyboard is the one failure that looks exactly
-the same from the controls alone - the four axes sit where the reset put them and
-never move - which is why the caption names it and the cure.
+hold it level and still, and while the rotor is under the 4 deg of its own that
+`simulation.GROUND_GRIP_ANGLE_DEG` names they hold the heading with it - the
+pedal has nothing to react against while the disk is not lifting the aircraft -
+so the cyclic and the pedals move nothing at all at the stops.  Above that angle
+the skids hand the heading back and the pedals turn the aircraft on them, which
+is what a pickup from the pad uses.  A window with no keyboard is the one failure
+that looks exactly the same from the controls alone - the four axes sit where the
+reset put them and never move - which is why the caption names it and the cure.
 
 The window draws those same four positions as well, as three square panels in
 its bottom left corner, in the shapes of a mockup sketch kept in

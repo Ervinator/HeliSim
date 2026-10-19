@@ -86,7 +86,9 @@ waterline less the 6.79 ft of hub above the c.g.).  What this module does is a
 *floor*, not a contact model: the c.g. is held on the skid line, the descent is
 taken out of the velocity, the skids hold the aircraft where it stands - no
 sliding is modelled - taking the yaw rate out as they do, and roll and pitch are
-levelled again, while the heading stays free so that pedal can pivot it.  A
+levelled again, while the heading stays free so that pedal can pivot it - under
+:data:`GROUND_GRIP_ANGLE_DEG` excepted, where the rotor is not lifting anything
+and the pedal turns nothing at all.  A
 descent rate at touchdown above :data:`UH1_HARD_LANDING_MPS` sets ``crashed``
 with :data:`CRASH_GROUND_CONTACT` for its reason, and the aircraft stays crashed
 until :meth:`Simulation.reset`; what a program shows for that is its business,
@@ -178,8 +180,21 @@ UH1_CG_HEIGHT_ON_GROUND = UH1_HUB_WATERLINE_M * INCH - UH1_HUB_HEIGHT
 UH1_HARD_LANDING_MPS = 3.0
 
 #: Rate at which the skids take a yaw rate out, 1/s: pedal pivots the helicopter
-#: on the ground and letting go stops it.  Six is about half a second.
+#: on the ground and letting go stops it.  Six is about half a second.  Above
+#: :data:`GROUND_GRIP_ANGLE_DEG` only: under that angle the skids have the
+#: heading outright and the rate goes whole.  See :meth:`Simulation._ground`.
 GROUND_FRICTION_PER_S = 6.0
+
+#: The rotor's own angle, deg, under which the skids hold the heading: with the
+#: lever too low for the rotor to be lifting the aircraft, a pedal has nothing to
+#: turn - the skids are carrying it and the heading is theirs - so full pedal on
+#: the ground produces no yaw at all.  The angle is the mixing law's own reading
+#: of the lever the pilot is holding, which is what ``Telemetry.collective_deg``
+#: shows, and 4 deg is 2.79 in of a UH-1's 11 in of travel on the flight test
+#: aircraft: beside the down stop, which is 0 deg, the 10 per cent and 25 per cent
+#: levers a pilot runs up on.  This project's own number, like everything else in
+#: the ground block - see the module docstring.
+GROUND_GRIP_ANGLE_DEG = 4.0
 
 #: Rate at which a rolled or pitched aircraft is levelled again on the ground,
 #: 1/s.  Level is the only attitude a floor can hold, since the skid line is one
@@ -1420,16 +1435,18 @@ class Simulation:
         # no blades, even though the clock above has already counted it.
         self.rotor_azimuth_deg += math.degrees(
             0.5 * (before.rotor_speed + self.airframe.state.rotor_speed) * dt)
-        self._ground(dt, descent, before.position)
+        self._ground(dt, descent, before)
 
-    def _ground(self, dt, descent, touchdown):
+    def _ground(self, dt, descent, before):
         """Put the aircraft back on the ground if the step took it through it.
 
         A floor, not a skid model: the c.g. is held on the skid line, the descent
         is taken out of the velocity, ``GROUND_FRICTION_PER_S`` takes out the
         residual ground speed and yaw rate, and roll and pitch are levelled again
         at ``GROUND_LEVELLING_PER_S`` onto whatever level means on this ground -
-        the heading stays free, so pedal still pivots it on its skids.  A descent
+        the heading stays free, so pedal still pivots it on its skids while the
+        rotor is lifting it.  Under ``GROUND_GRIP_ANGLE_DEG`` it is not, and then
+        the heading is not the pedal's either: see below.  A descent
         faster than ``UH1_HARD_LANDING_MPS`` at the moment of touchdown sets
         ``crashed`` with :data:`CRASH_GROUND_CONTACT` for its reason, which only
         a :meth:`reset` clears.
@@ -1444,6 +1461,23 @@ class Simulation:
         away, so a pickup is a smooth departure from rest rather than the jump an
         accumulating velocity would give.
 
+        **The heading, and the angle the rotor is at.**  A pedal that turns a
+        parked aircraft has to react its yaw moment against something, and the
+        skids are what there is: with the rotor's own angle under
+        ``GROUND_GRIP_ANGLE_DEG`` the rotor is not lifting the aircraft, its
+        weight is all on the skids, and full pedal produces no yaw at all.  The
+        heading comes back exactly as the frame found it rather than being damped
+        towards where it was, because a rate taken out at
+        ``GROUND_FRICTION_PER_S`` is still a rate a pilot can see - the gate is
+        the same treatment the *ground speed* gets while the skids are carrying
+        the aircraft, applied to the rotation the pedals ask for.  It is this
+        project's own policy rather than the report's, like every other number in
+        here, and the angle is the rotor's own: the pitch the mixing law gives the
+        lever the pilot is holding, which is ``Telemetry.collective_deg``, so what
+        a HUD shows is what the floor reads.  Holding the lever between the gate
+        and the lift off angle pivots the aircraft on its skids as it always did -
+        which is what a pilot running up on the pedals uses.
+
         The rotor speed is the state's own and the floor leaves it alone: what
         drives the shaft is the engine's business, and a rotor with nothing
         driving it arrives at the speed it arrived at.  Left to the
@@ -1454,9 +1488,10 @@ class Simulation:
 
         It replaces the state wholesale, which is fine because everything outside
         this policy reads the state through the airframe, and it is the one thing
-        in this module TM-73254 does not contain.  *touchdown* is the position the
-        frame started at, so that the skids are pinned where the frame found the
-        aircraft rather than where the frame's own integration took it.
+        in this module TM-73254 does not contain.  *before* is the state the frame
+        started at, so that the skids are pinned where the frame found the
+        aircraft rather than where the frame's own integration took it - the place
+        they stand on, and, while the rotor is not lifting, the heading as well.
 
         Every height and every place here is the ground plane's own: 1.40 m of
         skid line is 1.40 m up its normal, so an aircraft on a slope is placed
@@ -1481,11 +1516,29 @@ class Simulation:
         self.on_ground = True
         if self.ground_position is None:
             self.ground_position = ground.surface_point(
-                Vector3(touchdown.x, touchdown.y, touchdown.z))
+                Vector3(before.position.x, before.position.y, before.position.z))
         matrix = direction_cosine_matrix(state.attitude.x, state.attitude.y,
                                          state.attitude.z)
         fade = math.exp(-max(float(dt), 0.0) * GROUND_FRICTION_PER_S)
         level = math.exp(-max(float(dt), 0.0) * GROUND_LEVELLING_PER_S)
+        # The rotor's own angle - the mixing law's reading of the lever, which is
+        # the ``collective_deg`` a HUD shows - decides whether the pedals have a
+        # heading to turn at all: under the gate the rotor is not lifting, the
+        # skids are carrying the whole aircraft, and no yaw rate survives the
+        # frame.  Above it the yaw rate is the pilot's, taken out at
+        # GROUND_FRICTION_PER_S as before.
+        angle_deg = self.airframe.command_angles(
+            self.controls).collective_pitch_deg
+        gripping = angle_deg < GROUND_GRIP_ANGLE_DEG
+        yaw = 0.0 if gripping else state.rates.z * fade
+        # The heading the floor hands back.  The yaw *rate* is not the whole of a
+        # frame's rotation - the Euler kinematics turn a body rate into a heading
+        # at a rate of their own - so a gate that only zeroed the rate would leave
+        # the odometer a little further round every frame and the aircraft would
+        # slowly walk round on its skids.  Under the gate the heading is the one
+        # the frame found the aircraft at, exactly, which is the same thing the
+        # skids do to the *place* they stand on.
+        heading = before.attitude.z if gripping else state.attitude.z
         # The ground velocity the skids see: NED, down positive.
         velocity = apply(matrix, state.velocity)
         lift = 0.0 if self.forces is None else self.forces.lift
@@ -1502,7 +1555,7 @@ class Simulation:
             velocity = Vector3(velocity.x * fade, velocity.y * fade,
                                min(velocity.z, 0.0))
             under = state.position
-        leaning = ground.level_attitude(state.attitude.z)
+        leaning = ground.level_attitude(heading)
         self.airframe.state = FlightState(
             position=ground.above(under, UH1_CG_HEIGHT_ON_GROUND),
             velocity=apply(transpose(matrix), velocity),
@@ -1510,11 +1563,11 @@ class Simulation:
                              + leaning.x * (1.0 - level),
                              state.attitude.y * level
                              + leaning.y * (1.0 - level),
-                             state.attitude.z),
+                             heading),
             # The shaft is not the floor's business: the state is replaced for
             # the places, the velocity and the attitudes the ground owns, and the
             # rotor speed goes back in as the step left it.
-            rates=Vector3(0.0, 0.0, state.rates.z * fade),
+            rates=Vector3(0.0, 0.0, yaw),
             rotor_speed=state.rotor_speed)
 
     # --- what a renderer asks for -----------------------------------------
@@ -2394,12 +2447,14 @@ def _self_test():
     assert failed.telemetry().crash_message == "CRASHED"
     assert failed.airframe.state.altitude == UH1_CG_HEIGHT_ON_GROUND
     assert failed.airframe.state.speed < 1e-6
-    # The skid friction only damps the yaw rate, because the heading is left
-    # free: at the down stop the tail rotor's own yaw moment is still there, and
-    # a pilot with the collective down sits on the pedals.  What must be zero is
-    # the roll and pitch rates, since the floor levels the aircraft.
+    # The skid friction takes the yaw rate out with the ground speed - and at the
+    # down stop, under GROUND_GRIP_ANGLE_DEG, it takes it out whole: the rotor is
+    # not lifting there and the skids have the heading, so a pilot sitting on the
+    # pedals yaws nothing.  What must be zero is the roll and pitch rates too,
+    # since the floor levels the aircraft.
     assert abs(failed.airframe.state.rates.x) < 1e-9
     assert abs(failed.airframe.state.rates.y) < 1e-9
+    assert failed.airframe.state.rates.z == 0.0
     # A crashed aircraft stays crashed until it is reset, whatever is done with
     # the controls afterwards - here, holding the trim, which lifts it off its
     # skids again, because the model does not stop flying when the floor calls an
@@ -2413,6 +2468,103 @@ def _self_test():
     # as one that has not crashed rather than as one whose crash is still named.
     assert failed.crash_reason is None
     assert failed.telemetry().crash_message == ""
+
+    # And the skids have the heading while the lever is under
+    # GROUND_GRIP_ANGLE_DEG.  Parked at the down stop - 0.0 deg of rotor, the 100
+    # per cent rotor pushing nearly two weights down - two seconds of the right
+    # pedal held *against its stop* moves the heading not at all: a pedal on the
+    # ground is reacted by the skids, and this is where the model says so.
+    # Nothing about the *input* is what stops it, either, so the pedal is put at
+    # its stop rather than ratcheted towards one: the same stick, an unchanged
+    # aircraft, and one lever further up the travel is the only difference below.
+    held_steps = int(2.0 / SIM_TIME_STEP_S)
+
+    def pedalled(collective):
+        """A parked aircraft with the right pedal hard against its stop."""
+        run = Simulation()
+        run.on_the_pad(collective=collective)
+        run.pilot.set_axes(pedal=1.0)           # a script's hand, at the stop
+        return run, run.pilot.controls()
+
+    gripped, boundary = pedalled(0.0)
+    assert boundary.pedal == 0.5 * UH1_PEDAL_TRAVEL_IN
+    assert gripped.telemetry().collective_deg == 0.0
+    assert gripped.telemetry().collective_deg < GROUND_GRIP_ANGLE_DEG
+    heading = gripped.telemetry().yaw_deg
+    for _ in range(held_steps):
+        gripped.step(SIM_TIME_STEP_S, boundary)
+        assert not _out_of_envelope(gripped.airframe.state)
+    held = gripped.telemetry()
+    assert held.pedal_in == boundary.pedal              # and it stayed there
+    assert held.on_ground and not gripped.crashed
+    assert abs(held.alt_agl - UH1_CG_HEIGHT_ON_GROUND) < 1e-9
+    assert abs(held.yaw_deg - heading) < 1e-9           # and no yaw at all
+    assert held.yaw_rate_deg == 0.0
+    assert gripped.airframe.state.rates.z == 0.0
+    # The pad's own 75 % lever is 11.8 deg of rotor - the pickup, not the run up -
+    # and there the same stick does turn the same aircraft: the gate is a gate and
+    # not a brake on the floor, so a pilot running up on the pedals still has
+    # them, and the heading stays free exactly as it did before the gate.  What
+    # the aircraft does with the yaw is the model's business; here it is only that
+    # it turned, on its skids, with the same stick the parked one did not.
+    turning, boundary = pedalled(PAD_COLLECTIVE)
+    assert boundary.pedal == gripped.telemetry().pedal_in
+    assert boundary.pedal == 0.5 * UH1_PEDAL_TRAVEL_IN
+    assert turning.telemetry().collective_deg > GROUND_GRIP_ANGLE_DEG
+    heading = turning.telemetry().yaw_deg
+    for _ in range(held_steps):
+        turning.step(SIM_TIME_STEP_S, boundary)
+        assert not _out_of_envelope(turning.airframe.state)
+    turned = turning.telemetry()
+    assert turned.on_ground and not turning.crashed
+    assert turned.yaw_deg - heading > 1.0
+    assert turned.yaw_rate_deg > 1.0
+    assert abs(turned.alt_agl - UH1_CG_HEIGHT_ON_GROUND) < 1e-9
+
+    # The gate is a gate and not a schedule, so the lever that lands exactly on it
+    # is asked for rather than guessed: the mixing law's angle is monotone in the
+    # lever, so a bisection on ``Telemetry.collective_deg`` - the same reading the
+    # gate itself makes - finds the 0.253866 of the travel that is 4.0000 deg of
+    # rotor.  A frame's worth either side of that lever is then flown with the same
+    # stick, and the pair is the gate: 3.984 deg of rotor holds the heading the
+    # skids gave it to the last bit, 4.016 deg turns it 23 deg in the same two
+    # seconds, and both are on the ground at the end with the pedals still at
+    # their stop - the disk lifts nothing at either angle, so what differs is only
+    # who owns the heading.
+    def lever_at_gate():
+        """The lever whose rotor angle is GROUND_GRIP_ANGLE_DEG, by bisection."""
+        low, high = 0.0, 1.0
+        for _ in range(50):
+            middle = 0.5 * (low + high)
+            probe = Simulation()
+            probe.on_the_pad(collective=middle)
+            if probe.telemetry().collective_deg < GROUND_GRIP_ANGLE_DEG:
+                low = middle
+            else:
+                high = middle
+        return 0.5 * (low + high)
+
+    gate = lever_at_gate()
+    assert gate < PAD_COLLECTIVE
+    under, boundary = pedalled(gate - 1e-3)
+    assert under.telemetry().collective_deg < GROUND_GRIP_ANGLE_DEG
+    heading = under.telemetry().yaw_deg
+    for _ in range(held_steps):
+        under.step(SIM_TIME_STEP_S, boundary)
+        assert not _out_of_envelope(under.airframe.state)
+    assert abs(under.telemetry().yaw_deg - heading) < 1e-9
+    assert under.telemetry().yaw_rate_deg == 0.0
+    assert under.airframe.state.rates.z == 0.0
+    assert under.telemetry().on_ground and not under.crashed
+    over, boundary = pedalled(gate + 1e-3)
+    assert over.telemetry().collective_deg > GROUND_GRIP_ANGLE_DEG
+    heading = over.telemetry().yaw_deg
+    for _ in range(held_steps):
+        over.step(SIM_TIME_STEP_S, boundary)
+        assert not _out_of_envelope(over.airframe.state)
+    assert over.telemetry().yaw_deg - heading > 1.0
+    assert over.telemetry().yaw_rate_deg > 1.0
+    assert over.telemetry().on_ground and not over.crashed
 
     # The same pickup from thirty metres, with the collective at the down stop.
     # With the rotor held at 100 per cent there the closed form's trim force is
