@@ -131,6 +131,63 @@ These are choices, not oversights: each is stated where it lives.
 
 ## Done
 
+* 2026-10-20 - **a person's hands are in the loop now: the hover has a gain
+  *band*, and the model's own hover pilot is at the top of it.**  Every harness
+  beside this one flies the aircraft with a *script* - `_rt_pilot` decides four
+  axes off the instruments, `_rt_probe` steps a stick off its trim, `_rt_check`
+  asserts what a mission did - and none of them asks the handling qualities
+  question, which is whether hands slower than a frame, and later than the
+  instruments, can hold the machine at all.  `_rt_handling.py` is that question:
+  the model's own twenty foot hover, closed around a human's dynamics.
+
+  * *a clock, a delay, a gain, a lead and a lag.*  Twenty decisions a second on
+    the flight's own clock; what a decision reads is the aircraft as it was 0.2 s
+    ago - the last twelve frames, kept in a deque - so the loop is closed on a
+    *remembered* aircraft and the first fifth of a second of every case is flown
+    on the trim rather than on the perturbation; the stick is 0.100 in of long
+    stick per degree of attitude error, with 1.5 s of lead on the rate and 0.1 s
+    of lag in the hand.  The gain and the lead are not invented here: they are
+    `_rt_pilot`'s own `K_HOVER_PITCH_IN` and the ratio
+    `K_HOVER_RATE_IN / K_HOVER_PITCH_IN`, read off that module and asserted back
+    against it, so a scale of one *is* the pilot `_rt_check` flies the short
+    mission with - and everything the file measures is that pilot's margin rather
+    than a stranger's.  The loops underneath the clock are that pilot's own too,
+    loop for loop: the tilt a hover is held with, the height on the lever, the
+    heading on the pedals, and only the two attitude gains are the sweep's;
+  * *two degrees, both tilt axes, and the band.*  A hover trimmed, +2 deg put
+    into the attitude, and the pilot's job to get back inside 0.5 deg and *stay*
+    there for 2 s.  The model's own pilot does it in 8.48 s of pitch and 2.02 s
+    of roll, holding the height to a centimetre and the machine inside 2.3 m of
+    the pad.  A quarter softer (x0.75) still holds; x0.50 does not, and the way
+    it fails is that the attitude wanders a degree either side at a 7.7 s period
+    that no longer decays at all.  On the hard side x1.50 still comes back inside
+    the band at 7.9 s - and then grows straight back out of it at 11.5 s.  So the
+    band is **x0.75 to x1.00 of the model's own attitude gains, -2.5 dB to
+    0.0 dB**: the pilot the model is flown with is the *hardest grip that holds
+    it*, with no room above the gains it is flown with at all;
+  * *and the PIO is not the band's edge.*  At x2.00 the failure changes kind:
+    1.28 s a cycle, growing 37 per cent of itself a cycle, with the pilot's own
+    0.2 s of delay worth 56 degrees of that period - a pilot induced oscillation,
+    closed by the pilot's lag, which is a thing no aircraft mode can be.  Both
+    edges of the band fail on the model's own slow modes, where the same delay is
+    worth only six and nine degrees of phase; so this hover's *margin* belongs to
+    the aircraft and the outer loops, and the *PIO* belongs to the pilot, which is
+    the answer the phase was for;
+  * *with nobody flying it, for reference.*  The same perturbation with the sticks
+    where the trim left them: 20.9 m off the pad inside 20 s, the error doubled to
+    -4.2 deg, and never back inside the band - which is what the pilot's own 2.3 m
+    and 8.48 s are bought against.
+
+  Verified: `python _rt_handling.py`, which writes `_rt_handling.txt` and asserts
+  every number in it - the pilot's own clock measured in flight (100 decisions in
+  5.02 s, every view exactly 0.2000 s old, no step dropped), the nominal cases,
+  the two legs of the band, the PIO and the hands-off reference;
+  `python _tmp_shadow.py _rt_handling.py` reading 40 module-level names with none
+  written down twice; and the model itself untouched: `python main.py --check`
+  printing `main.py check passed`, `python regression_tm73254.py` printing
+  `self test passed`, and `python _rt_check.py` flying both missions to
+  `check passed`.
+
 * 2026-10-20 - **the mouse flies the aircraft: the cursor is the cyclic and its
   wheel is the collective.**  A UH-1's two controls that need a hand's own feel
   were the two this sandbox could only fly from the keyboard or from hardware, so
