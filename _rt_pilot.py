@@ -257,7 +257,12 @@ PARKED_ALT_M = 2.0
 AUTOROTATION_SPEED_KT = 60.0
 AUTOROTATION_SPEED_MPS = AUTOROTATION_SPEED_KT * KNOT
 CLIMB_SKID_FT = 500.0
-CLIMB_ALT_M = CLIMB_SKID_FT * FOOT + UH1_CG_HEIGHT_ON_GROUND
+#: And the height that climb ends at, in metres of c.g. - named for *this*
+#: mission, because ``CLIMB_ALT_M`` is the long mission's own height at the top
+#: of the file and is what ``HumanPilot``'s speed ramp is solved from.  A second
+#: binding of that name down here is the cruise winding its speed on against a
+#: height it never reaches, which is a hundred metre hover instead of a kilometre.
+AUTOROTATION_CLIMB_ALT_M = CLIMB_SKID_FT * FOOT + UH1_CG_HEIGHT_ON_GROUND
 
 #: The descent holds the lever and nothing else.  Banked rotor speed is the trade
 #: a pilot has and this model does not: the autorotation trim is the *equilibrium*
@@ -1095,13 +1100,13 @@ class AutorotationPilot(KeyboardPilot):
     #: :meth:`airframe.Airframe.trim_autorotation` is asked for.
     TRIM_SPEEDS_MPS = (0.0, 0.5 * AUTOROTATION_SPEED_MPS,
                        AUTOROTATION_SPEED_MPS)
-    TRIM_ALT_M = CLIMB_ALT_M
+    TRIM_ALT_M = AUTOROTATION_CLIMB_ALT_M
     TRIM_AUTOROTATION_MPS = AUTOROTATION_SPEED_MPS
 
     def __init__(self, sim, trims, reaction=REACTION_S, log=None):
         KeyboardPilot.__init__(self, sim, trims, reaction=reaction, log=log)
         self.phase = "pickup"
-        self.climb_alt = CLIMB_ALT_M
+        self.climb_alt = AUTOROTATION_CLIMB_ALT_M
         self.took_off = None          # s, the skids off the pad
         self.climb_settled = None     # s, height and speed both held
         self.cut_at = None            # s, the twist grip rolled off
