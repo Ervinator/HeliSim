@@ -131,6 +131,88 @@ These are choices, not oversights: each is stated where it lives.
 
 ## Done
 
+* 2026-10-21 - **the hover's margin is the cyclic's margin and nothing else: the
+  tilt pair's band is *wider* at sixty knots, and the lever's and the pedals' do
+  not transfer at all.**  Phase 1 asked whether a person's hands can hold this
+  model's hover at all, and answered it with the two *tilt* axes - and what that
+  file really is, it says of itself, is an instrument, with everything below the
+  attitude loop left at the model's own numbers.  `_rt_axes.py` is the rest of
+  that sentence, through the same instrument (twenty decisions a second on the
+  flight's own clock, 0.2 s of delay out of a deque of remembered states, 0.1 s
+  of lag in the hand, and the tilt loops still gain for gain phase 1's) and with
+  two more of the pilot's loops under scales of their own: the lever, whose gain
+  is `_rt_pilot.K_RATE_IN` inches of collective per m/s of climb rate the loop is
+  short of, and the pedals, a hover's heading hold being the model's turn loop
+  with the turn's schedule taken out of it, so what is scaled is inches of pedal
+  per degree of nose and per degree a second of yaw rate, kept at the model's own
+  lead ratio.  A metre of height and ten degrees of nose are then put in beside
+  phase 1's two degrees of attitude, each read against a band that is a *fraction*
+  of what was put in, and all of it is re-flown at sixty knots.  The answer is
+  that the hover is where the *attitude* has no damping and is **not** the hardest
+  condition for the other two axes: a margin read in the hover is a margin for the
+  cyclic and nothing else.
+
+  * *the nominal case of each axis, and the lever's fourteen seconds are not the
+    lever's.*  A metre of height takes the model's own lever 14.42 s to take back
+    out and ten degrees of nose 4.03 s, so neither of the two axes phase 1 left
+    alone is a slow axis of the aircraft.  The fourteen is not the lever's
+    either: a hover's height is asked for through the model's own
+    `RATE_GAIN_MPS`, twelve centimetres a second per metre, and it is that outer
+    loop's time constant the settling is really measuring - which the hands-off
+    case beside it proves by bringing the same metre back in 9.5 s with nobody
+    flying;
+  * *the two tilt axes do not have the same band, and phase 1's one band was
+    pitch's.*  Roll is *softer* below - x0.50 holds where pitch has already
+    failed - and *harder* above, where x1.50 is the pilot's own loop at a 1.05 s
+    period while pitch's x1.50 is still the aircraft's 11.5 s mode and its PIO
+    waits for x2.00.  So the bands are x0.75 to x1.00 of the model's own attitude
+    gains for pitch and x0.50 to x1.00 for roll, and the pilot the model is flown
+    with is at the hard edge of both;
+  * *the lever and the pedals have no soft edge in the hover at all.*  Every grip
+    down to x0.25 held on both, because what holds those two axes is the outer
+    loop and the aircraft rather than the pilot's hand: the cushion brings the
+    metre of height back on its own, and a hover's nose with the pedals nowhere
+    near stiff enough is still caught by the gain and the lead the model's own
+    turn loop is flown with.  Their hard edges are their own loops and they are
+    much further up, and both of them are PIOs - x2.00 on the lever, 2.72 s a
+    cycle and growing five per cent of itself, and x4.00 on the pedals, 1.25 s
+    and twenty-three;
+  * *and at sixty knots the tilt pair's bands transfer while the other two do
+    not.*  Both grips the hover's band failed at hold out there - pitch's x1.50
+    in 2.53 s and its x0.50 in 3.30 s, roll's x1.50 in 3.17 s and its x0.35 in
+    4.37 s, which is a *softer* grip than the one the hover failed at - the speed
+    comes back with the attitude, and the nominal pitch loop settles in 2.80 s
+    where the hover took 8.48 s.  On the lever and the pedals the same scale is a
+    stiffer loop, not a looser one: x2.00 of lever runs to -9.08 m and x4.00 of
+    pedals to -51.40 deg with 5.16 m of height gone, neither settling at all and
+    both growing a cycle at a time.  Nor are those two merely unchanged out there
+    - at the model's own grip, with nothing but the airstream different, the
+    nominal settle goes 14.42 s to 20.78 s on the lever and 4.03 s to 22.37 s on
+    the pedals;
+  * *with nobody flying them, in both conditions, which is where it shows.*  A
+    hover's height is a place the aircraft finds by itself - the metre comes back
+    to +0.03 m, inside the band - and sixty knots has no cushion under it, so the
+    same metre simply stays where it was put, at +1.00 m.  Roll *is* given back
+    out there, to +0.05 deg, where the hover wanders out the other way to
+    -3.38 deg.  Pitch comes back partway out there and no further: +1.42 deg of
+    its two still on the clock when the twenty seconds run out, against +2.12 in
+    the hover.  And the nose parks exactly where it was put in **both**
+    conditions, 9.9996 of its ten either way - the perturbation is a heading, so
+    nothing is slipping for the fin to weathervane against, which is why a
+    hover's yaw margin has nothing out there to be read against.
+
+  Verified: `python _rt_axes.py`, which writes `_rt_axes.txt` and asserts every
+  number in it - the nominal case of all four axes, both legs of all four bands,
+  the PIO of the two that close one, the whole check at sixty knots and the
+  hands-off reference in both conditions, with the tilt rows held to phase 1's
+  own pinned numbers as the check that the two files are one instrument;
+  `python _tmp_shadow.py _rt_axes.py` reading 35 module level names with none
+  written down twice; `python _rt_handling.py` re-run and green; and the model
+  itself untouched: `python main.py --check` printing `main.py check passed`,
+  `python regression_tm73254.py` printing `self test passed`, and
+  `python _rt_check.py` flying its missions to `check passed` in `_rt_log.txt`.
+
+
 * 2026-10-20 - **a person's hands are in the loop now: the hover has a gain
   *band*, and the model's own hover pilot is at the top of it.**  Every harness
   beside this one flies the aircraft with a *script* - `_rt_pilot` decides four
