@@ -13,6 +13,15 @@
   and leave the rest as they are.  A control this file does not mention keeps
   the keyboard mapping above.
 
+  The mouse is not a device of this map.  It is main.py's own, taken up in flight
+  with `M` or asked for at startup by the run's own `mouse` switch, and it flies
+  the cyclic and the collective itself: the cursor's position in the window is the
+  cyclic, the wheel is the lever, and the run's `mouse-reverse` switch turns the
+  wheel over so that a notch down raises the lever.  While the mouse is flying
+  those three controls the keyboard's own copies on them are not read, so `W` and
+  the arrows go quiet and whatever this file still has on the pedals and the grip
+  keeps flying them.
+
   An Arduino Leonardo sent as a generic USB HID game controller reports a name
   beginning "Arduino", so its device is found by match rather than by index: an
   index moves the day another controller is plugged in.  To fly the cyclic and

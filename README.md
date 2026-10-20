@@ -23,7 +23,7 @@ Layered, each one importing only what sits below it:
 | `regression_tm73254.py` | 661 | the report's figures 2 to 9 reflown: eight step inputs from 60 kt and from the hover, laid next to its published responses |
 | `scenery.py` | 603 | the XML scenery format and its loader - no pygame, no OpenGL, and the one module whose test needs no window and no physics |
 | `controls.py` | 1105 | the device map: which physical control flies which - keyboard or joystick, per control, with deadzone, invert and calibration - read from the XML of `default_controls.xml`, and likewise stdlib only |
-| `main.py` | 4125 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, the aircraft of `simulation.py` flown from its device map - keyboard, joystick or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it, with one `--engine` switch that fits the T53 before the first frame and one line for the grip of a run that has none |
+| `main.py` | 4527 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, the aircraft of `simulation.py` flown from its device map - keyboard, joystick, the mouse, or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it, with one `--engine` switch that fits the T53 before the first frame, the cursor on the cyclic and the wheel on the collective (`M`, `--mouse` and its own `--mouse-reverse`), and one line for the grip of a run that has none |
 
 Only `main.py` imports anything outside the standard library.
 
@@ -32,6 +32,7 @@ Only `main.py` imports anything outside the standard library.
     pip install -r requirements.txt
     python main.py [scenery.xml] [--engine] [--log FILE | --no-log]
                    [--controls FILE | --no-controls]
+                   [--mouse | --mouse-reverse]
     python main.py --check          # the wiring, headless, no window
 
 `sample_scenery.xml` is used when no path is given.  The scenery file lists
@@ -61,6 +62,7 @@ were computed with.
 | `G` | the GOV AUTO/EMER switch, which needs an engine to govern |
 | `X` | an engine failure, and `X` again to clear it |
 | `C` | camera: behind the aircraft, or fixed on the pad |
+| `M` | the mouse: the cursor on the cyclic and the wheel on the collective (`--mouse` starts that way, `--mouse-reverse` turns the wheel over) |
 | `Esc` | quit |
 
 The aircraft of the report's figures has no engine in it, because that is what
@@ -242,6 +244,44 @@ that fades the plane's edge into the sky where a horizon belongs.  Nothing
 clamps the aircraft or the camera any more; the envelopes in `simulation.py` are
 the limits.
 
+## The mouse
+
+The one stick this sandbox can fly with nothing plugged in is the mouse: `M`
+gives it the cyclic and the collective, and `M` again gives them back to the
+devices.  `--mouse` asks for it at startup, and `--mouse-reverse` is the same
+mouse with the wheel's sense turned over.
+
+The cursor is the cyclic, read as a *position* rather than as a rate: the middle
+of the window is the cyclic's own centre - with a 4 per cent band about it,
+`MOUSE_CYCLIC_DEADZONE`, since a hand never leaves a cursor exactly there - and
+the cursor's direction from the middle is the arrow key's of the same direction,
+so a cursor above the middle is cyclic forward and the nose down, and one to the
+right is roll right.  The window is the stick's own scale, so its edges are the
+stops.  Because a cursor that stays off the middle holds the deflection it is in,
+`R`, `P` and taking the mouse up all put the cursor back in the middle of the
+window: that is `Mouse.recentre`, and it is the one part of the mouse that needs
+a window.
+
+The wheel is the collective, a notch at a time: `MOUSE_WHEEL_COLLECTIVE_STEP` is
+a fiftieth of the lever's travel, so a notch is 0.22 in of the UH-1H's 11 in, and
+the lever follows at the rate a hand would move it (`set_axes` slews it) rather
+than jumping to the notch.  Where the wheel leaves the lever is remembered across
+frames, because a notch arrives as an *event* and is read in a *frame*, and it is
+clipped to the lever's own stops rather than running past them.
+`--mouse-reverse` is the one option the wheel has: a notch of the wheel down for
+more collective instead of up for more, which is a hand's own habit rather than
+anything the aircraft has an opinion about, and the run says which way it is
+reading it when the mouse is taken up.
+
+Two things follow from one control being one hand.  The mouse flies exactly the
+cyclic's two axes and the collective (`MOUSE_AXES`), so the aircraft is handed
+over and not shared: with the mouse on, `W` is not the collective and the arrows
+are not the cyclic, while the pedals stay on `A` and `D` and the grip on `Q` and
+`E` - which is what lets a run fly a full pattern with the mouse as the stick.
+And the lever is read back *off the aircraft* when the mouse is taken up, so
+taking it up mid-flight is no step to the hands: the mouse begins wherever the
+keys left the lever rather than at a position of its own.
+
 ## The key log
 
 A run writes `keylog.txt` beside `main.py` - `--log FILE` puts it elsewhere,
@@ -257,7 +297,7 @@ separated:
 | `t_s` | `time.perf_counter` seconds since the log was opened, monotonic, to a millisecond |
 | `wall_ms` | that same instant as `time.time` milliseconds, to a millisecond |
 | `frame`, `sim_s` | the model's own frame count and physics time, a `SIM_TIME_STEP_S` apiece |
-| `kind` | `down`/`up`, `reset`/`park`/`view`/`quit`, `focus`/`blur`, or `sample` |
+| `kind` | `down`/`up`, `reset`/`park`/`view`/`quit`, `fit`/`unfit`/`governor`/`failure`/`recovered`/`mouse`/`devices`, `focus`/`blur`, or `sample` |
 | `key`, `held` | the key's own name, and the flight keys down at that instant |
 | `spd_mps`, `vn_mps`, `ve_mps`, `vd_mps` | velocity: airspeed through the airframe, then over the ground north, east and down |
 | `hdg_deg`, `pitch_deg`, `roll_deg` | heading from north towards east, pitch, roll |
@@ -308,9 +348,12 @@ camera triples, the sixteen floats the renderer is handed, the rotor azimuths,
 the world's own scale, the arithmetic of the control position panel - the
 pedal lines, the cyclic disc, the collective lever and the attitude indicator's
 own ball, its horizon's chord and the ladder above and below it, the one pixel its
-lines are drawn at and the five colours of its dial - the fourth value of the
-command line, the one line a grip with no engine behind it owes and the three
-cases that owe nothing - and the key log: the
+lines are drawn at and the five colours of its dial - the four values of the
+command line and the mouse that is the fifth: the cursor's own reading of the
+cyclic, the deadzone about the middle, the wheel's notches and its reverse, and
+what the mouse does to a mapped control when it is flying it.  Then the grip's own
+line - the one a grip with no engine behind it owes, and the three cases that owe
+nothing - and the key log: the
 command line that names it, the names it gives a key and a hand, the columns of a
 line, the two clocks on it to a millisecond and the rate the flight is sampled
 at.  None of it needs an OpenGL context.

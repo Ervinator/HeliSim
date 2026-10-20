@@ -33,6 +33,7 @@ Usage::
 
     python main.py [scenery.xml] [--log FILE | --no-log]
                    [--controls FILE | --no-controls] [--engine]
+                   [--mouse | --mouse-reverse]
     python main.py --check          # the wiring, headless, no window
 
 Keys:
@@ -48,6 +49,7 @@ Keys:
     G               the GOV AUTO/EMER switch, which needs an engine to govern
     X               an engine failure, and X again to clear it
     C               camera: cockpit, behind the aircraft, or fixed on the pad
+    M               the mouse: cursor on the cyclic, wheel on the collective
     Esc             quit
 
 The four axes and the twist grip are ratchets: a key slews its control while the
@@ -126,6 +128,22 @@ has it on the keyboard's own `Q` and `E`, so the grip the window reads - and the
 pie that shows it on the collective's panel - follows those two keys, and a home
 made collective with a lever for it takes the pair over by naming the control on
 its own device.
+
+**The mouse is the pilot's other device, and the one that needs no hardware.**
+`M` puts the cursor on the cyclic and the wheel on the collective, so a run with
+no stick at all can fly the two controls that need a stick's own feel, and the
+three axes it takes are exactly those three: the pedals stay on `A` and `D` and
+the grip on `Q` and `E`, since one control is one hand.  Both are read as
+*positions*, so nothing springs back - a still cursor is a still cyclic and a
+still wheel is a lever that stays where it was put - and the two are read the way
+the arrow keys are: a cursor above the middle of the window is the up arrow's own
+control, which is cyclic forward and the nose down, right of it is roll right, and
+the middle of the window is the cyclic centred.  Every notch of the wheel is a
+fiftieth of the lever's travel (`MOUSE_WHEEL_COLLECTIVE_STEP`), and `--mouse`
+asks for it at startup where `M` asks for it in flight.  `--mouse-reverse` is the
+same with the wheel's sense turned over - a notch of the wheel down for more
+collective rather than up for more - since which way a wheel should turn a lever
+is a hand's own habit.
 
 The window's caption is this sandbox's instrument panel, and it carries all
 four control positions: the collective in per cent, the longitudinal and
@@ -212,6 +230,39 @@ DEFAULT_KEYLOG_FILE = os.path.join(
 #: The map it ships is the keyboard mapping this sandbox has always had, so a
 #: run that changes nothing flies no differently.
 DEFAULT_CONTROLS_FILE = controls.DEFAULT_CONTROLS_FILE
+
+#: The mouse, as the command line can ask for it: ``--mouse`` puts the cursor on
+#: the cyclic and the wheel on the collective, ``--mouse-reverse`` says the same
+#: with the wheel's sense turned over - a notch of the wheel down for more
+#: collective rather than up for more - and a run that says nothing about it flies
+#: the devices alone, which is ``MOUSE_OFF``.  There is no ``--no-mouse``: the
+#: mouse is *off* by default and that is the option, exactly as there is no
+#: ``--no-engine``.
+MOUSE_OFF = "off"
+MOUSE_ON = "on"
+MOUSE_REVERSE = "reverse"
+MOUSE_MODES = (MOUSE_OFF, MOUSE_ON, MOUSE_REVERSE)
+
+#: The three controls the mouse flies, by the names
+#: :class:`simulation.PilotInput` reads its axes by: the cyclic's own two and the
+#: collective.  The pedals and the twist grip are left to the device map, so a
+#: run with the mouse on still flies its pedals from `A` and `D` and its grip
+#: from `Q` and `E`.
+MOUSE_AXES = ("long_stick", "lat_stick", "collective")
+
+#: How far the cursor has to be from the middle of the window before the cyclic
+#: is believed to be off centre, as a fraction of the half width or the half
+#: height.  The same shape a joystick's own deadzone is, and there for the same
+#: reason: a hand's cursor is never exactly in the middle, and a cyclic that had
+#: to be centred to the pixel would be a stick nothing could be flown level with.
+MOUSE_CYCLIC_DEADZONE = 0.04
+
+#: What one notch of the wheel is worth of the collective's own travel, as a
+#: fraction of it - a fiftieth, which is 0.22 in of the UH-1H's 11 in of lever.
+#: The lever follows the wheel at the rate a hand moves it rather than jumping to
+#: the notch (`PilotInput.set_axes` slews at the control's own rate), so a spin of
+#: the wheel is worth more notches than the lever has moved by the time it stops.
+MOUSE_WHEEL_COLLECTIVE_STEP = 0.02
 
 #: The key log's sample rate, Hz: how often the flight itself is written down
 #: between the keystrokes.  Sixty hertz would be one line per frame and a log
@@ -2324,6 +2375,163 @@ class Devices:
         return "\n".join(lines)
 
 
+# ---------------------------------------------------------------------------
+# The mouse: the cursor as the cyclic, the wheel as the collective.  The two
+# readings are here as arithmetic, with no pygame mouse to run them on - the same
+# way controls.axis_value is a joystick's own reading with no joystick - so that
+# the check at the bottom of this file can fly one with nothing plugged in.
+# ---------------------------------------------------------------------------
+
+
+def mouse_cyclic(pos, size, deadzone=MOUSE_CYCLIC_DEADZONE):
+    """The cyclic's own two axes from where the cursor is: ``(lat, long)``.
+
+    *pos* is the cursor's position in pixels and *size* the window's own, so the
+    scale of the stick is the size of the window it is flown in.  The middle of
+    the window is the cyclic's own centre, and the cursor stands for the *key* of
+    the direction it is in rather than for the stick's own travel: above the
+    middle is the up arrow's own control, which is cyclic forward and the nose
+    down; to the right is the right arrow's, which is roll right.  A pilot who
+    can fly the arrows can therefore fly the cursor.
+
+    What comes out is the shape :meth:`simulation.PilotInput.set_axes` takes, -1
+    to +1 on each axis, clipped at the window's own edges and taken out about the
+    middle by *deadzone*: the band a hand leaves the cursor in when it means the
+    cyclic to be centred.
+    """
+    half_x, half_y = size[0] / 2.0, size[1] / 2.0
+    lat = _deadzone((pos[0] - half_x) / half_x, deadzone)
+    long_stick = _deadzone((half_y - pos[1]) / half_y, deadzone)
+    return (lat, long_stick)
+
+
+def _deadzone(value, deadzone):
+    """One axis' own reading: clipped to its stops, and centred by *deadzone*."""
+    value = max(-1.0, min(1.0, value))
+    return 0.0 if -deadzone < value < deadzone else value
+
+
+def mouse_wheel_collective(axis, clicks, step=MOUSE_WHEEL_COLLECTIVE_STEP,
+                           reverse=False):
+    """The collective's position after *clicks* notches of the wheel.
+
+    *axis* is where the lever was, 0 at the bottom stop to 1 at the top, and each
+    notch of the wheel is worth *step* of that travel: the wheel moves the lever a
+    notch at a time, and a wheel that is not turning leaves the lever exactly
+    where it was - which is what makes the wheel a lever's own hand rather than a
+    dial.  ``reverse`` turns the wheel's sense over, away from the pilot for less
+    collective instead of for more, and the answer is clipped to the lever's own
+    two stops, so a wheel spun past either end stops there.
+    """
+    value = float(axis) + float(clicks) * step * (-1.0 if reverse else 1.0)
+    return max(0.0, min(1.0, value))
+
+
+class Mouse:
+    """The mouse as two controls: the cursor the cyclic, the wheel the collective.
+
+    A joystick is a device the map can name a control on, and the mouse is not in
+    that map at all: it arrives with three controls of its own - the cyclic's two
+    axes and the collective (:data:`MOUSE_AXES`) - and it flies them as
+    *positions*, which is the shape :meth:`simulation.PilotInput.set_axes` takes.
+    Nothing here is a ratchet, so a still cursor is a still cyclic and a still
+    wheel is a lever that stays where it was put.
+
+    The window's own size is what turns the cursor's position into the cyclic's
+    (:func:`mouse_cyclic`), and :attr:`collective` is the lever's own position,
+    which is the one thing remembered between frames: a notch of the wheel arrives
+    as an *event* and is read in a *frame*, so the lever has to outlive the frame
+    the wheel was turned in.  :func:`mouse_for` sets it from the aircraft when the
+    mouse is taken up, which is what makes putting the mouse on no step to the
+    hands.
+    """
+
+    def __init__(self, size, reverse=False, collective=0.0):
+        #: The window's own size in pixels, which is the scale the cursor's
+        #: position is read against.
+        self.size = (int(size[0]), int(size[1]))
+        #: Is the wheel's sense turned over?  ``--mouse-reverse`` reads a notch of
+        #: the wheel down for more collective rather than up for more.
+        self.reverse = bool(reverse)
+        #: Where the wheel has left the lever, 0 at the bottom stop to 1 at the
+        #: top: the shape :meth:`simulation.PilotInput.set_axes` takes its own
+        #: collective in.
+        self.collective = float(collective)
+
+    def wheel(self, clicks):
+        """Take *clicks* notches of the wheel, which pygame counts up positive."""
+        self.collective = mouse_wheel_collective(self.collective, clicks,
+                                                 reverse=self.reverse)
+
+    def read(self, pos):
+        """The mouse's own three axes at *pos*, as :data:`MOUSE_AXES` names them."""
+        lat, long_stick = mouse_cyclic(pos, self.size)
+        return {"long_stick": long_stick, "lat_stick": lat,
+                "collective": self.collective}
+
+    def recentre(self):
+        """Put the cursor in the middle of the window, so the cyclic is centred.
+
+        The cursor *is* the stick, so a window whose cursor is off the middle is
+        an aircraft holding a cyclic deflection: this is the one thing that hands
+        it back, and it is done where a hand means the stick to be centred - being
+        given the mouse in the first place, and the `R` and `P` keys.  It needs a
+        window, so it is called from :func:`main` and never from the check.
+        """
+        pygame.mouse.set_pos(self.size[0] // 2, self.size[1] // 2)
+
+
+def mouse_for(sim, size, mode):
+    """A mouse ready to fly *sim*, from the switches the command line read.
+
+    It begins on the lever the aircraft already has - read back off
+    :meth:`simulation.PilotInput.collective_axis` rather than assumed, so that
+    taking the mouse up is no step to the hands on the lever - and with the cursor
+    in the middle of the window, which is the cyclic's own centre and so no step
+    on the stick either.  *mode* is one of :data:`MOUSE_MODES`, and
+    ``MOUSE_REVERSE`` is the same mouse with the wheel's sense turned over.
+    """
+    mouse = Mouse(size, reverse=(mode == MOUSE_REVERSE))
+    mouse.collective = sim.pilot.collective_axis
+    mouse.recentre()
+    return mouse
+
+
+def mouse_line(mouse):
+    """What a run says about the mouse in one line: which way the wheel turns.
+
+    The wheel is the one control of the five whose sense is a choice, so a run
+    that said ``--mouse-reverse`` should say so where the pilot can read it: a
+    lever that goes down when the wheel goes up is a broken lever to a pilot who
+    has not been told which way this run reads it.
+    """
+    return ("mouse: the cursor is the cyclic and the wheel the collective, %s"
+            % ("reversed: a notch of the wheel up lowers the lever"
+               if mouse.reverse else
+               "a notch of the wheel up raises the lever"))
+
+
+def hands_on(absolute, ratchet, mouse, pos):
+    """One frame's controls with the mouse's own three axes among them.
+
+    *absolute* and *ratchet* are what the device map answered for the frame, and
+    the mouse's positions are added to the first while the controls it flies are
+    taken out of the second, so that one control is one hand: with the mouse on,
+    `W` is not the collective and the arrows are not the cyclic, because the wheel
+    and the cursor are.  What it does not take over stays where the map put it,
+    which is what lets a run fly its pedals from `A` and `D` and its grip from `Q`
+    and `E` with the mouse as the stick - and a run with no mouse gets the map's
+    own two dictionaries back, untouched.
+    """
+    if mouse is None:
+        return absolute, ratchet
+    stick = mouse.read(pos)
+    for axis in stick:
+        ratchet.pop(axis, None)
+    absolute.update(stick)
+    return absolute, ratchet
+
+
 def fly_frame_axes(sim, camera, frame_dt, absolute, ratchet,
                    view=VIEW_COCKPIT):
     """One frame with the mapped controls: the positions, then the ratchets.
@@ -2495,6 +2703,7 @@ class KeyLog:
     ``fit`` / ``unfit``    the F key, and which way it left the engine
     ``governor``           the G key, the GOV AUTO/EMER switch
     ``failure`` / ``recovered``   the X key, an engine failed and cleared again
+    ``mouse`` / ``devices``       the M key, and which hand the aircraft is in
     ``focus`` / ``blur``   the window gaining and losing the keyboard
     ``sample``             the flight itself, ``rate_hz`` times a second
 
@@ -2541,8 +2750,8 @@ class KeyLog:
             " monotonic; wall_ms is the same instant as time.time milliseconds."
             "  Both to a millisecond.\n"
             "# kind is down/up for a key, reset/park/view/quit/fit/unfit/"
-            "governor/failure/recovered for the command keys, focus/blur for"
-            " the keyboard, sample for the flight;"
+            "governor/failure/recovered/mouse/devices for the command keys,"
+            " focus/blur for the keyboard, sample for the flight;"
             " key is the key itself or - on a sample.\n"
             "# held is the flight keys down at that instant.  Velocity is m/s"
             " (airspeed, then north/east/down over the ground), attitude is"
@@ -2607,28 +2816,38 @@ def log_key(log, sim, kind, event, keyboard):
 
 
 def command_line(args):
-    """``(scenery path, key log path, controls path, engine)`` from the command line.
+    """``(scenery path, key log path, controls path, engine, mouse)`` from the command line.
 
     The scenery file is the one bare argument, ``sample_scenery.xml`` when there
-    is none, exactly as it always was.  The other two halves each have two
-    options of their own:
+    is none, exactly as it always was.  The other three halves each have options
+    of their own:
 
     * the key log: ``--log FILE`` writes it to *FILE* and ``--no-log`` flies
       without one, which leaves its half None;
     * the controls: ``--controls FILE`` reads the device map from *FILE* and
       ``--no-controls`` flies on the built-in keyboard mapping without reading a
       file at all, which likewise leaves its half None.
+    * the mouse: ``--mouse`` puts the cursor on the cyclic and the wheel on the
+      collective, and ``--mouse-reverse`` says the same with the wheel's sense
+      turned over - a notch of the wheel down for more collective rather than up
+      for more - which reverses which way the wheel turns the lever.
 
     ``--log`` or ``--controls`` with no file after it names nothing, so the
     default stands, and a file named beats the ``--no-`` option beside it, since
     it is the option that says where the thing comes from.
 
-    The fourth half is a switch rather than a pair, and the only one here that
-    is: ``--engine`` fits the T53 before the first frame, where `F` fits it in
-    the tenth, and there is no ``--no-engine`` because the engine is *off* by
-    default - a run that says nothing about it flies the report's own aircraft,
-    which is the option.  A run that means to fly the twist grip from the start
-    says so here rather than pressing `F` once the window is up.
+    The engine is a switch rather than a pair, and the only single one of them:
+    ``--engine`` fits the T53 before the first frame, where `F` fits it in the
+    tenth, and there is no ``--no-engine`` because the engine is *off* by default
+    - a run that says nothing about it flies the report's own aircraft, which is
+    the option.  A run that means to fly the twist grip from the start says so
+    here rather than pressing `F` once the window is up.
+
+    The mouse is a pair of switches and is off by default in the same way: it
+    returns one of :data:`MOUSE_MODES`, and there is no ``--no-mouse`` for it
+    either.  Both switches are stripped rather than left in the arguments, and
+    ``--mouse-reverse`` implies ``--mouse``, since a reversed wheel that nothing
+    reads is not a thing a run can ask for.
 
     ``--check`` never reaches here: it is read at the bottom of the file, before
     ``main()`` is called at all.
@@ -2641,6 +2860,19 @@ def command_line(args):
         # Every one of them, so that saying it twice leaves no ``--engine`` in
         # the arguments to be mistaken for the scenery path below.
         args.remove("--engine")
+    mouse = MOUSE_OFF
+    if "--mouse" in args:
+        mouse = MOUSE_ON
+    if "--mouse-reverse" in args:
+        # After --mouse, so that a run saying both gets the wheel turned over:
+        # it is the more particular thing to say about the same mouse.
+        mouse = MOUSE_REVERSE
+    while "--mouse" in args:
+        # Stripped for the engine's own reason: an unmapped switch left in the
+        # arguments would be read as the scenery path.
+        args.remove("--mouse")
+    while "--mouse-reverse" in args:
+        args.remove("--mouse-reverse")
     if "--no-log" in args:
         args.remove("--no-log")
         log_path = None
@@ -2662,13 +2894,14 @@ def command_line(args):
         else:
             del args[index]
     return ((args[0] if args else DEFAULT_SCENERY_FILE), log_path,
-            controls_path, engine)
+            controls_path, engine, mouse)
 
 
 def main():
     global SCENERY
 
-    path, log_path, controls_path, engine = command_line(sys.argv[1:])
+    path, log_path, controls_path, engine, mouse_mode = command_line(
+        sys.argv[1:])
     loaded = load_scenery(path)
     if loaded is None:
         sys.exit(2)
@@ -2721,6 +2954,10 @@ def main():
     print("keys: W/S collective, arrows cyclic, A/D pedals, R reset, P park,")
     print("  Q/E the twist grip, F the engine, G the governor, X a failure,"
           " C camera, Esc quit")
+    print("  and M the mouse, which is the one control that needs no hardware:")
+    print("  the cursor flies the cyclic, the wheel turns the collective, and")
+    print("  --mouse asks for it at startup; --mouse-reverse turns the wheel")
+    print("  over, so that a notch up lowers the lever instead of raising it")
     print("  those are the built-in mapping, which the controls above name when"
           " this run")
     print("  reads no device map of its own; a control moved to a stick is read"
@@ -2765,6 +3002,10 @@ def main():
     resize(WIDTH, HEIGHT)
     init_gl()
     pygame.display.set_caption(window_title(sim, view))
+    # The window's own size, which is what turns the cursor's position into the
+    # cyclic's: the display here is fixed at WIDTH by HEIGHT, and this is the
+    # window the mouse is read against rather than the constant.
+    size = pygame.display.get_surface().get_size()
 
     # The map's joysticks, now that there is a window: each is found by the name
     # or the index the map gives it, and what was found is printed, since a
@@ -2773,6 +3014,14 @@ def main():
     devices = Devices(control_map)
     print("devices found:")
     print(devices.describe())
+
+    # The mouse, if the run asked for it, which is the one device that is not in
+    # the map and needs no hardware at all.  `M` takes it up later in exactly the
+    # same way, so this is the startup half of that key and nothing else.
+    mouse = None
+    if mouse_mode != MOUSE_OFF:
+        mouse = mouse_for(sim, size, mouse_mode)
+        print(mouse_line(mouse))
 
     clock = pygame.time.Clock()
     running = True
@@ -2813,6 +3062,15 @@ def main():
                     else:
                         sim.on_the_pad()
                     camera.reset()
+                    if mouse is not None:
+                        # The mouse reads the lever and the stick back off the
+                        # aircraft it has just been put back on - the pad's own
+                        # 75 % and the cyclic's own centre - so that an R or a P
+                        # is the same state whether the mouse or the keys are
+                        # flying it.  Without this the wheel's last notch would
+                        # slew the lever straight back off the pad again.
+                        mouse.collective = sim.pilot.collective_axis
+                        mouse.recentre()
                     # Logged after the reset, so the line is the state the key
                     # produced and not the one it was pressed in.
                     log_key(log, sim, "reset" if resetting else "park", event,
@@ -2868,6 +3126,23 @@ def main():
                                 event, keyboard)
                         print("  engine: %s"
                               % ("FAILED" if failed else "running again",))
+                elif event.key == pygame.K_m:
+                    # M is the mouse: the cursor on the cyclic and the wheel on
+                    # the collective, which is the one way this sandbox flies a
+                    # stick with no hardware at all.  Taking it up reads the
+                    # lever back off the aircraft and puts the cursor in the
+                    # middle of the window, so nothing moves but which hand is
+                    # on it; M again gives the aircraft back to the devices.
+                    # A run that asked for --mouse already began this way, and
+                    # asking for --mouse-reverse is what this asks for, too.
+                    if mouse is None:
+                        mouse = mouse_for(sim, size, mouse_mode)
+                        print("  " + mouse_line(mouse))
+                        log_key(log, sim, "mouse", event, keyboard)
+                    else:
+                        mouse = None
+                        print("  the mouse is off: the devices fly it again")
+                        log_key(log, sim, "devices", event, keyboard)
                 else:
                     keyboard[event.scancode] = True
                     tapped.add(event.scancode)
@@ -2885,6 +3160,14 @@ def main():
                 devices.refresh()
                 print("devices found:")
                 print(devices.describe())
+            elif event.type == MOUSEWHEEL and mouse is not None:
+                # The wheel, which is the collective: a notch is a fiftieth of
+                # the lever's travel and the lever follows it at the rate a hand
+                # moves one.  A wheel is not a keystroke, so the log has no line
+                # of its own for it - the lever it moved is in the next sample's
+                # own coll_frac, which is what that column is for - and a wheel
+                # turned with no mouse flying is read by nothing at all.
+                mouse.wheel(event.y)
 
         # The frame's own time, whatever it turned out to be: the physics inside
         # Simulation.step is always 1/60 s steps, so a dragged window is a longer
@@ -2901,6 +3184,12 @@ def main():
                                       else "click the window, it has not"))
             keyboard_was = focused
         absolute, ratchet = devices.read(keyboard, tapped)
+        # The mouse's own three axes are put among the map's, and the controls it
+        # flies are taken out of the map's ratchets, so that one control is one
+        # hand: with the mouse on, the arrow keys and `W` fly nothing and the
+        # pedals and the grip are still the keyboard's.
+        absolute, ratchet = hands_on(absolute, ratchet, mouse,
+                                     pygame.mouse.get_pos())
         # The grip is read off the aircraft before the frame's own input is put
         # into it and again after, which is what tells a frame that *moved* the
         # grip from sixty a second that merely find it where the last one left
@@ -2994,9 +3283,10 @@ def _self_check():
                                  {pygame.KSCAN_E}))["throttle"] == 0.0
     assert sorted(pilot_keys({})) == ["collective", "lat_stick", "long_stick",
                                       "pedal", "throttle"]
-    # R, F, G and X are command keys, not flight keys: tapping one flies nothing.
+    # R, F, G, X and M are command keys, not flight keys: tapping one flies
+    # nothing.
     for scancode in (pygame.KSCAN_R, pygame.KSCAN_F, pygame.KSCAN_G,
-                     pygame.KSCAN_X):
+                     pygame.KSCAN_X, pygame.KSCAN_M):
         assert scancode not in FLIGHT_SCANCODES
         assert pilot_keys(frame_keys({}, {scancode})) == pilot_keys({})
     assert pilot_keys(frame_keys({pygame.KSCAN_RIGHT: True},
@@ -3849,17 +4139,18 @@ def _self_check():
     # the name a key is given, the columns of a log line, the two clocks on it
     # and the rate that keeps the flight sampled rather than written every frame.
     assert command_line([]) == (DEFAULT_SCENERY_FILE, DEFAULT_KEYLOG_FILE,
-                                DEFAULT_CONTROLS_FILE, False)
+                                DEFAULT_CONTROLS_FILE, False, MOUSE_OFF)
     assert command_line(["scene.xml"]) == ("scene.xml", DEFAULT_KEYLOG_FILE,
-                                           DEFAULT_CONTROLS_FILE, False)
+                                           DEFAULT_CONTROLS_FILE, False,
+                                           MOUSE_OFF)
     assert command_line(["scene.xml", "--log", "run.csv"]) == (
-        "scene.xml", "run.csv", DEFAULT_CONTROLS_FILE, False)
+        "scene.xml", "run.csv", DEFAULT_CONTROLS_FILE, False, MOUSE_OFF)
     assert command_line(["--log", "run.csv"]) == (
-        DEFAULT_SCENERY_FILE, "run.csv", DEFAULT_CONTROLS_FILE, False)
+        DEFAULT_SCENERY_FILE, "run.csv", DEFAULT_CONTROLS_FILE, False, MOUSE_OFF)
     assert command_line(["--no-log"])[1] is None
     assert command_line(["scene.xml", "--no-log"]) == ("scene.xml", None,
                                                        DEFAULT_CONTROLS_FILE,
-                                                       False)
+                                                       False, MOUSE_OFF)
     assert command_line(["--log"])[1] == DEFAULT_KEYLOG_FILE  # no file named
     assert command_line(["--no-log", "--log", "run.csv"])[1] == "run.csv"
     # The device map has the same two options, and the same rule that a file
@@ -3871,18 +4162,37 @@ def _self_check():
     assert command_line(["--controls"])[2] == DEFAULT_CONTROLS_FILE
     assert command_line(["--no-controls", "--controls", "panel.xml"])[2] == \
         "panel.xml"
-    # The engine is a switch and not a pair, and the only one of the four that
-    # is: --engine fits the T53 before the first frame and a run that says
-    # nothing about it flies the report's own aircraft, which is the whole of
-    # the default - there is no --no-engine to write - and the flag is stripped
-    # rather than left in the arguments as a scenery path would be.
+    # The engine is a switch and not a pair: --engine fits the T53 before the
+    # first frame and a run that says nothing about it flies the report's own
+    # aircraft, which is the whole of the default - there is no --no-engine to
+    # write - and the flag is stripped rather than left in the arguments as a
+    # scenery path would be.
     assert command_line(["--engine"]) == (DEFAULT_SCENERY_FILE,
                                           DEFAULT_KEYLOG_FILE,
-                                          DEFAULT_CONTROLS_FILE, True)
+                                          DEFAULT_CONTROLS_FILE, True, MOUSE_OFF)
     assert command_line(["scene.xml", "--engine", "--no-log"]) == (
-        "scene.xml", None, DEFAULT_CONTROLS_FILE, True)
+        "scene.xml", None, DEFAULT_CONTROLS_FILE, True, MOUSE_OFF)
     assert command_line([])[3] is False and command_line(["--engine"])[3] is True
     assert command_line(["--engine", "--engine"])[3] is True   # as often as said
+    # The mouse is the last half and the only pair of switches among them: the
+    # default is off, which is the option, so there is no --no-mouse either -
+    # and --mouse-reverse implies --mouse, since a reversed wheel that nothing
+    # reads is not a thing a run can ask for.  Both are stripped, so neither is
+    # left in the arguments to be read as the scenery path.
+    assert command_line([])[4] == MOUSE_OFF
+    assert command_line(["--mouse"]) == (DEFAULT_SCENERY_FILE,
+                                         DEFAULT_KEYLOG_FILE,
+                                         DEFAULT_CONTROLS_FILE, False, MOUSE_ON)
+    assert command_line(["--mouse-reverse"])[4] == MOUSE_REVERSE
+    assert command_line(["--mouse", "--mouse-reverse"])[4] == MOUSE_REVERSE
+    assert command_line(["--mouse-reverse", "--mouse"])[4] == MOUSE_REVERSE
+    assert command_line(["--mouse", "--mouse"])[4] == MOUSE_ON  # as often as said
+    assert command_line(["scene.xml", "--mouse"])[0] == "scene.xml"
+    assert command_line(["scene.xml", "--mouse", "--engine"])[0] == "scene.xml"
+    # ...and the key log and the map are still read with the mouse on: the five
+    # halves are one command line and not four command lines.
+    assert command_line(["--mouse", "--no-log", "--controls", "panel.xml"]) == (
+        DEFAULT_SCENERY_FILE, None, "panel.xml", False, MOUSE_ON)
 
     # A flight key is named by the position the controls read it from, and every
     # other key - the four command keys among them - by pygame's own name.
@@ -4115,6 +4425,98 @@ def _self_check():
     # The grip is one control or the other and not both: a device that reports
     # its position leaves it out of the ratchet dictionary entirely.
     assert "throttle" not in ratchet
+
+    # The mouse, which is the one device with no hardware to be found and so the
+    # one the check can fly whole: the cursor's own position in the window is the
+    # cyclic, the wheel turns the collective, and the three axes it flies are
+    # exactly those three - the pedals and the grip stay where the map put them.
+    assert MOUSE_MODES == (MOUSE_OFF, MOUSE_ON, MOUSE_REVERSE)
+    assert MOUSE_AXES == ("long_stick", "lat_stick", "collective")
+    assert MOUSE_CYCLIC_DEADZONE == 0.04
+    assert MOUSE_WHEEL_COLLECTIVE_STEP == 0.02
+    mouse_size = (WIDTH, HEIGHT)
+    middle = (WIDTH // 2, HEIGHT // 2)
+    # The middle of the window is the cyclic centred, and the directions about it
+    # are the arrow keys' own: a cursor above the middle is the up arrow's own
+    # control, which is cyclic forward and the nose down, and one to the right is
+    # the right arrow's, which is roll right.
+    assert mouse_cyclic(middle, mouse_size) == (0.0, 0.0)
+    assert mouse_cyclic((WIDTH, HEIGHT // 2), mouse_size) == (1.0, 0.0)
+    assert mouse_cyclic((0, HEIGHT // 2), mouse_size) == (-1.0, 0.0)
+    assert mouse_cyclic((WIDTH // 2, 0), mouse_size) == (0.0, 1.0)     # nose down
+    assert mouse_cyclic((WIDTH // 2, HEIGHT), mouse_size) == (0.0, -1.0)  # nose up
+    assert mouse_cyclic((WIDTH, 0), mouse_size) == (1.0, 1.0)  # up and to the right
+    assert mouse_cyclic((-10, HEIGHT + 10), mouse_size) == (-1.0, -1.0)  # clipped
+    # The deadzone is a band about the middle, in the fraction of the half width
+    # the window is read in: 19 px of a 480 px half is inside it and 20 px is not,
+    # and what is beyond it is the cursor's own travel rather than a step.
+    assert mouse_cyclic((WIDTH // 2 + 19, HEIGHT // 2), mouse_size)[0] == 0.0
+    assert abs(mouse_cyclic((WIDTH // 2 + 20, HEIGHT // 2), mouse_size)[0]
+               - 20.0 / (WIDTH / 2.0)) < 1e-12
+    # The wheel: a notch is a fiftieth of the lever's travel, the lever moves when
+    # the wheel does and stays where it is when it does not, neither stop is
+    # somewhere the wheel can push it past, and the reverse of the two is the same
+    # wheel the other way up.
+    assert mouse_wheel_collective(0.75, 0) == 0.75            # a still wheel
+    assert abs(mouse_wheel_collective(0.75, 1) - 0.77) < 1e-12
+    assert abs(mouse_wheel_collective(0.75, -1) - 0.73) < 1e-12
+    assert mouse_wheel_collective(1.0, 4) == 1.0             # the lever's own stops
+    assert mouse_wheel_collective(0.0, -4) == 0.0
+    assert abs(mouse_wheel_collective(0.75, 1, reverse=True) - 0.73) < 1e-12
+    assert mouse_wheel_collective(0.0, 4, reverse=True) == 0.0
+    # The mouse itself, which is a window's own size and a lever the wheel
+    # remembers: a notch arrives as an event and is read in a frame, so where the
+    # wheel left the lever has to outlive the frame it was turned in.
+    mouse = Mouse(mouse_size)
+    assert mouse.size == mouse_size and not mouse.reverse
+    assert mouse.collective == 0.0
+    stick_axes = mouse.read(middle)
+    assert sorted(stick_axes) == sorted(MOUSE_AXES)         # three, and only three
+    assert stick_axes == {"long_stick": 0.0, "lat_stick": 0.0, "collective": 0.0}
+    mouse.wheel(3)
+    assert abs(mouse.collective - 0.06) < 1e-12
+    stick_axes = mouse.read((WIDTH, 0))                    # forward and to the right
+    assert stick_axes["lat_stick"] == 1.0 and stick_axes["long_stick"] == 1.0
+    assert abs(stick_axes["collective"] - 0.06) < 1e-12    # where the wheel left it
+    assert mouse.read((WIDTH, 0)) == stick_axes            # a still frame is still
+    turned = Mouse(mouse_size, reverse=True)
+    turned.wheel(3)
+    assert turned.collective == 0.0                        # the wheel the other way
+    turned.wheel(-3)
+    assert abs(turned.collective - 0.06) < 1e-12
+    # ...and which way this run reads it is a line the run says about itself,
+    # rather than something a pilot has to work out from the lever.
+    assert mouse_line(mouse).startswith("mouse: ")
+    assert "reversed" not in mouse_line(mouse)
+    assert mouse_line(mouse).endswith("raises the lever")
+    assert mouse_line(turned).endswith("lowers the lever")
+    # With the mouse on one control is one hand: its three axes join the frame's
+    # own positions, and the map's copies of them are taken out of its ratchets -
+    # while the pedals and the grip stay on the keyboard, so a run flies its
+    # pedals from `A` and `D` with the mouse as the stick.
+    mouse_board = Devices(controls.default_control_map())
+    mouse.collective = 0.8
+    absolute, ratchet = mouse_board.read({}, set())
+    absolute, ratchet = hands_on(absolute, ratchet, mouse, (WIDTH, 0))
+    assert sorted(absolute) == sorted(MOUSE_AXES)
+    assert absolute["collective"] == 0.8
+    assert absolute["lat_stick"] == 1.0 and absolute["long_stick"] == 1.0
+    assert sorted(ratchet) == ["pedal", "throttle"]      # the two the mouse left
+    assert ratchet["pedal"] == 0.0 and ratchet["throttle"] == 0.0
+    # ...and the keys the mouse has taken over fly nothing at all.
+    absolute, ratchet = mouse_board.read({}, {pygame.KSCAN_W})
+    assert "collective" not in hands_on(absolute, ratchet, mouse, middle)[1]
+    absolute, ratchet = mouse_board.read({}, {pygame.KSCAN_UP})
+    assert "long_stick" not in hands_on(absolute, ratchet, mouse, middle)[1]
+    absolute, ratchet = mouse_board.read({}, {pygame.KSCAN_LEFT})
+    assert "lat_stick" not in hands_on(absolute, ratchet, mouse, middle)[1]
+    # ...while the pedals and the grip are still read on that same frame.
+    absolute, ratchet = mouse_board.read({}, {pygame.KSCAN_D, pygame.KSCAN_Q})
+    _absolute, ratchet = hands_on(absolute, ratchet, mouse, middle)
+    assert ratchet["pedal"] == 1.0 and ratchet["throttle"] == -1.0
+    # A run with no mouse gets the map's own two dictionaries back, untouched.
+    plain = mouse_board.read({}, {pygame.KSCAN_D})
+    assert hands_on(plain[0], plain[1], None, middle) == plain
 
 
 if __name__ == "__main__":

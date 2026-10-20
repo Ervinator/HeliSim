@@ -131,6 +131,72 @@ These are choices, not oversights: each is stated where it lives.
 
 ## Done
 
+* 2026-10-20 - **the mouse flies the aircraft: the cursor is the cyclic and its
+  wheel is the collective.**  A UH-1's two controls that need a hand's own feel
+  were the two this sandbox could only fly from the keyboard or from hardware, so
+  a run with no stick on the desk had no stick: `M` now gives it the mouse, and
+  `--mouse` asks for it before the first frame - the one control in the project
+  that arrives with no device behind it at all.
+
+  * *the cursor is the cyclic, and it is read as a position.*  The window is the
+    stick's own scale, so its middle is the cyclic's own centre and its edges are
+    the stops; the cursor's direction from the middle is the arrow key's of that
+    direction, which is the rule a pilot can remember - above the middle is cyclic
+    forward and the nose down, right of it is roll right - and a 4 per cent band
+    about the middle (`MOUSE_CYCLIC_DEADZONE`) is the cyclic centred, because a
+    hand never leaves a cursor exactly there.  `mouse_cyclic` is the arithmetic,
+    with no pygame mouse to run it on, the way `controls.axis_value` is a
+    joystick's own reading with no joystick;
+  * *the wheel is the collective, a notch at a time.*  A notch is a fiftieth of
+    the lever's travel (`MOUSE_WHEEL_COLLECTIVE_STEP`, 0.22 in of the UH-1H's 11),
+    the lever follows at the rate a hand would move it because the frame's own
+    `set_axes` slews it, and where the wheel leaves it is remembered across frames
+    - a notch arrives as an *event* and is read in a *frame*, so it is the one
+    thing about the mouse that has to outlive a frame.  Both stops clip it.
+    `--mouse-reverse` is the wheel's one option, and it is the option the request
+    named: a notch of the wheel down for more collective instead of up for more.
+    Which way the run reads it is a line it prints when the mouse is taken up,
+    because a lever that goes down when the wheel goes up is a broken lever to a
+    pilot who has not been told;
+  * *one control is one hand, and the lever is read back off the aircraft.*  The
+    mouse flies exactly the cyclic's two axes and the collective (`MOUSE_AXES`),
+    and `hands_on` takes the map's own copies of those out of the frame's ratchet
+    dictionary as it puts the mouse's positions in, so `W` and the arrows go quiet
+    while the pedals stay on `A` and `D` and the grip on `Q` and `E`.  Taking the
+    mouse up - with `M`, or at startup - reads the lever off
+    `PilotInput.collective_axis` and puts the cursor in the middle of the window
+    (`Mouse.recentre`), so it is no step to the hands; `R` and `P` do the same
+    reading, or the wheel's last notch would slew the lever straight off the pad a
+    park had just put it on;
+  * *the mouse is not a device of the map.*  `default_controls.xml` names
+    keyboard and joystick devices and the mouse is neither: it is `main.py`'s own,
+    with its own two switches, which is why `command_line` now answers five values
+    - the mouse's being one of `MOUSE_OFF`/`MOUSE_ON`/`MOUSE_REVERSE` - and why
+    the key log has a `mouse`/`devices` kind for the `M` key beside the four
+    halves it already had.  Both switches are stripped like `--engine`, and
+    `--mouse-reverse` implies `--mouse`, since a reversed wheel that nothing reads
+    is not a thing a run can ask for.
+
+  Verified: `python main.py --check`, with its own new block - the four directions
+  about the middle of the window and the clipped corners, the 19 px inside the
+  deadzone and the 20 px that are not, the wheel's notches, stops and reverse, the
+  `Mouse` class's own frame-to-frame memory, and `hands_on` against the mapped
+  board: the mouse's three axes in the positions, the map's copies gone from the
+  ratchets, the pedals and grip still read on the same frame, and a run with no
+  mouse handed its dictionaries back untouched.  `attic/_mouse_probe.py` - scratch,
+  not part of the project - then flew it in a real window: `--mouse-reverse` taken
+  up on the pad reads the lever back at the pad's own 0.7500 and centres the
+  cursor; four notches *lower* it to 0.6700 where `set_axes` follows; a second of
+  the loop with `W` held as well leaves the lever at exactly 0.6700 with the skids
+  down and the aircraft uncrashed (the key read by nothing); two seconds with `D`
+  held moves the pedal by exactly its own key's rate - `key_rates()[2]` over those
+  two seconds, 0.5 of its travel - while both cyclic axes end on the cursor's own
+  reading; and `R` puts the lever and the aircraft back on the pad.  Its two
+  `MOUSEWHEEL` fields were read back out of pygame's own queue as well, since a
+  script cannot borrow `main()`'s while loop.  `python regression_tm73254.py`
+  unchanged, `python simulation.py` printing `self test passed`, and the module
+  line count of `README.md` and `main.py`'s docstring brought up to the file.
+
 * 2026-10-19 - **the skids have the heading: below 4 deg of rotor, full pedal on
   the ground now yaws nothing at all.**  The report was that a parked UH-1 with
   the lever low turns its nose on the pedals anyway, and the aircraft was right:
