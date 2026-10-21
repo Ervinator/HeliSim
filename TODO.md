@@ -131,6 +131,76 @@ These are choices, not oversights: each is stated where it lives.
 
 ## Done
 
+* 2026-10-21 - **the harness is written down: seven `_rt_` modules, four of them
+  thirteen days older than the entry that names them.**  Human flyability has two
+  entries of its own and nothing else, and everything the two of them stand on was
+  unnamed: `_rt_pilot.py` (1480 lines) and its three siblings were added in a
+  single commit on 2026-10-08 and appeared in this file only as references inside
+  somebody else's entry, `_rt_demo.py` was not named here at all, `README.md`'s
+  module table lists the model's nine and said nothing about the seven beside
+  them, and the one place that enumerated the harness was `.gitignore`'s own
+  comment.  What is new is an account: a *The harness* section in `README.md` -
+  the seven, what each is, how to run each, what each writes, and where the two
+  flyability phases and the autorotation probe sit in it - plus this entry, which
+  is the provenance the README cannot carry.
+
+  * *the pilot.*  `_rt_pilot.py`: the keyboard pilot with a person's timing that
+    drives `main.py`'s own frame loop.  The trims are the baseline -
+    :class:`TrimTable` reads them off the model, so the loops are small signal and
+    only have to catch what the trim does not - the pilot reads the instruments
+    every `REACTION_S` seconds on the *flight's* clock rather than the frame's,
+    and a key is held until the axis crawls to the position the pilot asked for.
+    Three missions, three classes: `HumanPilot` (the pad to a hundred metres up
+    and a kilometre out, which is what the playability runs flew),
+    `HoverTurnPilot` (the minute of hover, turn and landing),
+    `AutorotationPilot` (five hundred feet at sixty knots, the twist grip rolled
+    right off, and down again on the rotor - whose climb height is
+    `AUTOROTATION_CLIMB_ALT_M`, the second binding phase 0.1 made when
+    `CLIMB_ALT_M` turned out to be bound twice).  Nothing but the nine keys is
+    touched in any of them;
+  * *the ruler.*  `_rt_probe.py` (118 lines): the numbers the pilot's gains have
+    to be built from - travels, the pad's stick, the hover trim and the model's
+    own trims for the speeds a mission wants - read and not guessed, so a loop is
+    scaled to the aircraft rather than to trial and error.  `hover_step` is the
+    instrument: one control stepped *inches* off the hover's own trim through
+    :meth:`simulation.PilotInput.reset` - an axis, a ratchet, nothing held - and
+    what is printed is the model's answer, not a pilot's: how many degrees a
+    second an inch of pedal buys, how much pitch an inch of long stick buys and
+    what speed that pitch settles at;
+  * *the rehearsal.*  `_rt_check.py` (270 lines): the realtime demo's own
+    rehearsal - the pilots through `main.fly_frame`, the same keys, ratchet, clock,
+    camera and view as the window - with no renderer and no waiting, so the loops
+    are read off a transcript before anybody watches them and a mission's claims
+    are *asserted* rather than eyeballed.  The short mission is flown at two of a
+    person's reaction times, since it is a minute of flight and its shape should
+    be the same at both, and the long one as the regression that the frame loop the
+    two pilots share still flies what it flew;
+  * *the window.*  `_rt_demo.py` (260 lines): the same window `python main.py`
+    opens - the same `set_mode`, `init_gl`, `fly_frame`, `draw_scene` and panels -
+    with `HumanPilot` or `HoverTurnPilot` standing at the keyboard instead of a
+    person, so the pickup, a hover, a turn and a landing can be *watched* at sixty
+    frames a second; `C`, `R`, `P` and `Esc` on top of the pilot's own eight keys,
+    a mission name or a scenery file as the first argument, and a count of physics
+    steps so the whole driver can be checked end to end in one command.  One thing
+    in it is asked of a key a *watcher* would press rather than by the pilot: the
+    engine, because an unattended pilot cannot press `F` and a rotor *held* at a
+    hundred per cent cannot autorotate at all - which is the aircraft
+    `_rt_autoro_probe.py` measures;
+  * *and the three the programme added* - `_rt_handling.py` (2026-10-20),
+    `_rt_axes.py` (2026-10-21) and `_rt_autoro_probe.py` (2026-10-21) - each
+    already written up where it was measured, so the harness is seven modules
+    accounted for one by one, four of which flew for thirteen days before
+    anything here named them.
+
+  Verified: the four oldest arrived in one commit, `1accaca` of 2026-10-08, read
+  off `git log --diff-filter=A`; the count of seven agrees between `README.md`,
+  `.gitignore` and this entry; pygame is imported by `_rt_pilot`, `_rt_demo` and
+  `_rt_autoro_probe` and by the other four through `_rt_pilot`, which is what the
+  README now says; and nothing in the model was touched - the change is prose in
+  `README.md` and this file, with `python main.py --check` printing
+  `main.py check passed` and `python regression_tm73254.py` printing
+  `self test passed` where they were.
+
 * 2026-10-21 - **the hover's margin is the cyclic's margin and nothing else: the
   tilt pair's band is *wider* at sixty knots, and the lever's and the pedals' do
   not transfer at all.**  Phase 1 asked whether a person's hands can hold this

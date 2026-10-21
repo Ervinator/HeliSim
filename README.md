@@ -25,7 +25,14 @@ Layered, each one importing only what sits below it:
 | `controls.py` | 1105 | the device map: which physical control flies which - keyboard or joystick, per control, with deadzone, invert and calibration - read from the XML of `default_controls.xml`, and likewise stdlib only |
 | `main.py` | 4527 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, the aircraft of `simulation.py` flown from its device map - keyboard, joystick, the mouse, or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it, with one `--engine` switch that fits the T53 before the first frame, the cursor on the cyclic and the wheel on the collective (`M`, `--mouse` and its own `--mouse-reverse`), and one line for the grip of a run that has none |
 
-Only `main.py` imports anything outside the standard library.
+Only `main.py` imports anything outside the standard library - and that is a
+claim about the nine modules above rather than about the project.  The seven
+`_rt_*.py` files in the root beside them are *the harness*: the pilots that fly
+the model and the instruments that measure them, and they all want pygame, three
+of them by name (`_rt_pilot` for the nine scancodes its keys are, `_rt_demo` for
+the window it opens, `_rt_autoro_probe` for the grip's own two) and the other
+four through `_rt_pilot`.  No harness but `_rt_demo` opens a window and none of
+them needs an OpenGL context.  See *The harness* below.
 
 ## Running
 
@@ -358,18 +365,96 @@ command line that names it, the names it gives a key and a hand, the columns of 
 line, the two clocks on it to a millisecond and the rate the flight is sampled
 at.  None of it needs an OpenGL context.
 
+## The harness
+
+The nine modules above are the model.  The seven `_rt_*.py` files in the root
+beside them are the harness: the pilots that *fly* the model, and the instruments
+that measure whether it can be flown at all.  Nothing in the model imports one,
+all seven are tracked, and the `_rt_` prefix is the project's own word for what
+they are - scratch.  They arrived in two groups: the four the missions are flown
+with, in one commit on 8 October 2026, and the three the human flyability
+programme added on 20 and 21 October.
+
+| module | lines | what it is |
+| --- | --- | --- |
+| `_rt_pilot.py` | 1480 | the keyboard pilot with a person's timing, and the three missions it flies: the cruise, the minute of hover, turn and landing, and the autorotation |
+| `_rt_probe.py` | 118 | the ruler the pilot's gains are cut with: travels and the model's own trims, then one control stepped off the hover's trim, and what the model answered |
+| `_rt_check.py` | 270 | the demo's rehearsal: the missions flown headless and fast through the same frame loop, with every claim a mission makes asserted |
+| `_rt_demo.py` | 260 | the window `python main.py` opens, with a pilot at the keys instead of a person, so a mission can be watched at sixty frames a second |
+| `_rt_handling.py` | 1172 | human flyability, phase 1: a clock, a transport delay, a gain, a lead and a lag closed around the model's own hover |
+| `_rt_axes.py` | 1433 | phase 2: the lever and the pedals under scales of their own, and all four axes again at sixty knots |
+| `_rt_autoro_probe.py` | 192 | the autorotation measured rather than guessed: its entry, its descent, and the rate its skids arrive at |
+
+`_rt_pilot.py` is the one the others stand on, and it is three ideas.  A UH-1 has
+a force trim and the handbook has numbers, so the loops are small-signal about the
+trims `TrimTable` reads off the model, and they only have to catch what the trim
+does not.  The pilot reads the instruments every `REACTION_S` seconds on the
+*flight's* clock and not the frame's, so a dragged window does not change what was
+flown.  And a key is *held* until the axis crawls to the position the pilot asked
+for, which is what a hand does with a stick this slow.  Three missions fly on it,
+each a class of its own - `HumanPilot` from the pad to a hundred metres up and a
+kilometre out, `HoverTurnPilot` for the minute of hover, turn and landing, and
+`AutorotationPilot` for five hundred feet at sixty knots with the twist grip
+rolled right off - and nothing but the nine keys is touched in any of them.
+
+Each is run the way every other module here is:
+
+    python _rt_check.py            # both missions, headless: _rt_log.txt
+    python _rt_demo.py [mission] [scenery.xml] [reaction_seconds] [frames]
+    python _rt_probe.py            # the numbers a gain is built from
+    python _rt_handling.py         # human flyability, phase 1: _rt_handling.txt
+    python _rt_axes.py             # phase 2: _rt_axes.txt
+    python _rt_autoro_probe.py     # the autorotation: _rt_autoro_probe.txt
+
+Every transcript is written by the run itself rather than by the shell's
+redirection, and `_rt_*.txt` in `.gitignore` covers all five of them, so what is
+committed is the code that made them.  `_rt_handling.py`, `_rt_axes.py` and
+`_rt_check.py` assert every number they print, so a regression is a traceback and
+not a table nobody read.  `_rt_demo.py` is the only one that needs a display, and
+one thing in it is asked of a key a *watcher* would press rather than by the
+pilot: the engine, because an unattended pilot cannot press `F` and a rotor
+*held* at a hundred per cent cannot autorotate at all - which is the aircraft
+`_rt_autoro_probe.py` measures.  All seven want pygame installed, for the
+scancodes a pilot's keys are.
+
+The last three are the human flyability programme: the part of the harness that is
+not about flying the model but about measuring the hands that would.  Two phases
+have been flown, and both are written up in `TODO.md`, findings and numbers
+together:
+
+* **phase 1**, `_rt_handling.py` (20 October).  The model's own hover closed
+  around a person's dynamics - twenty decisions a second, 0.2 s of transport delay
+  out of a deque of remembered states, 0.1 s of lag in the hand and 1.5 s of lead
+  on the rate, with the gains read off `_rt_pilot` rather than written down again,
+  so a scale of one *is* the pilot the missions are flown with.  What comes back
+  is a gain *band* and not a number: x0.75 to x1.00 of the model's attitude gains
+  for pitch and x0.50 to x1.00 for roll, with the model's own pilot at the hard
+  edge of both - and the failure above the edge is the pilot's own loop, an
+  oscillation whose period makes 0.2 s of delay worth tens of degrees of phase;
+* **phase 2**, `_rt_axes.py` (21 October).  The same instrument, with the lever
+  and the pedals under scales of their own, and then all four axes re-flown at
+  sixty knots.  Neither axis phase 1 left alone has a soft edge in the hover at
+  all, and out there it is the tilt pair whose bands transfer - and *wider* -
+  while the lever's and the pedals' do not.  So the hover's margin is the cyclic's
+  margin and nothing else, and that is what a change to the model, the controls or
+  the trims is checked against: `_rt_handling.py` and `_rt_axes.py` first, then
+  `_rt_check.py` for the missions themselves.
+
 ## Layout
 
     .
     |-- aerodynamics.py            the physics chain, from the rotor up
     |-- rotor_control.py
+    |-- engine.py
     |-- airframe.py
     |-- simulation.py
     |-- regression_tm73254.py
     |-- scenery.py
+    |-- controls.py
     |-- main.py
+    |-- _rt_*.py                   the seven that fly the model: see The harness
     |-- sample_scenery.xml         the default scenery
-    |-- requirements.txt           pygame and PyOpenGL, for main.py only
+    |-- requirements.txt           pygame and PyOpenGL: a window and scancodes
     |-- README.md
     |-- TODO.md                    what is left
     |-- reference/                 the reports the model was built from
@@ -379,9 +464,9 @@ at.  None of it needs an OpenGL context.
 ## Requirements
 
 Python 3.8 was what this was developed against, and `requirements.txt` pins
-exactly what `main.py` imports: pygame and PyOpenGL.  Nothing else in the
-project imports anything outside the standard library, so the model runs on a
-bare interpreter, and the renderer wants no numpy - it hands the model's own
+exactly what `main.py` imports: pygame and PyOpenGL.  Nothing else in the model
+imports anything outside the standard library, so the model runs on a bare
+interpreter, and the renderer wants no numpy - it hands the model's own
 column-major tuple to `glMultMatrixf` through a `GLfloat` array.  The pins are
 exact rather than floors because these are the versions this was developed and
 run against, Python 3.8.2 on Windows; loosen them to `>=` if the interpreter
@@ -399,5 +484,7 @@ rotor's limits come from; the other four were read and are not quoted.
 
 The physics chain is complete, the report's own validation responses are
 reproduced, and `main.py` flies the aircraft in the sandbox.  Every module has a
-demo that asserts as it prints, so running any one of them is its own test;
-`TODO.md` lists what the model deliberately leaves out.
+demo that asserts as it prints, so running any one of them is its own test.  The
+harness beside them flies the missions and measures whether the machine can be
+held by hands - two phases of that so far - and `TODO.md` lists what the model
+deliberately leaves out.
