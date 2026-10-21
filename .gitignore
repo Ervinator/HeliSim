@@ -32,3 +32,15 @@ keylog.txt
 _m*.txt
 _rt_*.txt
 sim_demo.txt
+
+# What the _tmp_ tools scribbled, and the one of them that is NOT ignored:
+# _tmp_shadow.py is tracked, because the Done entries in TODO.md verify
+# _rt_axes.py and _rt_handling.py with it and a check nobody can run is not one.
+# The other six - the sweeps, probes and one-flight diagnostics the autorotation
+# cushion and the manual's flare were read with - went to attic/ on 2026-10-21,
+# which is already ignored, and what they wrote (_tmp_*.txt, and the log_*.txt a
+# detached run leaves) is scratch wherever it lands.
+_tmp_*.py
+!_tmp_shadow.py
+_tmp_*.txt
+log_*.txt

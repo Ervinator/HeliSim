@@ -60,6 +60,22 @@ wiring that flying cannot test.
     steady vector, so the upwash off a ridge and the sink over a valley are the
     same level's work as the ridge.
 
+* **Human flyability has two phases and its next one is named here.**  The
+  harness has a section in `README.md` now, and the programme's own file says
+  what the phase after *it* is for: `_rt_handling.py`'s docstring ends on "what
+  this file measures is the acceptance criterion for the phases after it, and a
+  criterion nobody can fail is not one".  What is left is the loops *above* the
+  attitude.  Both phases hold the height, the speed and the heading at the
+  model's own numbers on purpose - the question they ask is how hard a pilot may
+  grip the *attitude*, not how fast the outer loops may be - so nobody has yet
+  asked whether a person's clock can hold what `_rt_check.py`'s missions fly
+  *scripted*, and phase 2's own finding is why it matters: the hover's margin is
+  the cyclic's margin and nothing else, which says nothing at all about the lever
+  and the pedals once a person is closing them.  `_rt_axes.py` is the scaffolding
+  to build it on - the four axes, the scale sweep, the settle criterion and the
+  PIO detector - so the phase is closing that instrument around the outer loops
+  and pinning their bands the way phase 1 pinned the attitude's.
+
 ## Known limitations, from the modules themselves
 
 These are choices, not oversights: each is stated where it lives.
@@ -130,6 +146,61 @@ These are choices, not oversights: each is stated where it lives.
   how long the window took to see the key.
 
 ## Done
+
+* 2026-10-21 - **the last scratch in the root is accounted for: one tool kept,
+  six retired to `attic/`.**  Seven `_tmp_*.py` files were sitting in the root
+  tracked by nothing and ignored by nothing - `.gitignore` covered `_m*.txt`,
+  `_rt_*.txt` and `sim_demo.txt`, and `attic/` already existed for exactly this
+  kind of work - so one `git add -A` would have committed them, while the two
+  entries below were already verifying with one of them by name.  That one is a
+  check and not a flight, so it stayed and is tracked; the other six went to
+  `attic/` beside the scratch that used to fill the root, and `.gitignore` now
+  says which `_tmp_` file is the project and which is not, the way `_rt_*.txt`'s
+  own comment already does for the harness's transcripts.
+
+  * *the keeper.*  `_tmp_shadow.py` (60 lines): every name a module binds at
+    module level more than once, read off its syntax tree rather than hunted for.
+    It is how `_rt_pilot.py`'s own `CLIMB_ALT_M` was found written down twice -
+    eighty metres at the top of the file and the engine-off mission's five hundred
+    feet further down, so the long mission's speed ramp had been solved against a
+    height it never reaches, which is what `AUTOROTATION_CLIMB_ALT_M` is the
+    second binding of.  It reads any file, so it is run for a new module the way
+    `_rt_check.py` is run for a mission: `python _tmp_shadow.py _rt_axes.py` reads
+    35 module-level names with none written down twice, `_rt_handling.py` 40 with
+    none, and both were run again to write this entry - and both are cited by the
+    two entries below, which is the reason it could not stay untracked;
+  * *the six.*  `_tmp_sweep.py` (271 lines) - the autorotation's cushion flown
+    headless once per cell, `flare_ft,sink_mps,pull_in,gain`, reporting the rate
+    the skids met the ground at as the *model* measures it, which is where
+    `CUSHION_PULL_IN`, `FLARE_SKID_FT` and the pull's own gain were read;
+    `_tmp_patch.py` (133) - the manual's own beat patched onto `_rt_pilot.py`'s
+    text, the level off at twelve feet of skid and all, `--revert` to put the two
+    hundred foot schedule back; `_tmp_runs.py` (45) - a run started detached, so
+    this box's terminal cannot take a long sweep away mid-flight; and the three
+    that print one flight's numbers rather than measuring anything -
+    `_tmp_anch.py` (76) for the cushion's own anchor, `_tmp_diag.py` (55) for the
+    grip frame by frame, `_tmp_why.py` (65) for what the pilot *saw* at each of
+    its looks, spied on `AutorotationPilot.decide` itself.  Four of the six import
+    the *tracked* harness as a library and nothing imports them, so each of those
+    four keeps the `sys.path` line `attic/`'s older scripts carry, and all six
+    still run from the project root as `python attic/_tmp_sweep.py` and friends -
+    `_tmp_patch.py` opens `_rt_pilot.py` by that name, CRLF and all, which is why
+    it is the one that cares where it is run from.  Nothing was deleted: the
+    autorotation entries below were worked out with these, and their numbers can
+    still be traced back through them, which is what `attic/` is for;
+  * *and a rationale that was ahead of its tree.*  The entry below that tracks
+    `_rt_autoro_probe.py` (`a033557`) justifies tracking it partly because "the
+    four `_tmp_` tools import its `key_states` and `skid_ft`, so a clone without it
+    has dangling references" - which was true of a working copy and not of the
+    repository, since none of those tools was tracked.  They are in `attic/` now
+    and still importing it, so the reasoning holds on both counts.
+
+  Verified: `python _tmp_shadow.py _rt_axes.py` and `python _tmp_shadow.py
+  _rt_handling.py`, green at 35 and 40 module-level names with none bound twice;
+  `python main.py --check` printing `main.py check passed` and
+  `python regression_tm73254.py` printing `self test passed`, the model itself
+  untouched by any of it; and `git status --short` showing `_tmp_shadow.py` as the
+  only file added, with nothing loose left in the root.
 
 * 2026-10-21 - **the harness is written down: seven `_rt_` modules, four of them
   thirteen days older than the entry that names them.**  Human flyability has two

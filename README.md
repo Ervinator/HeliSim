@@ -440,6 +440,23 @@ together:
   the trims is checked against: `_rt_handling.py` and `_rt_axes.py` first, then
   `_rt_check.py` for the missions themselves.
 
+Both phases hold the loops *above* the attitude at the model's own numbers on
+purpose: what they measure is the margin a hand has on the cyclic.  Whether a
+person's clock can hold the height, the speed and the heading that `_rt_check.py`'s
+missions fly *scripted* is the programme's next phase, and it is named in
+`TODO.md`'s `Next` rather than here, because it has not been flown yet.
+
+One file beside all of these is not the harness: `_tmp_shadow.py`, which walks a
+module's syntax tree and prints every module-level name bound twice.  It is the
+check that caught `_rt_pilot.py`'s own `CLIMB_ALT_M` written down twice - eighty
+metres at the top of the file and five hundred feet further down, so the long
+mission's speed ramp had been solved against a height it never reaches, which is
+why the engine-off mission's climb height is `AUTOROTATION_CLIMB_ALT_M`.  It is
+the one `_tmp_` tool kept in the root and it is tracked, because the entries in
+`TODO.md` that verify `_rt_axes.py` and `_rt_handling.py` verify them with it; the
+six others - the sweeps, the probes and the one-flight diagnostics the programme
+was worked out with - went to `attic/` on 21 October.
+
 ## Layout
 
     .
@@ -453,6 +470,7 @@ together:
     |-- controls.py
     |-- main.py
     |-- _rt_*.py                   the seven that fly the model: see The harness
+    |-- _tmp_shadow.py             the one scratch tool kept: names bound twice
     |-- sample_scenery.xml         the default scenery
     |-- requirements.txt           pygame and PyOpenGL: a window and scancodes
     |-- README.md
