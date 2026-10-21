@@ -2,9 +2,10 @@
 
 ## Next
 
-Nothing outstanding.  Every module has a demo that asserts as it prints -
-`scenery.py` and `controls.py` among them - and `main.py` has `--check` for the
-wiring that flying cannot test.
+The model's own modules are verified where they live: every one has a demo that
+asserts as it prints - `scenery.py` and `controls.py` among them - and `main.py`
+has `--check` for the wiring that flying cannot test.  What follows is what
+`Done` leaves open, in the order it is worth taking up.
 
 * **The engine is in; what is left of the level is around it.**  `engine.py`
   landed on 2026-10-08 with the airframe and simulation wiring that lets it drive
@@ -26,18 +27,44 @@ wiring that flying cannot test.
     the shape of those charts - a density scaling and a 50 psi full scale - and
     the rest of the level is digitising it.
 
-* **An autorotation is a flight now; what is left of it is the *entry*.**  A
-  shaft with nothing driving it offers the rotor equation 10's second root -
-  see the `windmill` note under `Not in the model` - and
+* **An autorotation is a flight now, and its *entry* is measured.**  A shaft
+  with nothing driving it offers the rotor equation 10's second root - see the
+  `windmill` note under `Known limitations` - and
   `Simulation.trim_autorotation` solves the manual's own 60 kt entry and leaves
-  a run flying it, rotor at 100 per cent.  What no key does yet is *put* an
-  aircraft on that condition, so a pilot who fails the engine with `X` and then
-  lowers the collective is on his own between the failure and the entry, which
-  is where the branch is at its least forgiving: a vertical descent with the
-  collective up is the frame the loop refuses outright, and only a script can
-  ask for the trimmed descent instead.  A key that asks for it the way `R` asks
-  for the run's own start is the obvious next thing.  The other half of the
-  level is the one below: nothing in the model holds a rotor *near* the trim.
+  a run flying it, rotor at 100 per cent.  Both switches a pilot would use are
+  in `main.py` already: `X` is the engine failure, `set_governor(failed=True)`,
+  and `Q` rolls the twist grip right off - two different events in the model and
+  the same physics at the shaft, which is what `Airframe.windmill` reads - while
+  `F`, or `--engine` on the command line, fits the engine the report's own
+  aircraft has not got.  What was open was what the model does *between* a
+  switch and the trimmed descent, and the harness answers it now:
+  `_rt_autoro_entry.py` flies the mission's own pilot through both switches, at
+  two of a person's decision rates, and asserts every number it prints.  What it
+  found, on the `"flight test"` aircraft at 500 ft of skid and 60 kt:
+
+  * the failure is the *quicker* entry - one governor lag against the grip's four
+    seconds of a quarter rate key - with a 190 ft catch in 7.5 s against the
+    scripted cut's 232 ft in 8.9 s, and both then settle on the same descent,
+    12.2 to 12.3 m/s against the trim's own 11.6;
+  * the *rotor*, which the model does not hold, is what the switch is worth:
+    neither entry keeps it inside the manual's green arc - both take it under
+    90.7 per cent and put the skids down on a rotor already below it - and how
+    far under is more the hand's doing than the switch's.  At the mission's own
+    0.25 s the failure is the worse one (72 per cent at the skids against the
+    grip cut's 87); at 0.35 s the grip's own cut overtakes it (60 against 70),
+    because a slower hand holds the *level* trim for longer with nothing driving
+    the shaft;
+  * and nothing was refused: no `OUT OF ENVELOPE` frame and no crash, on either
+    entry at either rate, with the skids arriving at 1.7 to 2.5 m/s against the
+    3.0 m/s the floor counts as hard.
+
+  What that leaves is the *hand*, and the trim it is handed: the loops are
+  `_rt_pilot.py`'s own and the lever position is the handbook's, so a person at
+  the keys - with no trim row to read and no stall or flap limit to catch them -
+  is what has not been measured.  See the windmill bullet under
+  `Known limitations` for what the model has behind a rotor taken off that trim,
+  and why a vertical descent with the collective up is the frame it refuses
+  outright.
 
 * **The ground is a plane, and the next level is a terrain.**  Everything that
   touches the ground - equation 10a's cushion, the floor's skid line, the point
@@ -109,7 +136,11 @@ These are choices, not oversights: each is stated where it lives.
   the trim finds the root doing more than the trim asked of it and overspeeds
   without bound.  A *vertical* descent with the collective up is the worst of
   them - equation 10's two roots meet at zero airspeed - which is the frame
-  `simulation.py` refuses as out of its envelope rather than passing on.
+  `simulation.py` refuses as out of its envelope rather than passing on.  What the
+  model does with a rotor taken off the trim is measured now, as far as the entry
+  goes: `_rt_autoro_entry.py` takes it under the manual's own 90.7 per cent on
+  both switches, out of a settled 60 kt climb at 500 ft, and nothing brings it
+  back - which is the number this note is about.
 * **The ground is a floor, not a contact model.**  `simulation.py` holds the
   c.g. on the skid line, takes the descent out of the velocity, and levels roll
   and pitch; the skids do not flex, slide or spring.
@@ -146,6 +177,45 @@ These are choices, not oversights: each is stated where it lives.
   how long the window took to see the key.
 
 ## Done
+
+* 2026-10-21 - **the autorotation's other switch is measured: a failure out of a
+  settled climb *is* a flight, and what it costs is the hand.**  `Next` had
+  recorded the open end as the *entry*, and it was right about the model and
+  wrong about the sandbox: every key for it already existed - `X` is
+  `set_governor(failed=True)`, `Q` rolls the twist grip right off, and `F` or
+  `--engine` fits the engine the report's own aircraft has not got - and what had
+  never been done was measure what the model does *between* a switch and the
+  trimmed descent.  So the harness gained a second autorotation instrument:
+  `_rt_autoro_entry.py` (676 lines), which flies the mission's own pilot through
+  both switches, at two of a person's decision rates, and asserts every number it
+  prints, the way `_rt_axes.py` and `_rt_handling.py` do.
+
+  * *what the model does.*  On the `"flight test"` aircraft at 500 ft of skid and
+    60 kt, both switches end in the same descent - 12.2 to 12.3 m/s against the
+    trim's own 11.59 - and neither is refused: no `OUT OF ENVELOPE` frame, no
+    crash, and the skids arrive at 1.7 to 2.5 m/s against the 3.0 m/s the floor
+    counts as hard.  The failure is the *quicker* entry - one governor lag against
+    the grip's four seconds of quarter rate key - with a 190 ft catch in 7.5 s
+    against the scripted cut's 232 ft in 8.9 s;
+  * *what it costs.*  The rotor, which the model does not hold: both entries take
+    it under the manual's own 90.7 per cent and put the skids down on a rotor
+    already below it.  How far below is the *hand's* doing as much as the
+    switch's, and that is why the file flies two decision rates - at 0.25 s the
+    failure leaves 72 per cent at the skids against the grip cut's 87, and at
+    0.35 s the grip's own cut is the worse of the two (60 against 70), because a
+    slower hand holds the level trim for longer with nothing driving the shaft;
+  * *what is left.*  The loops are `_rt_pilot.py`'s own and the lever position is
+    the handbook's trim, so a person at the keys - no trim row to read, and no
+    blade stall and no flap limit behind them - is still unmeasured.  `Next` says
+    so, and points at the windmill note for what the model has not got.
+  * *verified.*  `python _rt_autoro_entry.py` asserts its whole transcript
+    (`_rt_autoro_entry.txt`, 226 lines at both rates); `python
+    _rt_autoro_probe.py` still prints the same trim the new file reads (11.59 m/s
+    down, 4.44 in of collective); `python _tmp_shadow.py _rt_autoro_entry.py`
+    reads 19 module-level names with none written down twice; `python
+    _rt_check.py` still passes both missions at both reaction times; and
+    `README.md`'s harness table, its layout tree and `.gitignore`'s own comment
+    count eight `_rt_` modules now rather than seven.
 
 * 2026-10-21 - **the last scratch in the root is accounted for: one tool kept,
   six retired to `attic/`.**  Seven `_tmp_*.py` files were sitting in the root
