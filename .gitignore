@@ -42,6 +42,14 @@ sim_demo.txt
 # which is already ignored, and what they wrote (_tmp_*.txt, _tmp_*.log - the
 # console dumps a redirection leaves, which are UTF-16 on this box - and the
 # log_*.txt a detached run leaves) is scratch wherever it lands.
+#
+# Three more joined them on 2026-10-22, all with the ninth harness module:
+# _tmp_hand_probe.py, which flies one of a module's entry points inside a try,
+# and _tmp_syntax.py, which parses one file with ast - and with them
+# attic/_tmp_counts.py, the tool that reads every `(N lines)` claim in
+# README.md, TODO.md and attic/README.md back off the files themselves and
+# exits 1 when one of them has drifted, so a count can be gated on rather than
+# trusted to whoever wrote it down last.
 _tmp_*.py
 !_tmp_shadow.py
 _tmp_*.txt

@@ -154,6 +154,58 @@ These are choices, not oversights: each is stated where it lives.
 
 ## Done
 
+* 2026-10-22 - **the hand's battery was re-flown to the last number it claims,
+  the root was pruned back to transcripts, and the counts the three documents
+  write down by hand are now read back off the files instead.**  The commit
+  above left its questions in `Next`'s own terms and a session's worth of
+  console dumps in the root; both are closed here, by re-flying every run the
+  commit was verified with and by giving its numbers a check.
+
+  * *the flights.*  `_rt_autoro_hand.py` was flown by `attic/_tmp_runs.py`
+    detached from this terminal - 14:25:20 to 14:27:39, with the clock sweep
+    flying beside it - and `_rt_autoro_hand.txt` (451 lines) ends on the same
+    `check passed` it was committed on: the mission's own row to the decimal,
+    every person's flight flown at the clock it claims, every view 0.20 s old.
+    The entry was re-flown too (`_rt_autoro_entry.txt`, 226 lines), the
+    aircraft `_rt_autoro_probe.py` measures, the rehearsal through
+    `_rt_check.py` - the short mission at both of a person's reaction
+    times, the long one as the frame loop's regression - and the wiring
+    through `main.py --check`;
+  * *the two tools that were owed.*  `_tmp_hand_probe.py` (41 lines) runs one
+    entry point of the new module inside a `try` and writes its verdict to
+    `_tmp_probe_out.txt` - `ruler: OK` and `sweep: OK` are what the ruler
+    reading and the 0.05/0.10/0.20 s clock sweep produced - and
+    `_tmp_syntax.py` (26 lines) parses one file with `ast` and prints the
+    lines around any problem.  Both were in the root and both are in `attic/`
+    now, carrying the `sys.path` line the six there already have;
+  * *the prune.*  Thirty-one console dumps and greps went: `_tmp_v1..v12.txt`,
+    the `*_console.txt` captures of a mode's own output, the `_tmp_*.log`
+    redirections, `_tmp_err.txt` and four `log_*.txt` a detached run left.
+    What a run writes for itself stayed - the transcripts above,
+    `_rt_log.txt` and the probe's `_tmp_probe_out.txt` - and `_tmp_shadow.py`
+    stayed because the entry above verifies with it.  Nothing was added to
+    `.gitignore`: every one of them was already covered;
+  * *the check underneath.*  `_tmp_counts.py` (105 lines), in `attic/`, reads
+    every count the documents claim - the model's nine and the harness's nine
+    in the two `| module | lines |` tables, and every `` `name` (N lines) ``
+    in `README.md`, `TODO.md` and `attic/README.md` (which records this move)
+    back off the files themselves, one line each, the root first and `attic/`
+    after it, and exits 1 on any disagreement.  It asserts the other direction
+    as well: no `.py` in the root without a table row, and no `python x.py` in
+    `README.md`'s run list without a file.  Its own count is one of the claims.
+
+  Verified: every number above is a run's own output rather than a reading of
+  one - `_rt_autoro_hand.txt` ends `check passed`, `_rt_log.txt` ends
+  `check passed: cruise at reaction 0.25 s, mission complete at 93 s, hands off
+  (1001 m out)`, `main.py --check` printed `main.py check passed`, and the
+  duplicate-name check found 8 module-level names in `_rt_autoro_hand.py`
+  and 76 in `_rt_pilot.py`, none written down twice.  The check this entry is
+  about was itself tried the other way: `README.md`'s row for
+  `_rt_autoro_hand.py` was set to 1400 and an unnamed `_zztmp_testmod.py` was
+  dropped in beside it, and the tool named both and exited 1 - both were put
+  back byte for byte.  Nothing in the model was touched: the change is prose in
+  this file and a comment in `.gitignore`.
+
 * 2026-10-22 - **the autorotation flown by hand: the *entry* holds, the *arrival*
   is what a hand changes, and the model will not fly a hand slower than its own
   delay.**  `Next` had left the hand open - "a person at the keys ... is what has
