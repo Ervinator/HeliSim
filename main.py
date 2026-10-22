@@ -206,6 +206,7 @@ from aerodynamics import (UH1_BLADE_COUNT, UH1_CHORD, UH1_COLLECTIVE_TRAVEL_IN,
                           UH1_TAIL_MAIN_RATIO, UH1_TAIL_RADIUS, Vector3)
 from airframe import (FOOT, POUND, UH1_HUB_HEIGHT, UH1_TAIL_ARM,
                       UH1_TAIL_HEIGHT)
+from engine import UH1_TORQUE_NM_PER_PSI, UH1_TRANSMISSION_LIMIT_PSI
 from simulation import (ChaseCamera, PAD_COLLECTIVE, SIM_TIME_STEP_S, Simulation,
                         UH1_CG_HEIGHT_ON_GROUND, UH1_ENVELOPE_CEILING_MPS,
                         airframe_preset)
@@ -2617,12 +2618,28 @@ def window_title(sim, view, focused=True):
     :meth:`simulation.Simulation.fit_engine`), so the words appear the moment F
     fits one and go again the moment F takes it off: the caption of the aircraft
     TM-73254's figures were computed with reads exactly as it always did.
+
+    The torque gauge is read against the transmission and not only against the
+    data plate, because the transmission is the limit the shaft actually has:
+    "50 psi calibrated torque" (7.1-13) is the structural limit, and the 1125
+    ft-lb data plate is the calibration the gauge reads 100 per cent at
+    (7.1-14).  With this project's 50 psi full scale - :data:`engine.
+    UH1_TRANSMISSION_LIMIT_PSI`, the slope being
+    :data:`engine.UH1_TORQUE_NM_PER_PSI` - those are the same reading, so the
+    caption prints the gauge in the manual's own psi with the limit beside it
+    rather than as a percentage of a full scale nobody printed: ``Q 29 % (14/50
+    psi)`` is a reading and its limit, and the same line is what says whether
+    the engine is being asked to take the transmission past it, which the
+    manual's own caution is that it can (7.1-13).
     """
     telemetry = sim.telemetry()
     panel = telemetry.engine
     engine = ("" if not panel.has_engine else
-              " | rotor %5.1f %% | N2 %4.0f rpm | Q %3.0f %% | %s"
+              " | rotor %5.1f %% | N2 %4.0f rpm"
+              " | Q %3.0f %% (%2.0f/%2.0f psi) | %s"
               % (telemetry.rotor_percent, panel.rpm, panel.torque_percent,
+                 panel.torque / UH1_TORQUE_NM_PER_PSI,
+                 UH1_TRANSMISSION_LIMIT_PSI,
                  "FAILED" if panel.failed else "EMER" if panel.emer else "AUTO"))
     return ("HeliSim - UH-1H%s | alt %6.1f m %+6.0f fpm | %5.1f kt"
             " | coll %3.0f %% | cyc %+6.2f/%+6.2f in | ped %+5.2f in%s%s%s%s"
@@ -3431,6 +3448,21 @@ def _self_check():
     assert "| rotor 100.0 %" in caption, caption             # held, on the pad
     assert "| N2 " in caption and "| Q " in caption and "| AUTO" in caption
     assert sim.telemetry().engine.rpm > 0.0
+    # The gauge is read against the transmission rather than against a full
+    # scale of the caption's own: the psi beside the percentage are the
+    # telemetry's own newton metres at the manual's slope, and the limit they
+    # are read against is the 50 psi structural one (7.1-13, 7.1-14).  The two
+    # readings are one torque printed twice, so they have to agree - 100 per
+    # cent of this gauge is the 50 psi limit - and the reading itself is a real
+    # one rather than a zero: the governor is holding an idling rotor up.
+    panel = sim.telemetry().engine
+    psi = panel.torque / UH1_TORQUE_NM_PER_PSI
+    assert ("| Q %3.0f %% (%2.0f/%2.0f psi) | AUTO"
+            % (panel.torque_percent, psi,
+               UH1_TRANSMISSION_LIMIT_PSI)) in caption, caption
+    assert abs(psi - 0.01 * UH1_TRANSMISSION_LIMIT_PSI
+               * panel.torque_percent) < 1e-9
+    assert 0.0 < panel.torque_percent < UH1_TRANSMISSION_LIMIT_PSI
 
     # G is the GOV AUTO/EMER switch and X is an engine failure, and both read
     # back off the caption: those two words are the switch's own, and neither is

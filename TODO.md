@@ -12,16 +12,18 @@ has `--check` for the wiring that flying cannot test.  What follows is what
   the shaft - see `Done` below - so a torque now comes from somewhere: a T53 with
   a twist grip, an N2 governor with the manual's own +-40 rpm droop band, a
   0.6 sec spool, 1125 ft-lb of data plate torque, 50 psi of transmission, 7 psi
-  for EMER and the manual's bleed air numbers.  Two things are still open:
+  for EMER and the manual's bleed air numbers.  Two things were open around the
+  engine here; the first has closed and the second is what is left:
 
   * *main.py's own aircraft.*  It flies the report's fixed rotor, as it should -
-    every figure in TM-73254 was computed with that - and what is left there is
-    around the engine: the caption shows the engine's panel but not the engine's
-    own torque against the transmission limit.  (The device map named no throttle
-    until 2026-10-16, so a mapped joystick or a home made collective could not
-    roll the grip the keyboard could; it names the keyboard's own `Q` and `E`
-    now, and one naming `throttle` on a device takes that pair over - see
-    `Done`.)
+    every figure in TM-73254 was computed with that - and what was left there was
+    around the engine: the caption showed the engine's panel but not the engine's
+    own torque against the transmission limit.  It reads it now, in the manual's
+    own psi with the 50 psi limit beside them (2026-10-22, see `Done`).  (The
+    device map named no throttle until 2026-10-16, so a mapped joystick or a home
+    made collective could not roll the grip the keyboard could; it names the
+    keyboard's own `Q` and `E` now, and one naming `throttle` on a device takes
+    that pair over - see `Done`.)
   * *the torque available chart.*  Figure 7.1-2 is the real answer to "how much
     torque is there at this altitude and temperature"; what `engine.py` ships is
     the shape of those charts - a density scaling and a 50 psi full scale - and
@@ -151,6 +153,55 @@ These are choices, not oversights: each is stated where it lives.
   aircraft could have shown.  The two clocks are on every line, so a log can be
   read against the flight and against the time of day, but neither is a measure of
   how long the window took to see the key.
+
+* 2026-10-22 - **the caption's torque gauge is read against the transmission, in
+  the manual's own psi.**  The sandbox entry further down names this where it
+  lives - "the caption's torque gauge is not read against the 50 psi
+  transmission limit" - and `Next` was carrying it as the first of the engine
+  level's two open halves.  It is closed without a new gauge and without a new
+  telemetry field, by printing one number in the manual's own units: the caption
+  reads
+
+      | rotor 100.0 % | N2 6600 rpm | Q  37 % (19/50 psi) | AUTO
+
+  on the T53 `F` fits live, which is the run the line above was printed by.
+
+  * *the two numbers it is made of.*  TM 55-1520-210-10 keeps the limit and the
+    calibration in consecutive paragraphs: "50 psi calibrated torque" is the
+    transmission's structural limit (7.1-13) and the 1125 ft-lb data plate is
+    "the indicated torque pressure at 1125 ft-lbs actual output shaft torque"
+    (7.1-14), i.e. where the gauge reads 100 per cent.  With this project's own
+    50 psi full scale (`engine.UH1_TRANSMISSION_LIMIT_PSI`) the two are the same
+    reading, which is why a percentage could stand for it - and is also why the
+    percentage was the wrong half of the pair: a pilot reads a psi against a
+    psi, and 100 per cent of this gauge is a full scale the manual never prints;
+  * *what it took.*  `EngineTelemetry` already carried the torque in newton
+    metres, so the psi on the caption are `telemetry.engine.torque` at that
+    slope - `engine.UH1_TORQUE_NM_PER_PSI`, 621.4 N m of rotor shaft torque per
+    psi - with `engine.UH1_TRANSMISSION_LIMIT_PSI` beside them as the limit the
+    reading is against.  Two imports in `main.py` (4559 lines), one format
+    string, and nothing under the physics touched: which limit a reading is read
+    against was always the caption's business, and the model already had both
+    numbers.  A gauge shown against what the transmission will take is also the
+    manual's own caution made visible - the engine "can exceed the transmission
+    structural limit ... under certain conditions" (7.1-13) - because in dense
+    air `Governor.power_available` scales the available torque past that limit,
+    and the same line then reads over 50 psi.
+
+  Verified: `main.py --check` printed `main.py check passed` with the new
+  assertions written in the style the check already keeps - the engine panel as
+  the exact string built from the telemetry it prints, `| Q %3.0f %% (%2.0f/%2.0f
+  psi) | AUTO` on the freshly fitted T53; the psi and the percentage agreeing to
+  1e-9, since they are one torque in two units; and the pad's own idling rotor
+  reading above zero and under the limit rather than reading nothing.  The gate
+  was re-run in full for it: the seven module self tests each printed their own
+  `self test passed`, `regression_tm73254.py` printed its own, `_rt_check.py`
+  flew both missions and wrote `_rt_log.txt`, and every one exited 0.  The
+  table's own row for `main.py` is read back at what it now is,
+  `README.md`'s caption paragraph names the limit the gauge is read against, and
+  `attic/_tmp_counts.py` is at 39 claims - this entry's own line count among
+  them - with none disagreeing.
+
 
 ## Done
 
@@ -937,11 +988,13 @@ These are choices, not oversights: each is stated where it lives.
   so the aircraft of TM-73254's figures is told apart from the T53 by the gauges
   and by nothing else.
 
-  What is left is named where it lives rather than left to be found: the caption's
-  torque gauge is not read against the 50 psi transmission limit.  (The device map
-  named no throttle until 2026-10-16 and the note in `default_controls.xml` said
-  which control name to use when one arrived; the map names it on `Q` and `E` now
-  - see `Done`.)  See `Next`.
+  What was left was named where it lives rather than left to be found: the
+  caption's torque gauge was not read against the 50 psi transmission limit, and
+  it is now - `main.py` prints the reading and the limit in the manual's own psi
+  (top of this list, 2026-10-22).  (The device map named no throttle until
+  2026-10-16 and the note in `default_controls.xml` said which control name to
+  use when one arrived; the map names it on `Q` and `E` now - see `Done`.)  See
+  `Next`, which is the chart alone now.
 
   Verified: `main.py --check` with the new assertions written in the same style -
   the grip as pilot_keys' fifth control and not one of the four axes, Q and E

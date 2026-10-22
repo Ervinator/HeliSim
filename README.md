@@ -23,7 +23,7 @@ Layered, each one importing only what sits below it:
 | `regression_tm73254.py` | 661 | the report's figures 2 to 9 reflown: eight step inputs from 60 kt and from the hover, laid next to its published responses |
 | `scenery.py` | 603 | the XML scenery format and its loader - no pygame, no OpenGL, and the one module whose test needs no window and no physics |
 | `controls.py` | 1105 | the device map: which physical control flies which - keyboard or joystick, per control, with deadzone, invert and calibration - read from the XML of `default_controls.xml`, and likewise stdlib only |
-| `main.py` | 4527 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, the aircraft of `simulation.py` flown from its device map - keyboard, joystick, the mouse, or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it, with one `--engine` switch that fits the T53 before the first frame, the cursor on the cyclic and the wheel on the collective (`M`, `--mouse` and its own `--mouse-reverse`), and one line for the grip of a run that has none |
+| `main.py` | 4559 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, the aircraft of `simulation.py` flown from its device map - keyboard, joystick, the mouse, or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it, with one `--engine` switch that fits the T53 before the first frame, the cursor on the cyclic and the wheel on the collective (`M`, `--mouse` and its own `--mouse-reverse`), and one line for the grip of a run that has none |
 
 Only `main.py` imports anything outside the standard library - and that is a
 claim about the nine modules above rather than about the project.  The nine
@@ -82,9 +82,10 @@ hover the governor and the rotor settle on together.  From there the twist grip
 is a control that does something, `G` is the GOV AUTO/EMER switch of
 TM 55-1520-210-10 (9-3), and `X` is the fuel going away - the wind down through
 the engine's own lag, which a hovering UH-1 has a couple of seconds of.  The
-caption gains the engine's own panel (rotor speed, N2, the torque gauge and the
-switch) the moment there is one to read, and gives it up again when `F` takes it
-off: the two aircraft are told apart by the gauges and by nothing else.  `F` is
+caption gains the engine's own panel (rotor speed, N2, the torque gauge read
+against the transmission's own 50 psi limit and the switch) the moment there is
+one to read, and gives it up again when `F` takes it off: the two aircraft are
+told apart by the gauges and by nothing else.  `F` is
 the whole of getting one live mid flight, and `--engine` on the command line fits
 it before the first frame instead - for a run that means to fly the grip from the
 start rather than from the tenth frame.
