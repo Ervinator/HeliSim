@@ -27,44 +27,20 @@ has `--check` for the wiring that flying cannot test.  What follows is what
     the shape of those charts - a density scaling and a 50 psi full scale - and
     the rest of the level is digitising it.
 
-* **An autorotation is a flight now, and its *entry* is measured.**  A shaft
-  with nothing driving it offers the rotor equation 10's second root - see the
-  `windmill` note under `Known limitations` - and
-  `Simulation.trim_autorotation` solves the manual's own 60 kt entry and leaves
-  a run flying it, rotor at 100 per cent.  Both switches a pilot would use are
-  in `main.py` already: `X` is the engine failure, `set_governor(failed=True)`,
-  and `Q` rolls the twist grip right off - two different events in the model and
-  the same physics at the shaft, which is what `Airframe.windmill` reads - while
-  `F`, or `--engine` on the command line, fits the engine the report's own
-  aircraft has not got.  What was open was what the model does *between* a
-  switch and the trimmed descent, and the harness answers it now:
-  `_rt_autoro_entry.py` flies the mission's own pilot through both switches, at
-  two of a person's decision rates, and asserts every number it prints.  What it
-  found, on the `"flight test"` aircraft at 500 ft of skid and 60 kt:
-
-  * the failure is the *quicker* entry - one governor lag against the grip's four
-    seconds of a quarter rate key - with a 190 ft catch in 7.5 s against the
-    scripted cut's 232 ft in 8.9 s, and both then settle on the same descent,
-    12.2 to 12.3 m/s against the trim's own 11.6;
-  * the *rotor*, which the model does not hold, is what the switch is worth:
-    neither entry keeps it inside the manual's green arc - both take it under
-    90.7 per cent and put the skids down on a rotor already below it - and how
-    far under is more the hand's doing than the switch's.  At the mission's own
-    0.25 s the failure is the worse one (72 per cent at the skids against the
-    grip cut's 87); at 0.35 s the grip's own cut overtakes it (60 against 70),
-    because a slower hand holds the *level* trim for longer with nothing driving
-    the shaft;
-  * and nothing was refused: no `OUT OF ENVELOPE` frame and no crash, on either
-    entry at either rate, with the skids arriving at 1.7 to 2.5 m/s against the
-    3.0 m/s the floor counts as hard.
-
-  What that leaves is the *hand*, and the trim it is handed: the loops are
-  `_rt_pilot.py`'s own and the lever position is the handbook's, so a person at
-  the keys - with no trim row to read and no stall or flap limit to catch them -
-  is what has not been measured.  See the windmill bullet under
-  `Known limitations` for what the model has behind a rotor taken off that trim,
-  and why a vertical descent with the collective up is the frame it refuses
-  outright.
+* **A hand has been put on the autorotation; the harness's other two missions
+  have not had one.**  `_rt_autoro_hand.py` - see `Done` - flies the
+  autorotation's own entry with a person's clock on it, so what is left of that
+  question is the rest of the harness's missions: `_rt_check.py`'s hover-turn and
+  cruise fly their climbs, and the height, speed and heading they hold, off
+  `_rt_pilot`'s own trim rows and *scripted*, and no hand has been put on either.
+  What it needs is what the autorotation's took: the instrument's own clock, the
+  phases of the mission read off the *view* rather than off the aircraft, and the
+  trims read off the model rather than written down again.  The trim a hand is
+  handed is the other half of it - the loops are `_rt_pilot.py`'s own and the lever
+  position is the handbook's, with no blade stall and no flap limit behind them -
+  so see the windmill bullet under `Known limitations` for what the model has
+  behind a rotor taken off that trim, and why a vertical descent with the
+  collective up is the frame it refuses outright.
 
 * **The ground is a plane, and the next level is a terrain.**  Everything that
   touches the ground - equation 10a's cushion, the floor's skid line, the point
@@ -177,6 +153,62 @@ These are choices, not oversights: each is stated where it lives.
   how long the window took to see the key.
 
 ## Done
+
+* 2026-10-22 - **the autorotation flown by hand: the *entry* holds, the *arrival*
+  is what a hand changes, and the model will not fly a hand slower than its own
+  delay.**  `Next` had left the hand open - "a person at the keys ... is what has
+  not been measured" - and the harness gained a third autorotation instrument:
+  `_rt_autoro_hand.py` (1417 lines), which puts phase 2's instrument on the
+  *mission's* own loops and flies both of its switches through it.  Every gain is
+  `_rt_pilot.py`'s own pair under the instrument's scale and every reading comes
+  off the *view*, so the loops are the mission's and the only things between its
+  numbers and this file's are the clock, the eyes, the hand and the grip.  What
+  the file asserts before it flies anything is that claim: at a scale of one, with
+  no hand lag and with the aircraft itself handed to the decision instead of a
+  memory of it, one hand decision lands on `_rt_pilot.AutorotationPilot`'s own to
+  1e-12 of an inch.
+
+  * *the clocks.*  Two, and only one of them the mission's: the instrument's own
+    twenty decisions a second, and the *slowest* clock it will fly, one decision
+    per delay.  The mission's own scripted 0.25 s is longer than that and the
+    instrument's own `selftest` refuses it (`period <= DELAY_S`), so the file
+    asserts the refusal rather than pretending to fly it - which is a finding in
+    itself: the row everything is read against is a *script's* clock, and the
+    slowest hand the model has decides exactly as often as its eyes lag;
+  * *the finding.*  On the `"flight test"` aircraft at 500 ft of skid and 60 kt,
+    the *entry* holds and the *arrival* does not: the instrument's own clock gives
+    195.9 ft of catch in 7.1 s against the mission's 231.8 in 8.9 on the grip's
+    own cut, on the same 11.90 m/s descent, and arrives at 3.13 m/s where the
+    mission arrives at 2.26 - outside the floor's own 3.0 - while the failure's
+    entry is 195.1 against 189.7 ft and arrives at 1.59 m/s, inside it.  The
+    reason is in the file and it is not the entry: a hand moves the collective
+    about four times faster than `CUSHION_KEY_RATE_IN`, so it outruns the
+    mission's one-way cushion schedule, arrives at a lever the schedule has
+    stopped asking for, and comes down again on what the pull has spent;
+  * *the slow clock.*  At a decision per delay the loops give out before the
+    mission has begun: the aircraft never settles in the mission's own band, the
+    switch is never thrown, and there is no entry to measure - out of envelope 78 s
+    into the climb on the grip's own cut, and a crash in the cushion at 43 s on the
+    failure.  That row is empty in the transcript, and `check` asserts the absence
+    as the finding it is: the mission's own climb is closed to a hand that slow.
+    Ten decisions a second flies it - 199.5 ft of catch and a 3.03 m/s arrival - so
+    the line is between the two clocks;
+  * *the band.*  The grip's own two edges, out of the mission's own gains: the
+    harder edge is x3.00 of the cyclic, past which the *climb* departs and neither
+    entry is flown at all (x1.50 and x2.00 both hold), and the softer edge is
+    x0.35, where the failure's own descent falls out of the mission's own 1.0 m/s
+    band while the grip's cut still reaches it;
+  * *verified.*  `python _rt_autoro_hand.py` asserts its whole transcript
+    (`_rt_autoro_hand.txt`), which carries the mission's own row to the decimal
+    `_rt_autoro_entry.py` commits it at, every person's flight at the clock it
+    claims with every view 0.200 s old and no frame dropped, the two ends of the
+    person's own entry, the refusal of the mission's own clock, and the two edges
+    of the grip's own band.  `python _tmp_shadow.py _rt_autoro_hand.py` reads 8
+    module-level names with none written down twice; `python _rt_autoro_entry.py`
+    and `python _rt_autoro_probe.py` still print what they printed; `python
+    _rt_check.py` still passes both missions at both reaction times; and the model
+    itself is untouched - the change is one harness module, its transcript, and
+    `README.md`'s harness table, phase list and layout tree.
 
 * 2026-10-21 - **the autorotation's other switch is measured: a failure out of a
   settled climb *is* a flight, and what it costs is the hand.**  `Next` had

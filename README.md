@@ -26,12 +26,12 @@ Layered, each one importing only what sits below it:
 | `main.py` | 4527 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, the aircraft of `simulation.py` flown from its device map - keyboard, joystick, the mouse, or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it, with one `--engine` switch that fits the T53 before the first frame, the cursor on the cyclic and the wheel on the collective (`M`, `--mouse` and its own `--mouse-reverse`), and one line for the grip of a run that has none |
 
 Only `main.py` imports anything outside the standard library - and that is a
-claim about the nine modules above rather than about the project.  The eight
+claim about the nine modules above rather than about the project.  The nine
 `_rt_*.py` files in the root beside them are *the harness*: the pilots that fly
 the model and the instruments that measure them, and they all want pygame, four
 of them by name (`_rt_pilot` for the nine scancodes its keys are, `_rt_demo` for
 the window it opens, `_rt_autoro_probe` for the grip's own two, and
-`_rt_autoro_entry` for the failure key's name) and the other four through
+`_rt_autoro_entry` for the failure key's name) and the other five through
 `_rt_pilot`.  No harness but `_rt_demo` opens a window and none of
 them needs an OpenGL context.  See *The harness* below.
 
@@ -372,13 +372,13 @@ at.  None of it needs an OpenGL context.
 
 ## The harness
 
-The nine modules above are the model.  The eight `_rt_*.py` files in the root
+The nine modules above are the model.  The nine `_rt_*.py` files in the root
 beside them are the harness: the pilots that *fly* the model, and the instruments
 that measure whether it can be flown at all.  Nothing in the model imports one,
-all eight are tracked, and the `_rt_` prefix is the project's own word for what
+all nine are tracked, and the `_rt_` prefix is the project's own word for what
 they are - scratch.  They arrived in two groups: the four the missions are flown
-with, in one commit on 8 October 2026, and the four the autorotation and the
-human flyability programme added on 20 and 21 October.
+with, in one commit on 8 October 2026, and the five the autorotation and the
+human flyability programme added on 20, 21 and 22 October.
 
 | module | lines | what it is |
 | --- | --- | --- |
@@ -390,6 +390,7 @@ human flyability programme added on 20 and 21 October.
 | `_rt_axes.py` | 1433 | phase 2: the lever and the pedals under scales of their own, and all four axes again at sixty knots |
 | `_rt_autoro_probe.py` | 192 | the autorotation measured rather than guessed: its entry, its descent, and the rate its skids arrive at |
 | `_rt_autoro_entry.py` | 676 | the autorotation's *other* switch: the engine failure flown through the mission's own loops and printed against the grip's own cut, at two decision rates |
+| `_rt_autoro_hand.py` | 1417 | phase 3: those two switches worked by a person's hands on the *mission's* own loops, at the instrument's clock and at the slowest one it will fly, with the mission's own row beside them and every number asserted |
 
 `_rt_pilot.py` is the one the others stand on, and it is three ideas.  A UH-1 has
 a force trim and the handbook has numbers, so the loops are small-signal about the
@@ -412,21 +413,24 @@ Each is run the way every other module here is:
     python _rt_axes.py             # phase 2: _rt_axes.txt
     python _rt_autoro_probe.py     # the autorotation: _rt_autoro_probe.txt
     python _rt_autoro_entry.py     # both of its switches: _rt_autoro_entry.txt
+    python _rt_autoro_hand.py      # both entries by hand: _rt_autoro_hand.txt
 
 Every transcript is written by the run itself rather than by the shell's
-redirection, and `_rt_*.txt` in `.gitignore` covers all six of them, so what is
+redirection, and `_rt_*.txt` in `.gitignore` covers all seven of them, so what is
 committed is the code that made them.  `_rt_handling.py`, `_rt_axes.py`,
-`_rt_autoro_entry.py` and `_rt_check.py` assert every number they print, so a
-regression is a traceback and not a table nobody read.  `_rt_demo.py` is the only
-one that needs a display, and one thing in it is asked of a key a *watcher* would
-press rather than by the pilot: the engine, because an unattended pilot cannot
-press `F` and a rotor *held* at a hundred per cent cannot autorotate at all -
-which is the aircraft `_rt_autoro_probe.py` and `_rt_autoro_entry.py` both
-measure.  All eight want pygame installed, for the scancodes a pilot's keys are.
+`_rt_autoro_entry.py`, `_rt_autoro_hand.py` and `_rt_check.py` assert every number
+they print, so a regression is a traceback and not a table nobody read.
+`_rt_demo.py` is the only one that needs a display, and one thing in it is asked
+of a key a *watcher* would press rather than by the pilot: the engine, because an
+unattended pilot cannot press `F` and a rotor *held* at a hundred per cent cannot
+autorotate at all - which is the aircraft `_rt_autoro_probe.py`,
+`_rt_autoro_entry.py` and `_rt_autoro_hand.py` all measure.  All nine want pygame
+installed, for the scancodes a pilot's keys are.
 
-The last four are the part of the harness that measures rather than flies: the
-autorotation's own two instruments, and the human flyability programme - two
-phases flown, and both are written up in `TODO.md`, findings and numbers together:
+The last five are the part of the harness that measures rather than flies: the
+autorotation's own three instruments, and the human flyability programme - three
+phases flown, and all three are written up in `TODO.md`, findings and numbers
+together:
 
 * **phase 1**, `_rt_handling.py` (20 October).  The model's own hover closed
   around a person's dynamics - twenty decisions a second, 0.2 s of transport delay
@@ -445,23 +449,56 @@ phases flown, and both are written up in `TODO.md`, findings and numbers togethe
   margin and nothing else, and that is what a change to the model, the controls or
   the trims is checked against: `_rt_handling.py` and `_rt_axes.py` first, then
   `_rt_check.py` for the missions themselves.
+* **phase 3**, `_rt_autoro_hand.py` (22 October).  Phase 2's instrument - the
+  twenty hertz clock, the fifth of a second of delay, the lag in the hand - put on
+  the *mission's* own loops instead of the hover's and flown through both of the
+  autorotation's switches, so the entry that file measures with a script has a
+  person on it: every gain is `_rt_pilot.py`'s pair under the instrument's scale,
+  and every reading comes off the *view*.  What the file asserts before it flies
+  anything is that the two pilots are one pilot: at a scale of one, with no lag and
+  the aircraft itself handed to the decision instead of a memory of it, one hand
+  decision lands on `_rt_pilot.AutorotationPilot`'s own to the last bit of an inch
+  - and, because the cushion integrates a *rate*, both pilots are given the same
+  clock for it.  Two clocks, and only one of them a hand's: the instrument's own,
+  and the *slowest* it will fly, one decision per delay, because its own selftest
+  refuses a hand that decides less often than its eyes see - which is the mission's
+  scripted 0.25 s, and is refused to the last decimal rather than flown.  What
+  comes back is that the *entry* holds and the *arrival* is where a hand shows:
+  196 ft of catch against the mission's 232 and a 3.1 m/s arrival against 2.3 on
+  the grip's own cut, outside the floor's own 3.0 - a hand moves the collective
+  about four times faster than the key the mission's cushion is written for, so it
+  outruns the schedule and comes down on what the pull has spent - while the
+  failure's entry is 195 against 190 ft and arrives at 1.6 m/s, inside it.  The
+  cyclic's own band on these two entries has its harder edge at x3.00 of the
+  mission's own gains - past it the *climb* departs and neither entry is flown at
+  all, x1.50 and x2.00 both holding - and its softer edge at x0.35, where the
+  failure's own descent falls out of the mission's own 1.0 m/s band.  And the slow
+  clock is where the loops give out: at a decision per delay the hand never gets
+  the aircraft into the mission's own band at all - out of envelope 78 s into the
+  climb - so that row is empty, and the mission's own climb is closed to a hand
+  that slow;
 
-The other two of the four are the autorotation's, and they measure the *model*
-rather than a hand.  `_rt_autoro_probe.py` is the ruler `_rt_demo_autorotate` is
-cut with: the mission's own entry, from a settled sixty knot cruise on the twist
-grip's own key, and the rate its skids arrive at.
+The other three of the five are the autorotation's.  `_rt_autoro_probe.py` is the
+ruler `_rt_demo_autorotate` is cut with: the mission's own entry, from a settled
+sixty knot cruise on the twist grip's own key, and the rate its skids arrive at.
 `_rt_autoro_entry.py` flies the *failure* - `main.py`'s own `X` - through the same
 mission's loops and prints the two side by side, at two of a person's decision
 rates, because what the switch costs turns out to be the hand that works it as
-much as the switch.  Its numbers are in `TODO.md`'s `Next`, and the short of them
+much as the switch.  Its numbers are in `TODO.md`'s `Done`, and the short of them
 is a 190 ft catch from the failure against the grip cut's 232 ft, the same descent
 either way, and a rotor that leaves the manual's green arc on both entries.
+`_rt_autoro_hand.py` is the one of the three that puts a *hand* on all of it - the
+mission's own row beside the same two entries flown by phase 2's instrument - and
+its numbers are in `Done` beside them: see the phase 3 bullet above.
 
 Both phases hold the loops *above* the attitude at the model's own numbers on
 purpose: what they measure is the margin a hand has on the cyclic.  Whether a
 person's clock can hold the height, the speed and the heading that `_rt_check.py`'s
-missions fly *scripted* is the programme's next phase, and it is named in
-`TODO.md`'s `Next` rather than here, because it has not been flown yet.
+missions fly *scripted* was the programme's next phase, and phase 3 answers it for
+the autorotation's own climb: the instrument's own clock and ten decisions a
+second both get the aircraft there, and a hand that decides once a delay does not
+- it is out of envelope before the cut.  The hover-turn's and the cruise's own
+climbs are still flown *scripted*, and that is what `TODO.md`'s `Next` now names.
 
 One file beside all of these is not the harness: `_tmp_shadow.py`, which walks a
 module's syntax tree and prints every module-level name bound twice.  It is the
@@ -486,7 +523,7 @@ was worked out with - went to `attic/` on 21 October.
     |-- scenery.py
     |-- controls.py
     |-- main.py
-    |-- _rt_*.py                   the eight that fly the model: see The harness
+    |-- _rt_*.py                   the nine that fly the model: see The harness
     |-- _tmp_shadow.py             the one scratch tool kept: names bound twice
     |-- sample_scenery.xml         the default scenery
     |-- requirements.txt           pygame and PyOpenGL: a window and scancodes
