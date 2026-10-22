@@ -76,8 +76,12 @@ the only way the manual expresses it, in psi of calibrated torque.
   with air temperature (7.1-12), and both of those reach the model as one
   number, the air density the airframe is already flying at, so the available
   torque is scaled by ``rho / rho_0``.  That is the shape of the charts and not
-  their numbers: the charts themselves, or a digitised figure 7.1-2, would
-  replace :meth:`Governor.power_available` and nothing else.
+  their numbers: the charts themselves, or a digitised figure 7.1-2, which
+  replace :meth:`Governor.power_available` and nothing else, and the second of
+  those is done: :data:`UH1_TORQUE_CHART_10000FT_PSI` and
+  :func:`torque_available_psi` below are figure 7.1-2 read into numbers, and
+  they take over from the density scaling above whenever a pressure altitude
+  and a free air temperature are given to :meth:`Governor.power_available`.
 
 Standard library only, like the rest of the model, so this module imports and
 tests without pygame, OpenGL or numpy.
@@ -156,6 +160,84 @@ UH1_GOVERNOR_EMER_PSI = 7.0                   # psi, 6 to 8 in the manual
 UH1_BLEED_HEATER_PSI = 1.4                    # psi, bleed air heater on
 UH1_BLEED_DEVICE_PSI = 2.1                    # psi, a bleed air device on
 UH1_BLEED_BOTH_PSI = 3.5                      # psi, both at once
+
+#: Figure 7.1-2 (sheet 1) digitised.  The chart is drawn for 324 rotor / 6600
+#: engine rpm with the particle separator installed, reads calibrated torque in
+#: psi against free air temperature, and carries a curve for each pressure
+#: altitude from sea level to 14,000 feet under a printed maximum limit line at
+#: 50 psi.  Its axis is the *calibrated* torque the transmission limit is
+#: quoted in and not the gauge's indicated torque: the manual's own worked
+#: example on the figure reads 36.8 psi calibrated at 10,000 feet and +15 C,
+#: where the same point reads 39.8 on the indicator of an engine whose
+#: calibration factor is 66 psi at 1125 ft-lb (7.1-14).  This project's psi are
+#: calibrated, because 50 of them is what the transmission will take.
+#:
+#: The first table is the 10,000 foot curve, read off the recovered page at
+#: every temperature it prints - the +15 C entry is the manual's own worked
+#: value, 36.6 against its 36.8, which is the reading's own precision.  The
+#: spacing below is how much a curve gains per 2,000 feet, fitted to the two
+#: values appendix C tabulates for 1,000 feet, 48.0 psi at +20 C and 42.7 at
+#: +30 C, set against that same curve; it reproduces the chart's own crossings
+#: at 0 C and -10 C to within half a psi as well.
+UH1_TORQUE_CHART_10000FT_PSI = ((-20.0, 47.5), (-10.0, 45.7), (0.0, 42.8),
+                                (10.0, 38.9), (15.0, 36.6), (20.0, 35.0),
+                                (30.0, 30.7), (40.0, 27.2), (50.0, 24.6))
+
+#: Psi per 2,000 feet of pressure altitude at 0 C, and per degree of it:
+#: 3.33333 - 0.022222 * FAT is 2.8889 at +20 C and 2.6667 at +30 C.
+UH1_TORQUE_CHART_STEP_PSI = 3.33333
+UH1_TORQUE_CHART_STEP_PER_C = -0.022222
+
+#: The altitudes the chart is drawn over, and the step between its curves.
+UH1_TORQUE_CHART_TOP_FEET = 14000.0
+UH1_TORQUE_CHART_STEP_FEET = 2000.0
+UH1_TORQUE_CHART_READ_FEET = 10000.0
+
+
+def _chart_curve(curve, temperature):
+    """A (temperature, psi) table read at a temperature, ends extrapolated."""
+    if len(curve) < 2:
+        return curve[0][1]
+    if temperature <= curve[0][0]:
+        first, second = curve[0], curve[1]
+    elif temperature >= curve[-1][0]:
+        first, second = curve[-2], curve[-1]
+    else:
+        first, second = curve[0], curve[1]
+        for low, high in zip(curve, curve[1:]):
+            if low[0] <= temperature <= high[0]:
+                first, second = low, high
+                break
+    span = float(second[0] - first[0])
+    if span <= 0.0:
+        return float(first[1])
+    return (first[1] + (temperature - first[0]) / span
+            * (second[1] - first[1]))
+
+
+def torque_available_psi(pressure_altitude, fat):
+    """Maximum calibrated torque available, psi, off the digitised chart.
+
+    Figure 7.1-2 is read by entering the free air temperature, moving right to
+    the pressure altitude wanted and reading the psi under the curve, and it is
+    that reading this returns - in the calibrated psi the 50 psi transmission
+    limit is quoted in, and never above that limit, which the chart prints as
+    its own maximum limit line.  Between the printed temperatures the reading
+    is interpolated along the curve and between altitudes by the family's own
+    spacing, which is how the manual's appendix C reads its tables as well.
+
+    :data:`UH1_TORQUE_CHART_10000FT_PSI` and the two spacings beside it are
+    what the chart is digitised as; :meth:`Governor.power_available` uses this
+    when it is given a pressure altitude and a temperature.
+    """
+    temperature = float(fat)
+    altitude = min(max(float(pressure_altitude), 0.0),
+                   UH1_TORQUE_CHART_TOP_FEET)
+    step = (UH1_TORQUE_CHART_STEP_PSI
+            + UH1_TORQUE_CHART_STEP_PER_C * temperature)
+    steps = (UH1_TORQUE_CHART_READ_FEET - altitude) / UH1_TORQUE_CHART_STEP_FEET
+    return min(_chart_curve(UH1_TORQUE_CHART_10000FT_PSI, temperature)
+               + steps * step, UH1_TRANSMISSION_LIMIT_PSI)
 
 #: The gas producer's time constant, sec: this project's own, like the rotor
 #: inertia over in :mod:`airframe` and for the same reason - a first order lag
@@ -240,7 +322,8 @@ class Governor:
         return (max(float(self.bleed_psi), 0.0)
                 + (UH1_GOVERNOR_EMER_PSI if self.emer else 0.0))
 
-    def power_available(self, air_density=RHO_SEA_LEVEL):
+    def power_available(self, air_density=RHO_SEA_LEVEL,
+                        pressure_altitude=None, fat=None):
         """The most power there is at the shaft, W, in this air.
 
         Sea level standard is :data:`UH1_ENGINE_POWER_W`, which is 50 psi of
@@ -249,8 +332,26 @@ class Governor:
         the shape of the manual's torque available charts in one number.  The
         EMER and bleed penalties come off afterwards, in psi, so that they
         reduce whatever the density left.
+
+        Given a ``pressure_altitude`` and a ``fat`` instead, the digitised
+        figure 7.1-2 answers the question directly and the air density is not
+        used: :func:`torque_available_psi` returns the chart's own calibrated
+        psi, the EMER and bleed penalties come off in psi as they do above,
+        and the temperature the chart is read at is the one the air is at,
+        which is the free air temperature the pilot reads, not the inlet one
+        (7.1-13 warns that a prolonged hover in ground effect can raise the
+        inlet temperature by 10 C, and says to correct for it by reading the
+        chart 10 C warmer).
         """
-        fraction = (float(air_density) / RHO_SEA_LEVEL
+        if pressure_altitude is not None and fat is not None:
+            # The digitised figure 7.1-2 answers this directly, in the same
+            # calibrated psi, and its own maximum limit line is the 50 psi
+            # this cap used to stand in for.
+            available = torque_available_psi(pressure_altitude, fat)
+            fraction = ((available - self.psi_lost())
+                        / UH1_TRANSMISSION_LIMIT_PSI)
+        else:
+            fraction = (float(air_density) / RHO_SEA_LEVEL
                     * (1.0 - self.psi_lost() / UH1_TRANSMISSION_LIMIT_PSI))
         return UH1_ENGINE_POWER_W * max(fraction, 0.0)
 
@@ -393,12 +494,14 @@ class Engine:
             return 0.0
         return self.power / omega
 
-    def max_torque(self, rotor_rpm, air_density=RHO_SEA_LEVEL):
+    def max_torque(self, rotor_rpm, air_density=RHO_SEA_LEVEL,
+                   pressure_altitude=None, fat=None):
         """The most torque there is at that rotor speed, N m, in that air."""
         omega = self.omega_of(rotor_rpm)
         if omega <= 0.0:
             return 0.0
-        return self.governor.power_available(air_density) / omega
+        return self.governor.power_available(air_density, pressure_altitude,
+                                             fat) / omega
 
     def torque_percent(self, rotor_rpm):
         """Where the torque gauge would be pointing, % of the 1125 ft-lb point.
@@ -678,6 +781,30 @@ def _self_test():
     assert abs(Engine().max_torque(UH1_RPM) - UH1_ENGINE_MAIN_TORQUE_NM) < 1e-6
     assert Engine().max_torque(UH1_RPM, 1.1 * RHO_SEA_LEVEL) \
         > UH1_ENGINE_MAIN_TORQUE_NM
+
+    # The digitised figure 7.1-2 against the three numbers the manual prints
+    # for it: the chart's own worked example at 10,000 feet and +15 C, and
+    # appendix C's tabulated maximum torque available at 1,000 feet for +20
+    # and +30 C.  The chart is quoted in calibrated psi, and its maximum limit
+    # line caps the family at the transmission limit, so sea level standard
+    # comes out at exactly the 50 psi this project reads its gauge against.
+    assert abs(torque_available_psi(10000.0, 15.0) - 36.8) < 1.0
+    assert abs(torque_available_psi(1000.0, 20.0) - 48.0) < 0.5
+    assert abs(torque_available_psi(1000.0, 30.0) - 42.7) < 0.5
+    assert torque_available_psi(0.0, 15.0) == UH1_TRANSMISSION_LIMIT_PSI
+    assert torque_available_psi(14000.0, 15.0) < torque_available_psi(0.0, 15.0)
+    assert torque_available_psi(10000.0, 50.0) \
+        < torque_available_psi(10000.0, -20.0)
+    chart = Governor()
+    assert abs(chart.power_available(pressure_altitude=0.0, fat=15.0)
+               - UH1_ENGINE_POWER_W) < 1e-6
+    thin = Governor()
+    assert abs(thin.power_available(pressure_altitude=10000.0, fat=15.0)
+               - UH1_ENGINE_POWER_W * 36.6 / 50.0) < 1e-6
+    # A penalty is still a psi off the chart's answer and not off the density's.
+    assert abs(Governor(bleed_psi=UH1_BLEED_HEATER_PSI)
+               .power_available(pressure_altitude=10000.0, fat=15.0)
+               - UH1_ENGINE_POWER_W * (36.6 - 1.4) / 50.0) < 1e-6
 
     # The settled torque, which is what a rotor speed trim closes the shaft on:
     # nothing at or above the speed the governor is asking for, since an idling

@@ -25,9 +25,18 @@ has `--check` for the wiring that flying cannot test.  What follows is what
     keyboard's own `Q` and `E` now, and one naming `throttle` on a device takes
     that pair over - see `Done`.)
   * *the torque available chart.*  Figure 7.1-2 is the real answer to "how much
-    torque is there at this altitude and temperature"; what `engine.py` ships is
-    the shape of those charts - a density scaling and a 50 psi full scale - and
-    the rest of the level is digitising it.
+    torque is there at this altitude and temperature", and it is read now:
+    `UH1_TORQUE_CHART_10000FT_PSI` is the chart's 10,000 foot curve at every
+    temperature the sheet prints, `torque_available_psi` puts the rest of the
+    family on it at the chart's own spacing, and `Governor.power_available`
+    answers from the chart rather than from an air density when it is handed a
+    pressure altitude and a free air temperature (2026-10-22, see `Done`).
+    What is left is finer than that: the 10,000 foot curve was read at each
+    printed temperature and the other altitudes stand on the spacing fitted to
+    the two values appendix C tabulates for 1,000 feet, so reading each curve's
+    own crossings at each printed gridline would put every altitude on its own
+    reading rather than on the family's spacing; and the airframe still hands
+    the governor an air density, so nothing in a flight reads the chart yet.
 
 * **A hand has been put on the autorotation; the harness's other two missions
   have not had one.**  `_rt_autoro_hand.py` - see `Done` - flies the
@@ -204,6 +213,33 @@ These are choices, not oversights: each is stated where it lives.
 
 
 ## Done
+
+* 2026-10-22 - **figure 7.1-2 is digitised: the chart's own 10,000 foot curve is
+  in `engine.py`, the family's spacing is fitted to appendix C, and the three
+  numbers the manual prints for the chart are asserted against both.**  The page
+  had to be recovered before it could be read - the chapter 7 sheets are the ones
+  the PDF's page tree lost, so the chart came back out of the raw objects (the
+  bookmark tree gives page object 5763, its `/Contents` is six scan strips, each
+  strip's rows arrive bottom-up, and the strips are decoded light on dark, which
+  the first measurements had backwards and which made the grid's dots look like
+  ink and its paper like a rule).  Read, the sheet says what the manual's text
+  says it says: curves of calibrated torque against free air temperature for
+  pressure altitudes from sea level to 14,000 feet, a printed maximum limit line
+  at 50 psi, and a torque axis in *calibrated* psi - the manual's own worked
+  example on the figure reads 36.8 psi calibrated and 39.8 indicated at 10,000
+  feet and +15 C, the two differing by the engine's calibration factor of 66 psi
+  at 1125 ft-lb (7.1-14), and this project's psi are the calibrated ones because
+  50 of them is what the transmission will take.  The axes were calibrated off
+  the chart's own printed numbers (a least squares line through its nine torque
+  labels, worst residual 0.19 psi, and one through nine FAT labels, worst
+  0.52 C), the 10,000 foot curve was then read at every temperature the sheet
+  prints, and the spacing per 2,000 feet was fitted to appendix C's tabulated
+  48.0 psi at 1,000 feet and +20 C and 42.7 at +30 C set against that same
+  curve.  `Governor.power_available` answers from the chart when it is given a
+  pressure altitude and a free air temperature, `Engine.max_torque` passes them
+  through, and the chart's own limit is the cap the density scaling used to
+  stand in for.  The readings are only as good as the scan: the curve is right
+  to about half a psi, which is the width of the printed stroke.
 
 * 2026-10-22 - **the hand's battery was re-flown to the last number it claims,
   the root was pruned back to transcripts, and the counts the three documents
