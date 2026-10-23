@@ -78,10 +78,11 @@ the only way the manual expresses it, in psi of calibrated torque.
   torque is scaled by ``rho / rho_0``.  That is the shape of the charts and not
   their numbers: the charts themselves, or a digitised figure 7.1-2, which
   replace :meth:`Governor.power_available` and nothing else, and the second of
-  those is done: :data:`UH1_TORQUE_CHART_10000FT_PSI` and
-  :func:`torque_available_psi` below are figure 7.1-2 read into numbers, and
-  they take over from the density scaling above whenever a pressure altitude
-  and a free air temperature are given to :meth:`Governor.power_available`.
+  those is done: :data:`UH1_TORQUE_CHART_PSI` below is figure 7.1-2 read into
+  numbers, curve by curve, and :func:`torque_available_psi` brackets the
+  altitude wanted between the two curves either side of it.  It takes over
+  from the density scaling above whenever a pressure altitude and a free air
+  temperature are given to :meth:`Governor.power_available`.
 
 Standard library only, like the rest of the model, so this module imports and
 tests without pygame, OpenGL or numpy.
@@ -172,13 +173,60 @@ UH1_BLEED_BOTH_PSI = 3.5                      # psi, both at once
 #: calibration factor is 66 psi at 1125 ft-lb (7.1-14).  This project's psi are
 #: calibrated, because 50 of them is what the transmission will take.
 #:
-#: The first table is the 10,000 foot curve, read off the recovered page at
-#: every temperature it prints - the +15 C entry is the manual's own worked
-#: value, 36.6 against its 36.8, which is the reading's own precision.  The
-#: spacing below is how much a curve gains per 2,000 feet, fitted to the two
-#: values appendix C tabulates for 1,000 feet, 48.0 psi at +20 C and 42.7 at
-#: +30 C, set against that same curve; it reproduces the chart's own crossings
-#: at 0 C and -10 C to within half a psi as well.
+#: The family below is that sheet read curve by curve: each of its eight curves
+#: was followed down the recovered page and read at the temperatures the sheet
+#: prints, in the calibrated psi its own axis is drawn in, and every table runs
+#: from the coldest end of the chart to the warmest.  A curve is read where the
+#: sheet is clean, so a cell a printed altitude label sits on, or one the
+#: printed maximum limit line runs over, is simply not carried - 50 psi is what
+#: the transmission takes and the reading is clamped there anyway - and between
+#: the temperatures the sheet prints the reading is interpolated along the
+#: curve, which is what the manual's own straight edge does.  The two lowest
+#: curves are drawn past the 50 psi line at the warm end, where the engine can
+#: exceed the transmission's limit, which is why they have no cells at all once
+#: the day is cold enough for them to sit above it.
+UH1_TORQUE_CHART_PSI = {
+    14000: ((-30.0, 42.6), (-25.0, 41.8), (-20.0, 41.0), (-15.0, 40.1),
+            (-10.0, 39.1), (-5.0, 37.9), (0.0, 36.5), (5.0, 34.8),
+            (10.0, 32.8), (15.0, 30.9), (25.0, 27.6), (30.0, 26.1),
+            (35.0, 24.7), (40.0, 23.4), (45.0, 22.4)),
+    12000: ((-30.0, 46.0), (-25.0, 45.0), (-20.0, 44.1), (-15.0, 43.2),
+            (-10.0, 42.2), (-5.0, 41.0), (0.0, 39.6), (5.0, 37.8),
+            (10.0, 35.9), (15.0, 33.8), (25.0, 30.2), (30.0, 28.5),
+            (35.0, 26.9), (40.0, 25.4), (45.0, 24.1), (50.0, 22.9)),
+    10000: ((-25.0, 48.8), (-20.0, 47.7), (-15.0, 46.9), (-10.0, 45.7),
+            (-5.0, 44.3), (0.0, 42.8), (5.0, 40.5), (10.0, 38.9),
+            (15.0, 36.8), (20.0, 34.4), (25.0, 32.7), (30.0, 30.8),
+            (35.0, 29.3), (40.0, 27.4), (45.0, 25.8), (50.0, 24.4)),
+    8000: ((-5.0, 47.8), (0.0, 45.9), (5.0, 44.1), (10.0, 42.0),
+           (15.0, 39.8), (20.0, 37.7), (25.0, 35.5), (30.0, 33.6),
+           (35.0, 31.6), (40.0, 29.7), (45.0, 27.9), (50.0, 26.4)),
+    6000: ((0.0, 50.3), (5.0, 47.9), (10.0, 45.4), (15.0, 42.8),
+           (20.0, 40.8), (25.0, 38.2), (30.0, 36.1), (35.0, 33.9),
+           (40.0, 31.9), (45.0, 29.9), (50.0, 28.1)),
+    4000: ((10.0, 48.9), (15.0, 46.5), (20.0, 44.1), (25.0, 41.6),
+           (30.0, 39.1), (35.0, 36.9), (40.0, 34.5), (45.0, 32.4),
+           (50.0, 30.2)),
+    2000: ((20.0, 47.5), (25.0, 44.8), (30.0, 42.3), (35.0, 39.7),
+           (40.0, 37.3), (45.0, 35.1), (50.0, 33.0)),
+    0: ((25.0, 48.3), (30.0, 45.6), (35.0, 42.7), (40.0, 40.3),
+        (45.0, 37.9), (50.0, 35.5)),
+}
+
+#: The pressure altitudes the sheet draws a curve for, ascending, and the top
+#: of the family.  A reading is bracketed between the two curves either side of
+#: the altitude asked for, which is how appendix C reads a 1,000 foot value off
+#: its own 2,000 foot neighbours.
+UH1_TORQUE_CHART_FEET = (0.0, 2000.0, 4000.0, 6000.0, 8000.0,
+                         10000.0, 12000.0, 14000.0)
+UH1_TORQUE_CHART_TOP_FEET = 14000.0
+
+#: The 10,000 foot curve of that same sheet as it was read first, and the
+#: spacing the rest of the family was put on at the time.  Neither is what the
+#: model uses now - the family above is read curve by curve instead - and both
+#: are kept because they are a second, independent reading of the one page: the
+#: self test further down makes the two agree, so a reader who re-reads the
+#: sheet can see at once whether it still says what this file thinks it says.
 UH1_TORQUE_CHART_10000FT_PSI = ((-20.0, 47.5), (-10.0, 45.7), (0.0, 42.8),
                                 (10.0, 38.9), (15.0, 36.6), (20.0, 35.0),
                                 (30.0, 30.7), (40.0, 27.2), (50.0, 24.6))
@@ -187,11 +235,6 @@ UH1_TORQUE_CHART_10000FT_PSI = ((-20.0, 47.5), (-10.0, 45.7), (0.0, 42.8),
 #: 3.33333 - 0.022222 * FAT is 2.8889 at +20 C and 2.6667 at +30 C.
 UH1_TORQUE_CHART_STEP_PSI = 3.33333
 UH1_TORQUE_CHART_STEP_PER_C = -0.022222
-
-#: The altitudes the chart is drawn over, and the step between its curves.
-UH1_TORQUE_CHART_TOP_FEET = 14000.0
-UH1_TORQUE_CHART_STEP_FEET = 2000.0
-UH1_TORQUE_CHART_READ_FEET = 10000.0
 
 
 def _chart_curve(curve, temperature):
@@ -222,22 +265,28 @@ def torque_available_psi(pressure_altitude, fat):
     the pressure altitude wanted and reading the psi under the curve, and it is
     that reading this returns - in the calibrated psi the 50 psi transmission
     limit is quoted in, and never above that limit, which the chart prints as
-    its own maximum limit line.  Between the printed temperatures the reading
-    is interpolated along the curve and between altitudes by the family's own
-    spacing, which is how the manual's appendix C reads its tables as well.
+    its own maximum limit line.  Between the temperatures the sheet prints the
+    reading is interpolated along the curve, and an altitude between two of the
+    sheet's own curves is bracketed between them and interpolated in psi, which
+    is how the manual's appendix C reads a 1,000 foot value off its 2,000 foot
+    neighbours.
 
-    :data:`UH1_TORQUE_CHART_10000FT_PSI` and the two spacings beside it are
-    what the chart is digitised as; :meth:`Governor.power_available` uses this
-    when it is given a pressure altitude and a temperature.
+    :data:`UH1_TORQUE_CHART_PSI` is the family itself, and
+    :meth:`Governor.power_available` uses this when it is given a pressure
+    altitude and a free air temperature.
     """
     temperature = float(fat)
     altitude = min(max(float(pressure_altitude), 0.0),
                    UH1_TORQUE_CHART_TOP_FEET)
-    step = (UH1_TORQUE_CHART_STEP_PSI
-            + UH1_TORQUE_CHART_STEP_PER_C * temperature)
-    steps = (UH1_TORQUE_CHART_READ_FEET - altitude) / UH1_TORQUE_CHART_STEP_FEET
-    return min(_chart_curve(UH1_TORQUE_CHART_10000FT_PSI, temperature)
-               + steps * step, UH1_TRANSMISSION_LIMIT_PSI)
+    for shallow, deep in zip(UH1_TORQUE_CHART_FEET, UH1_TORQUE_CHART_FEET[1:]):
+        if altitude <= deep:
+            break
+    share = (altitude - shallow) / (deep - shallow)
+    available = (_chart_curve(UH1_TORQUE_CHART_PSI[shallow], temperature)
+                 * (1.0 - share)
+                 + _chart_curve(UH1_TORQUE_CHART_PSI[deep], temperature)
+                 * share)
+    return min(available, UH1_TRANSMISSION_LIMIT_PSI)
 
 #: The gas producer's time constant, sec: this project's own, like the rotor
 #: inertia over in :mod:`airframe` and for the same reason - a first order lag
@@ -782,29 +831,67 @@ def _self_test():
     assert Engine().max_torque(UH1_RPM, 1.1 * RHO_SEA_LEVEL) \
         > UH1_ENGINE_MAIN_TORQUE_NM
 
-    # The digitised figure 7.1-2 against the three numbers the manual prints
-    # for it: the chart's own worked example at 10,000 feet and +15 C, and
-    # appendix C's tabulated maximum torque available at 1,000 feet for +20
-    # and +30 C.  The chart is quoted in calibrated psi, and its maximum limit
-    # line caps the family at the transmission limit, so sea level standard
-    # comes out at exactly the 50 psi this project reads its gauge against.
-    assert abs(torque_available_psi(10000.0, 15.0) - 36.8) < 1.0
-    assert abs(torque_available_psi(1000.0, 20.0) - 48.0) < 0.5
-    assert abs(torque_available_psi(1000.0, 30.0) - 42.7) < 0.5
+    # The digitised figure 7.1-2 against the numbers the manual prints for it:
+    # the chart's own worked example at 10,000 feet and +15 C, and appendix C's
+    # tabulated maximum torque available at 1,000 feet for +20 and +30 C.  The
+    # chart is quoted in calibrated psi - appendix C says its own tabulated
+    # torque is calibrated too - and its maximum limit line caps the family at
+    # the transmission limit, so sea level standard comes out at exactly the 50
+    # psi this project reads its gauge against.
+    assert abs(torque_available_psi(10000.0, 15.0) - 36.8) < 0.2
+    # The sheet's own 1,000 foot reading, taken between its sea level and 2,000
+    # foot curves as appendix C takes its own, sits about a psi and a quarter
+    # above the number that table prints for it: a reading of a curve off a
+    # ruled graph against a number out of a table, which is the two documents'
+    # own scatter and not this project's.
+    assert abs(torque_available_psi(1000.0, 20.0) - 48.0) < 1.5
+    assert abs(torque_available_psi(1000.0, 30.0) - 42.7) < 1.5
     assert torque_available_psi(0.0, 15.0) == UH1_TRANSMISSION_LIMIT_PSI
     assert torque_available_psi(14000.0, 15.0) < torque_available_psi(0.0, 15.0)
     assert torque_available_psi(10000.0, 50.0) \
         < torque_available_psi(10000.0, -20.0)
+
+    # The family, and the 10,000 foot curve it was first read as, are two
+    # readings of the one sheet taken years apart, and this is where they are
+    # made to answer for each other: within two thirds of a psi everywhere the
+    # sheet prints a temperature, which is the reading's own precision.
+    for temperature in (-20.0, -10.0, 0.0, 10.0, 15.0, 20.0, 30.0, 40.0, 50.0):
+        assert abs(torque_available_psi(10000.0, temperature)
+                   - _chart_curve(UH1_TORQUE_CHART_10000FT_PSI, temperature)) \
+            < 0.7
+    # And the same family against the spacing the rest of it was put on at the
+    # time.  The two agree to within about a psi and a half, and the shape they
+    # disagree in is the chart's own: per 2,000 feet the family steps 2.9, 3.0,
+    # 3.0, 3.0 and 3.7 psi at +15 C, and 1.5, 2.0, 1.7, 2.1 and 2.8 at +50 C,
+    # where the fit has one number for a family that is wider at the bottom of
+    # the chart and tighter at the top.
+    assert abs(torque_available_psi(12000.0, 15.0)
+               - torque_available_psi(14000.0, 15.0) - 2.9) < 0.15
+    assert abs(torque_available_psi(4000.0, 15.0)
+               - torque_available_psi(6000.0, 15.0) - 3.7) < 0.15
+    assert abs(torque_available_psi(10000.0, 50.0)
+               - torque_available_psi(12000.0, 50.0) - 1.5) < 0.15
+    for temperature in (50.0, 25.0, 0.0, -20.0):
+        step = (UH1_TORQUE_CHART_STEP_PSI
+                + UH1_TORQUE_CHART_STEP_PER_C * temperature)
+        for altitude in (2000.0, 4000.0, 6000.0, 8000.0, 12000.0, 14000.0):
+            here = torque_available_psi(altitude, temperature)
+            if here >= UH1_TRANSMISSION_LIMIT_PSI:
+                continue            # the limit has taken the reading over
+            away = abs(here - torque_available_psi(10000.0, temperature)
+                       - (10000.0 - altitude) / 2000.0 * step)
+            assert away < 1.8, (temperature, altitude, away)
+
     chart = Governor()
     assert abs(chart.power_available(pressure_altitude=0.0, fat=15.0)
                - UH1_ENGINE_POWER_W) < 1e-6
     thin = Governor()
     assert abs(thin.power_available(pressure_altitude=10000.0, fat=15.0)
-               - UH1_ENGINE_POWER_W * 36.6 / 50.0) < 1e-6
+               - UH1_ENGINE_POWER_W * 36.8 / 50.0) < 1e-6
     # A penalty is still a psi off the chart's answer and not off the density's.
     assert abs(Governor(bleed_psi=UH1_BLEED_HEATER_PSI)
                .power_available(pressure_altitude=10000.0, fat=15.0)
-               - UH1_ENGINE_POWER_W * (36.6 - 1.4) / 50.0) < 1e-6
+               - UH1_ENGINE_POWER_W * (36.8 - 1.4) / 50.0) < 1e-6
 
     # The settled torque, which is what a rotor speed trim closes the shaft on:
     # nothing at or above the speed the governor is asking for, since an idling

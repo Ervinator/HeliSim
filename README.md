@@ -17,7 +17,7 @@ Layered, each one importing only what sits below it:
 | --- | --- | --- |
 | `aerodynamics.py` | 1617 | quasi-steady blade element theory for one rotor: section data, flapping, hover and forward flight loads |
 | `rotor_control.py` | 1280 | the control path: inches of stick travel to swashplate angles, the mixing law and its rigging, the control lags |
-| `engine.py` | 932 | the T53-L-13 on the other end of the shaft: the twist grip, the N2 governor and its droop band, the torque available read off a digitised figure 7.1-2, what EMER and bleed air cost, and the gas producer's lag |
+| `engine.py` | 1019 | the T53-L-13 on the other end of the shaft: the twist grip, the N2 governor and its droop band, the torque available read off a digitised figure 7.1-2 - each of its eight altitude curves read at every temperature the sheet prints - what EMER and bleed air cost, and the gas producer's lag |
 | `airframe.py` | 3633 | TM-73254's force and moment model - main rotor, tail rotor, fuselage, fin, stabilizer - and the six degree of freedom equations of motion, with the rotor's own speed as a state when an engine is aboard, the second root of equation 10 read off a shaft with nothing driving it, and the ground under it as one flat plane with a level and a normal |
 | `simulation.py` | 3083 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the three trims, and what a renderer or a HUD asks for |
 | `regression_tm73254.py` | 661 | the report's figures 2 to 9 reflown: eight step inputs from 60 kt and from the hover, laid next to its published responses |

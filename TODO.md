@@ -25,18 +25,22 @@ has `--check` for the wiring that flying cannot test.  What follows is what
     keyboard's own `Q` and `E` now, and one naming `throttle` on a device takes
     that pair over - see `Done`.)
   * *the torque available chart.*  Figure 7.1-2 is the real answer to "how much
-    torque is there at this altitude and temperature", and it is read now:
-    `UH1_TORQUE_CHART_10000FT_PSI` is the chart's 10,000 foot curve at every
-    temperature the sheet prints, `torque_available_psi` puts the rest of the
-    family on it at the chart's own spacing, and `Governor.power_available`
-    answers from the chart rather than from an air density when it is handed a
-    pressure altitude and a free air temperature (2026-10-22, see `Done`).
-    What is left is finer than that: the 10,000 foot curve was read at each
-    printed temperature and the other altitudes stand on the spacing fitted to
-    the two values appendix C tabulates for 1,000 feet, so reading each curve's
-    own crossings at each printed gridline would put every altitude on its own
-    reading rather than on the family's spacing; and the airframe still hands
-    the governor an air density, so nothing in a flight reads the chart yet.
+    torque is there at this altitude and temperature", and every curve of it is
+    read now: `UH1_TORQUE_CHART_PSI` is all eight of its altitude curves at
+    every temperature the sheet prints, `torque_available_psi` brackets the
+    altitude wanted between the two curves either side of it, and
+    `Governor.power_available` answers from the chart rather than from an air
+    density when it is handed a pressure altitude and a free air temperature
+    (2026-10-22 and 2026-10-23, see `Done`).  What is left is the wiring: the
+    airframe still hands the governor an air density, so nothing in a flight
+    reads the chart yet - no `Airframe` carries a pressure altitude or a free
+    air temperature for it to be read at, and no preset has them to carry.  It
+    is worth doing because the two answers part company exactly where the chart
+    is drawn: in standard air the chart and the density scaling agree to a
+    couple of per cent - 36.8 psi against the 36.9 that 73.9 per cent of sea
+    level density is worth at 10,000 feet - and off a standard day they do not,
+    since at 10,000 feet and -30 C the chart reads 49.8 psi where that air's
+    density is worth 40.8.
 
 * **A hand has been put on the autorotation; the harness's other two missions
   have not had one.**  `_rt_autoro_hand.py` - see `Done` - flies the
@@ -213,6 +217,81 @@ These are choices, not oversights: each is stated where it lives.
 
 
 ## Done
+
+* 2026-10-23 - **figure 7.1-2 is read curve by curve: all eight of its altitude
+  curves are in `engine.py` at every temperature the sheet prints, and the
+  spacing that stood in for seven of them is gone.**  The commit before this
+  one read a single curve off the page - the 10,000 foot one - and put the rest
+  of the family on a spacing fitted to the two values appendix C tabulates for
+  1,000 feet, and it said in `Next` that reading each curve's own crossings was
+  the finer reading still owed.  Doing that turned out to need the page read
+  again, because reading a line off it is not like following a line on paper
+  three times over: the scan is printed over a fine dotted texture whose dots
+  are one to three pixels where a stroke of the family is five or six; the
+  temperature grid is dashed and crosses the family a hundred and forty times;
+  and every curve carries its own altitude printed *on* it, the digits lying
+  along the curve the way a row of beads lies along a wire.  Those labels are
+  the trap: the eight of them sit in one band across the sheet, so a tracker
+  that walks from one row of ink to the next walks from one curve's label to
+  the next curve's label and never notices it has left the line.  What
+  separates them is size, and both tests are needed - a piece of a curve is
+  fifty rows of the sheet where a digit is twenty, and a curve's stroke is
+  three pixels of a row's ink where a dash of the ruling is twenty to seventy,
+  so the ruling goes by length as well as by position and the strokes that are
+  left are read as connected pieces.  The family is then read at the
+  temperature gridlines out of the pieces that cover them, which needs no chain
+  from the top of the sheet to the bottom at all: a piece is fifty clean rows
+  of one curve, the pieces sorted across the sheet are the altitudes in order,
+  14,000 feet first and sea level last, and the identity of every curve is
+  settled by the one number the manual prints for the chart - 36.8 psi
+  calibrated at 10,000 feet and +15 C - carried up and down the sheet at each
+  curve's own slope.  The +45 C row is the check rather than an input: it is
+  the one row where the sheet draws all eight curves inside the printed axis,
+  and the chain has to find them there, in order, for itself.  The readings are
+  the sheet's own, so the family's shape comes out of it: per 2,000 feet it
+  steps 2.9, 3.0, 3.0, 3.0 and 3.7 psi at +15 C and 1.5, 2.0, 1.7, 2.1 and 2.8
+  at +50 C, where the fit had one number for all of it - wider at the bottom of
+  the chart and tighter at the top - which is exactly what reading each curve
+  for itself buys, and the two lowest curves have no cells at all once the day
+  is cold enough to put them above the 50 psi line, which the transmission
+  limit clamps anyway.  What the sheet cannot be read at is left blank rather
+  than guessed: a cell a label sits on or the limit line runs over is dropped,
+  and a reading that no line through its own curve's neighbours reaches - the
+  one way a sparse row can give a stroke to the wrong curve - is dropped too,
+  and the curve is left to read across the gap.
+
+  Re-read, the sheet also settles the one thing the commit before this one had
+  taken on trust.  Its page is drawn in terms of both calibrated and indicated
+  torque (7.1-13), its axis carries the printed numbers and a maximum limit
+  line at 50 psi, and appendix C prints its own torque in calibrated psi and
+  says so in as many words - "Torque Values outlined in Tabular Data are
+  Calibrated Values and should be converted to indicated before use in the
+  cockpit" (C-1) - so the chart's readings and this project's psi are the same
+  ones, which is what the 36.8 the manual's worked example reads is.  The sheet
+  and that table do not agree at every point: taken between the sheet's sea
+  level and 2,000 foot curves as appendix C takes its own interpolations, the
+  1,000 foot reading the chart gives is about a psi and a quarter above the
+  48.0 and 42.7 the table prints for +20 and +30 C.  That is a reading of a
+  curve off a ruled graph against a number out of a table, and it is recorded
+  here rather than reconciled: the model follows the chart, because the chart
+  is where every other number this file reads comes from, and the self test
+  holds the two to within 1.5 psi so that the day someone reads the page again
+  the difference is a number and not a surprise.
+
+  Verified: the family and the 10,000 foot curve it was first read as are now
+  made to answer for each other in the module itself - the same sheet read
+  twice, and within two thirds of a psi everywhere it prints a temperature -
+  and the fitted spacing is held to within a psi and a half except where the
+  limit has already taken the reading over, so the reading that replaced it and
+  the reading it replaced both stand in the file.  The gate was re-run in full:
+  the seven module self tests each printed their own `self test passed`,
+  `main.py --check` printed `main.py check passed`, `regression_tm73254.py`
+  printed its own, `_rt_check.py` flew both missions and wrote `_rt_log.txt`,
+  and every one exited 0 - none of them touched by the change, because the
+  chart is only reached when a flight hands the governor a pressure altitude,
+  which is the other half of this item.  `README.md`'s row for `engine.py` is
+  read back at what it now is and `attic/_tmp_counts.py` is at 39 claims with
+  none disagreeing.
 
 * 2026-10-22 - **figure 7.1-2 is digitised: the chart's own 10,000 foot curve is
   in `engine.py`, the family's spacing is fitted to appendix C, and the three
