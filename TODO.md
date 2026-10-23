@@ -31,16 +31,19 @@ has `--check` for the wiring that flying cannot test.  What follows is what
     altitude wanted between the two curves either side of it, and
     `Governor.power_available` answers from the chart rather than from an air
     density when it is handed a pressure altitude and a free air temperature
-    (2026-10-22 and 2026-10-23, see `Done`).  What is left is the wiring: the
-    airframe still hands the governor an air density, so nothing in a flight
-    reads the chart yet - no `Airframe` carries a pressure altitude or a free
-    air temperature for it to be read at, and no preset has them to carry.  It
-    is worth doing because the two answers part company exactly where the chart
-    is drawn: in standard air the chart and the density scaling agree to a
-    couple of per cent - 36.8 psi against the 36.9 that 73.9 per cent of sea
-    level density is worth at 10,000 feet - and off a standard day they do not,
-    since at 10,000 feet and -30 C the chart reads 49.8 psi where that air's
-    density is worth 40.8.
+    (2026-10-22 and 2026-10-23 twice, see `Done`).  A *flight* reads it now too:
+    `Airframe` carries the two numbers, the frame loop, the reset and all three
+    trims hand them to the engine through `Airframe.engine_air`, and the air a
+    run flies in is a preset's business like its mass.  It was worth doing
+    because the two answers part company exactly where the chart is drawn: in
+    standard air the chart and the density scaling agree to a couple of per cent
+    - 36.8 psi against the 36.9 that 73.9 per cent of sea level density is worth
+    at 10,000 feet - and off a standard day they do not, since at 10,000 feet
+    and -30 C the chart reads 49.8 psi where that air's density is worth 40.8.
+    What is left is the air the flight is flown *through*: the pair is a setting
+    the run is given rather than something read off where the aircraft is, and
+    7.1-13's inlet temperature correction is still a pilot's job by hand - see
+    the limitations below.
 
 * **A hand has been put on the autorotation; the harness's other two missions
   have not had one.**  `_rt_autoro_hand.py` - see `Done` - flies the
@@ -159,6 +162,18 @@ These are choices, not oversights: each is stated where it lives.
 * **The model is evaluated in SI** while the reports tabulate English units.
   The conversions are written next to each constant, so both columns can be
   read, but a difference in the fourth figure can come from either.
+* **The air is a setting, not a profile.**  What a flight flies in is a pressure
+  altitude and a free air temperature on the airframe - `Airframe.pressure_altitude`,
+  `Airframe.fat` - with the density worked out from them
+  (`aerodynamics.isa_air_density`) or named outright, which is the manual's own
+  way of saying what the air is.  What is *not* in the model is that air changing
+  with where the aircraft is: nothing reads the state's own altitude, so a run
+  that climbs to 10,000 ft keeps the air it was configured with, and there is no
+  temperature profile and no wind field over the scenery - the ground is a plane
+  and the sky above it is one air, the same gap in one more place.  The inlet
+  temperature of 7.1-13 is not modelled either: the chart is read at the free air
+  temperature the pilot can see, and a prolonged hover in ground effect needs its
+  own 10 C correction by hand.
 * **`main.py`'s key log is stamped where the loop handles the key**, not where it
   was pressed: the event is taken out of pygame's queue before the frame is flown,
   so a line is up to a frame late - inside the 1/60 s the physics steps in
@@ -192,7 +207,7 @@ These are choices, not oversights: each is stated where it lives.
     metres, so the psi on the caption are `telemetry.engine.torque` at that
     slope - `engine.UH1_TORQUE_NM_PER_PSI`, 621.4 N m of rotor shaft torque per
     psi - with `engine.UH1_TRANSMISSION_LIMIT_PSI` beside them as the limit the
-    reading is against.  Two imports in `main.py` (4559 lines), one format
+    reading is against.  Two imports in `main.py` (4582 lines), one format
     string, and nothing under the physics touched: which limit a reading is read
     against was always the caption's business, and the model already had both
     numbers.  A gauge shown against what the transmission will take is also the
@@ -217,6 +232,64 @@ These are choices, not oversights: each is stated where it lives.
 
 
 ## Done
+
+* 2026-10-23 - **the air the aircraft flies in is a pressure altitude and a free
+  air temperature, and a flight reads figure 7.1-2 off them.**  This is the
+  other half of the entry below it: the chart was in `engine.py` with nothing to
+  read it, because no airframe carried the two numbers the figure is drawn
+  against.  It carries them now, and the engine is handed them on every frame
+  and in every trim.
+
+  `aerodynamics.isa_air_density` is where the manual's two numbers become the
+  one the rotor force model wants: the pressure is the standard atmosphere's at
+  the pressure altitude - which is what a pressure altitude *means*, and not a
+  height above the ground - over ``R T`` with the temperature a thermometer reads
+  in that air.  It is anchored on this project's own `RHO_SEA_LEVEL` rather than
+  on the standard atmosphere's own 1.22499, so sea level at +15 C is exactly the
+  1.225 kg/m^3 every other constant here is written against; the shape is the
+  standard atmosphere's either way, which is what makes 10,000 ft on a standard
+  day the ISA tables' own 0.9046 at their own -4.8 C.  Past the tropopause it
+  reads a little thin and past the lapse's own arithmetic it refuses, both said
+  where the function is.
+
+  `Airframe` gained `pressure_altitude` (feet, the unit the charts are drawn in)
+  and `fat` (C, defaulting to 15 - ISA at sea level, so an airframe given an
+  altitude and nothing else is asking for a +15 C day *there*, and a standard day
+  is `fat=isa_temperature_c(pressure_altitude * FOOT)`).  `air_density` stays as
+  the other way of saying what the air is: left at `None` the density is worked
+  out from the pair, and named it *is* the air.  `Airframe.engine_air` is the one
+  place that decides which of the two the governor is asked in - the pair for the
+  airframe's own air, a density on its own when a caller has named one, because a
+  density and a chart reading are two answers to one question - and the frame
+  loop, the reset, all three trims and the telemetry go through that one method,
+  so a trim solved at an altitude closes the shaft on the same answer the loop
+  flies on.  `Governor.power_available` and `Engine.max_torque` took the pair
+  already; `gain`, `power_target`, `droop_engine_rpm`, `settled_n2_rpm`,
+  `settled_rotor_rpm`, `advance` and `settle` take it as trailing arguments now,
+  and `Simulation.engine_telemetry` passes the airframe's own three, so the
+  panel's maximum is the chart's reading rather than a sea level number scaled.
+
+  Verified: a governed flight flown at altitude, in the module's own terms and
+  through the frame loop.  The deck aircraft's panel reads 31,169 N m of torque
+  available; the same aircraft at 10,000 ft and +15 C reads 22,967, which is
+  36.8 psi of the 50 - figure 7.1-2's own worked example - and at 10,000 ft and
+  -30 C it reads 31,107, the 49.8 psi this file recorded for that cell before a
+  flight could reach it.  The hover's own torque does not move (52.4 per cent of
+  the data plate, 19 psi on the pad) while the share of what is available rises
+  from 52 to 71 per cent as the air thins, which is 7.1-12's warning arriving as
+  telemetry rather than as prose.  The gate was re-run in full for it: the seven
+  module self tests each printed their own `self test passed` - with the air
+  asserted where the report's numbers are, in `airframe.py` and in
+  `simulation.py`'s panel - `main.py --check` printed `main.py check passed` with
+  a new assertion on a preset at 10,000 ft, `regression_tm73254.py` printed its
+  own, `_rt_check.py` flew both missions and wrote `_rt_log.txt`, and every one
+  exited 0.  The report's own aircraft is untouched by all of it: `Airframe()`
+  flies the standard atmosphere and its density is 1.225 exactly, so
+  `regression_tm73254.py` reproduces figure 2 where it did.  `attic/_tmp_counts.py`
+  prints "39 claims, 0 disagreeing" with the five module rows read off this
+  commit's files, and `TODO.md` carries the above with the limitation that is
+  left - the air is a setting and not a profile - named where the other limits
+  are.
 
 * 2026-10-23 - **figure 7.1-2 is read curve by curve: all eight of its altitude
   curves are in `engine.py` at every temperature the sheet prints, and the

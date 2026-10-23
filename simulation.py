@@ -142,7 +142,7 @@ from airframe import (FOOT, KNOT, POUND, Airframe, BodyForces, FlightState,
                       GroundPlane, UH1_HUB_HEIGHT, UH1_OMEGA, UH1_SIM_MASS,
                       UH1_TEST_MASS, apply, direction_cosine_matrix,
                       transpose)
-from engine import Engine, UH1_ENGINE_POWER_W
+from engine import (Engine, UH1_ENGINE_POWER_W, UH1_TRANSMISSION_LIMIT_PSI)
 from rotor_control import PilotControls
 
 # ---------------------------------------------------------------------------
@@ -273,6 +273,13 @@ def airframe_preset(name="simulation", engine=None, **overrides):
     ``airframe_preset(ground=GroundPlane(Vector3(), Vector3(0.0, 0.5, -1.0)))``
     is one whose ground leans to starboard - see :class:`airframe.GroundPlane`
     and :attr:`Simulation.ground`.
+
+    The air is a preset's business as well, and it rides on the airframe like the
+    mass does: ``airframe_preset("flight test", pressure_altitude=10000.0,
+    fat=-30.0)`` is that aircraft in the cold air at 10,000 ft, whose governor
+    reads the manual's torque available chart at those two numbers, and
+    ``airframe_preset(air_density=1.19)`` is one flying in an air whose density a
+    caller already knows.
 
     *engine* is the opt-in that changes the aircraft rather than the trim:
     ``None``, the default, is no engine at all, i.e. the report's fixed rotor
@@ -1703,7 +1710,10 @@ class Simulation:
 
         Every number comes off the shaft the airframe is holding: N2 from the
         rotor speed through the ratio, the torque from the power the engine is
-        delivering now, and the maximum from the air the aircraft is flying in.
+        delivering now, and the maximum from the air the aircraft is flying in -
+        the same air the engine itself is being governed in, since the airframe's
+        three numbers are handed to it exactly as they are handed to the
+        governor (:meth:`airframe.Airframe.engine_air`).
         With no engine aboard the gauges read zero and ``has_engine`` is False,
         while the *grip* is still reported, since it is a control position an
         aircraft without an engine in the model still has.
@@ -1716,7 +1726,7 @@ class Simulation:
                 power=0.0, torque=0.0, torque_percent=0.0, maximum_torque=0.0,
                 maximum_percent=0.0, failed=False, emer=False)
         governor = engine.governor
-        maximum = engine.max_torque(rotor_rpm, self.airframe.air_density)
+        maximum = engine.max_torque(rotor_rpm, *self.airframe.engine_air())
         torque = engine.torque(rotor_rpm)
         return EngineTelemetry(
             has_engine=True, throttle=governor.throttle,
@@ -2075,6 +2085,38 @@ def _self_test():
     assert 0.0 < panel.maximum_percent < 100.0
     assert panel.power > 0.0 and not panel.failed and not panel.emer
     assert not grip.crashed
+
+    # The panel's own maximum is read at the air the airframe is flying in, off
+    # the manual's chart and not scaled from a sea level number: the same
+    # aircraft at 10,000 ft and +15 C - the cell figure 7.1-2's worked example
+    # prints - has 36.8 psi of torque available where the deck aircraft has 50,
+    # so the two panels are one aircraft in two airs and the chart is what tells
+    # them apart.  The two rotors settle at very nearly the same speed, which is
+    # what makes the maxima come out in the ratio of those two readings.
+    aloft = Simulation(airframe=airframe_preset(engine=True,
+                                                pressure_altitude=10000.0,
+                                                fat=15.0))
+    for _ in range(360):
+        aloft.step_fixed()
+    deck = Simulation(airframe=airframe_preset(engine=True))
+    for _ in range(360):
+        deck.step_fixed()
+    high_panel, low_panel = aloft.telemetry().engine, deck.telemetry().engine
+    assert not aloft.crashed and not deck.crashed
+    assert high_panel.maximum_torque < low_panel.maximum_torque
+    assert abs(high_panel.maximum_torque / low_panel.maximum_torque
+               - 36.8 / UH1_TRANSMISSION_LIMIT_PSI) < 0.01
+    # And the torque available *is* the chart's reading rather than a speed away
+    # from it: the maximum is a torque, so it is P over omega, and multiplying it
+    # back by that omega has to be the chart's own psi worth of the sea level
+    # power - 36.8 of the 50.
+    available = high_panel.maximum_torque * aloft.airframe.state.rotor_speed
+    assert abs(available - UH1_ENGINE_POWER_W * 36.8 / 50.0) \
+        < 1e-6 * UH1_ENGINE_POWER_W, available
+    # With less to give, the same hover is a larger share of it: the torque is
+    # what the aircraft needs and the ceiling is what the air has, so the manual's
+    # own altitude warning (7.1-12) comes out of the telemetry as a percentage.
+    assert high_panel.maximum_percent > low_panel.maximum_percent
 
     # EMER takes the governor out of the loop and the twist grip becomes the
     # fuel control (TM 55-1520-210-10, 9-3): half a grip is half of what the

@@ -97,6 +97,72 @@ RHO_SEA_LEVEL = 1.225
 #: Standard gravity, m/s^2.
 GRAVITY = 9.80665
 
+#: The standard atmosphere, in the units it is defined in: the sea level
+#: temperature it starts from, the rate it cools at below the tropopause, the
+#: gas constant of dry air, and zero Celsius in kelvin.  :data:`GRAVITY` above
+#: belongs with them, in the exponent of :func:`isa_air_density`.  The sea level
+#: *pressure* is not here, and neither is the sea level density these come out
+#: at: the density function is anchored on :data:`RHO_SEA_LEVEL` and the
+#: pressure only ever enters as the standard atmosphere's own ratio to sea
+#: level, so sea level standard is this project's own 1.225 kg/m^3 and not a
+#: re-derived 1.22499.
+ISA_SEA_LEVEL_TEMPERATURE_C = 15.0
+ISA_LAPSE_RATE_K_PER_M = 0.0065
+GAS_CONSTANT_DRY_AIR = 287.05287
+ZERO_CELSIUS_K = 273.15
+
+
+def isa_temperature_c(pressure_altitude):
+    """Standard atmosphere temperature at a pressure altitude, C.
+
+    ``15 - 0.0065 h`` down to the tropopause: 15 C at sea level, -4.8 C at
+    10,000 ft.  This is a *standard day's* temperature at an altitude and not a
+    temperature anybody read off a thermometer: a free air temperature is the
+    latter, and the two are the same number only on a standard day.
+    """
+    return ISA_SEA_LEVEL_TEMPERATURE_C - ISA_LAPSE_RATE_K_PER_M * float(
+        pressure_altitude)
+
+
+def isa_air_density(pressure_altitude, fat=ISA_SEA_LEVEL_TEMPERATURE_C):
+    """Air density, kg/m^3, at a pressure altitude and a free air temperature.
+
+    A pressure altitude and the temperature a thermometer reads in the air are
+    the manual's own two numbers for what the air *is* - they are what the
+    torque available chart in :mod:`engine` is read at - and they are what this
+    turns into the one number the rotor force model wants.  A pressure altitude
+    is not a height: it is the altitude at which the standard atmosphere has
+    the pressure the aircraft is actually flying in, so the pressure here is
+    the standard atmosphere's own and the density is ``p / R T`` with *that*
+    pressure and the temperature given.
+
+    Anchored on :data:`RHO_SEA_LEVEL` rather than on the standard atmosphere's
+    own 1.22499 kg/m^3, so that sea level at +15 C is the 1.225 kg/m^3 every
+    other constant in this project is written against, to the last bit.  The
+    shape is the standard atmosphere's either way, which is what makes 10,000 ft
+    on a standard day the 0.9046 kg/m^3 of the ISA tables.
+
+    Above the tropopause - 11,000 m, 36,089 ft, higher than anything in the
+    manual's charts - the real atmosphere stops cooling and this keeps going, so
+    it reads a little thin up there; past the point where the standard
+    atmosphere's own arithmetic stops describing air at all it raises rather
+    than returning a nonsense number.  The altitude is in metres, which is this
+    module's working unit; the manual's charts are drawn in feet and their
+    callers convert.
+    """
+    altitude = float(pressure_altitude)
+    sea_level = ISA_SEA_LEVEL_TEMPERATURE_C + ZERO_CELSIUS_K
+    lapse = 1.0 - ISA_LAPSE_RATE_K_PER_M * altitude / sea_level
+    if lapse <= 0.0:
+        raise ValueError("a pressure altitude of %.0f m is above the standard "
+                         "atmosphere's own arithmetic" % altitude)
+    # The exponent is g / (R L): how much faster the pressure falls than the
+    # temperature does, which is what makes the standard atmosphere a power law
+    # rather than an exponential.
+    ratio = lapse ** (GRAVITY / (GAS_CONSTANT_DRY_AIR * ISA_LAPSE_RATE_K_PER_M))
+    return (RHO_SEA_LEVEL * ratio
+            * (sea_level / (float(fat) + ZERO_CELSIUS_K)))
+
 
 @dataclass(frozen=True)
 class Vector3:
@@ -1611,6 +1677,41 @@ def _self_test():
     # A rotor that makes no thrust needs no induced flow, and says so.
     assert solve_inflow(lambda value: -1.0, rotor.radius,
                         rotor.omega)[0] == 0.0
+
+    # The standard atmosphere, which is what an airframe flies in unless it is
+    # told otherwise.  Sea level at +15 C is this project's own sea level
+    # density exactly - the function is anchored on it, so an airframe that says
+    # nothing about its air flies as it always did - and 10,000 ft (3,048 m) on
+    # a standard day is the ISA tables' own 0.9046 kg/m^3 at their own -4.8 C.
+    assert isa_temperature_c(0.0) == ISA_SEA_LEVEL_TEMPERATURE_C
+    assert isa_air_density(0.0) == RHO_SEA_LEVEL
+    assert abs(isa_temperature_c(3048.0) + 4.812) < 0.001
+    assert abs(isa_air_density(3048.0, isa_temperature_c(3048.0))
+               - 0.9046) < 1e-3
+    # The same pressure with a warmer day in it is thinner air, and the three
+    # readings fall in the order they should: a hot 10,000 ft day is thinner
+    # than a standard one, which is thinner than a cold one - and all three are
+    # thinner than sea level, which is the standard atmosphere's own drop with
+    # altitude.  Density is ``p / R T`` with p the altitude's own, so the
+    # temperature scales it rather than moving it along the lapse.
+    hot = isa_air_density(3048.0, 15.0)
+    standard_day = isa_air_density(3048.0, isa_temperature_c(3048.0))
+    cold = isa_air_density(3048.0, -30.0)
+    assert hot < standard_day < cold < RHO_SEA_LEVEL
+    assert abs(hot - 0.8425) < 1e-3 and abs(cold - 0.9983) < 1e-3
+    # A pressure altitude is a pressure and not a height, so the same air at
+    # twice the altitude is not half the density: it is the standard
+    # atmosphere's own 0.688 of sea level pressure at 3,048 m.
+    assert abs(isa_air_density(3048.0, 15.0) / RHO_SEA_LEVEL
+               - 0.6877) < 1e-3
+    # Past the standard atmosphere's own arithmetic it refuses rather than
+    # returning something that is not a density.
+    try:
+        isa_air_density(60000.0)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("60,000 m should be past the lapse")
 
 
 if __name__ == "__main__":

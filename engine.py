@@ -76,13 +76,16 @@ the only way the manual expresses it, in psi of calibrated torque.
   with air temperature (7.1-12), and both of those reach the model as one
   number, the air density the airframe is already flying at, so the available
   torque is scaled by ``rho / rho_0``.  That is the shape of the charts and not
-  their numbers: the charts themselves, or a digitised figure 7.1-2, which
-  replace :meth:`Governor.power_available` and nothing else, and the second of
-  those is done: :data:`UH1_TORQUE_CHART_PSI` below is figure 7.1-2 read into
-  numbers, curve by curve, and :func:`torque_available_psi` brackets the
-  altitude wanted between the two curves either side of it.  It takes over
-  from the density scaling above whenever a pressure altitude and a free air
-  temperature are given to :meth:`Governor.power_available`.
+  their numbers, and the numbers are here now: :data:`UH1_TORQUE_CHART_PSI` is
+  the digitised figure 7.1-2 read into numbers curve by curve, and
+  :func:`torque_available_psi` brackets the altitude wanted between the two
+  curves either side of it.  :meth:`Governor.power_available` answers from that
+  rather than from the density whenever it is handed a pressure altitude and a
+  free air temperature, and an airframe hands over the pair for its own air -
+  and a density on its own when a caller has named one -
+  (:meth:`airframe.Airframe.engine_air`), so a flight at an altitude is answered
+  by the chart and a flight in an air somebody measured is answered by its
+  density.
 
 Standard library only, like the rest of the model, so this module imports and
 tests without pygame, OpenGL or numpy.
@@ -377,10 +380,10 @@ class Governor:
 
         Sea level standard is :data:`UH1_ENGINE_POWER_W`, which is 50 psi of
         calibrated torque worth of it, and it scales with the air density the
-        airframe is flying in (:meth:`airframe.Airframe.air_density`), which is
-        the shape of the manual's torque available charts in one number.  The
-        EMER and bleed penalties come off afterwards, in psi, so that they
-        reduce whatever the density left.
+        airframe is flying in (:attr:`airframe.Airframe.density`), which is the
+        shape of the manual's torque available charts in one number.  The EMER
+        and bleed penalties come off afterwards, in psi, so that they reduce
+        whatever the density left.
 
         Given a ``pressure_altitude`` and a ``fat`` instead, the digitised
         figure 7.1-2 answers the question directly and the air density is not
@@ -391,6 +394,11 @@ class Governor:
         (7.1-13 warns that a prolonged hover in ground effect can raise the
         inlet temperature by 10 C, and says to correct for it by reading the
         chart 10 C warmer).
+
+        An airframe passes the pair for its *own* air and a density on its own
+        when a caller names one instead (:meth:`airframe.Airframe.engine_air`),
+        so which of the two answers a flight gets is decided in one place and
+        not at every call.
         """
         if pressure_altitude is not None and fat is not None:
             # The digitised figure 7.1-2 answers this directly, in the same
@@ -404,15 +412,23 @@ class Governor:
                     * (1.0 - self.psi_lost() / UH1_TRANSMISSION_LIMIT_PSI))
         return UH1_ENGINE_POWER_W * max(fraction, 0.0)
 
-    def gain(self, air_density=RHO_SEA_LEVEL):
+    def gain(self, air_density=RHO_SEA_LEVEL,
+             pressure_altitude=None, fat=None):
         """The governor's gain, W of shaft power per engine rpm of N2 error.
 
         Full power at the bottom of the droop band and none at the top of it,
         which is what "will hold N2 rpm to +-40 rpm" (2-23) means read as a
         loop: the band *is* the gain, expressed in the unit the pilot's gauge
         is marked in.
+
+        The gain is the ceiling over that band, so it is whatever air
+        :meth:`power_available` was given and not an air of its own: a governor
+        handed the manual's chart is a governor whose full power costs the chart's
+        own droop, which is what keeps a trim that closes the shaft and the loop
+        that flies it on the same answer.
         """
-        return self.power_available(air_density) / self.droop_rpm
+        return self.power_available(air_density, pressure_altitude,
+                                    fat) / self.droop_rpm
 
 
     def selected_n2_rpm(self):
@@ -427,7 +443,8 @@ class Governor:
         """
         return self.target_n2_rpm() * _clip(self.throttle, 0.0, 1.0)
 
-    def power_target(self, rotor_rpm, air_density=RHO_SEA_LEVEL):
+    def power_target(self, rotor_rpm, air_density=RHO_SEA_LEVEL,
+                     pressure_altitude=None, fat=None):
         """The power the engine is being asked for, W, at a rotor speed.
 
         Four regimes, in the order they are checked:
@@ -446,16 +463,23 @@ class Governor:
           brake, and the rotor winds down on its own drag from there;
         * and never more than :meth:`power_available`, which is what makes the
           droop band a band rather than a cliff.
+
+        The air is whatever :meth:`power_available` is handed - the manual's
+        chart when a pressure altitude and a free air temperature come with the
+        call, a density when one does instead - so the ceiling, the gain and the
+        answer all belong to one air, whichever way the caller said it.
         """
         if self.failed or self.throttle <= 0.0:
             return 0.0
-        ceiling = self.power_available(air_density)
+        ceiling = self.power_available(air_density, pressure_altitude, fat)
         if self.emer:
             return ceiling * _clip(self.throttle, 0.0, 1.0)
         error = self.selected_n2_rpm() - self.n2_rpm(rotor_rpm)
-        return _clip(self.gain(air_density) * error, 0.0, ceiling)
+        return _clip(self.gain(air_density, pressure_altitude, fat) * error,
+                     0.0, ceiling)
 
-    def droop_engine_rpm(self, power, air_density=RHO_SEA_LEVEL):
+    def droop_engine_rpm(self, power, air_density=RHO_SEA_LEVEL,
+                         pressure_altitude=None, fat=None):
         """The N2 speed error a power demand settles at, engine rpm.
 
         ``P / gain``, clipped to the band, which is the manual's droop curve
@@ -464,18 +488,22 @@ class Governor:
         proportional.  Note that it is the *error*, so a settled speed is
         :meth:`settled_n2_rpm`, i.e. this much below the selected speed.
         """
-        ceiling = self.power_available(air_density)
+        ceiling = self.power_available(air_density, pressure_altitude, fat)
         if ceiling <= 0.0:
             return 0.0
         return _clip(power, 0.0, ceiling) / ceiling * self.droop_rpm
 
-    def settled_n2_rpm(self, power, air_density=RHO_SEA_LEVEL):
+    def settled_n2_rpm(self, power, air_density=RHO_SEA_LEVEL,
+                       pressure_altitude=None, fat=None):
         """Where the loop settles for a power demand: the selected speed less droop."""
-        return self.selected_n2_rpm() - self.droop_engine_rpm(power, air_density)
+        return self.selected_n2_rpm() - self.droop_engine_rpm(
+            power, air_density, pressure_altitude, fat)
 
-    def settled_rotor_rpm(self, power, air_density=RHO_SEA_LEVEL):
+    def settled_rotor_rpm(self, power, air_density=RHO_SEA_LEVEL,
+                          pressure_altitude=None, fat=None):
         """The same thing in the unit the pilot's rotor gauge is marked in."""
-        return self.settled_n2_rpm(power, air_density) / self.ratio
+        return self.settled_n2_rpm(power, air_density, pressure_altitude,
+                                   fat) / self.ratio
 
     def __str__(self):
         return ("governor %s %+4.0f rpm, throttle %3.0f %%"
@@ -562,11 +590,14 @@ class Engine:
         """
         return 100.0 * self.torque(rotor_rpm) / UH1_ENGINE_MAIN_TORQUE_NM
 
-    def power_target(self, rotor_rpm, air_density=RHO_SEA_LEVEL):
+    def power_target(self, rotor_rpm, air_density=RHO_SEA_LEVEL,
+                     pressure_altitude=None, fat=None):
         """What the governor is asking the engine for at this rotor speed, W."""
-        return self.governor.power_target(rotor_rpm, air_density)
+        return self.governor.power_target(rotor_rpm, air_density,
+                                          pressure_altitude, fat)
 
-    def settled_torque(self, rotor_rpm, air_density=RHO_SEA_LEVEL):
+    def settled_torque(self, rotor_rpm, air_density=RHO_SEA_LEVEL,
+                       pressure_altitude=None, fat=None):
         """The torque the shaft settles at on that rotor speed, N m.
 
         ``P / omega`` of what the governor is asking for at the speed the rotor
@@ -582,13 +613,20 @@ class Engine:
         seconds of frames would have walked to.  The self test asserts the two
         agree, so the closed form and the integrated loop vouch for each other.
         A failed engine, or a grip rolled right off, settles on nothing at all.
+
+        The air it is asked in is whatever the caller hands it, on
+        :meth:`power_target`'s terms: the manual's chart when the pair is given,
+        which is what :meth:`airframe.Airframe.engine_air` passes for an
+        airframe's own air, and the density scaling when a density is.
         """
         omega = self.omega_of(rotor_rpm)
         if omega <= 0.0:
             return 0.0
-        return self.power_target(rotor_rpm, air_density) / omega
+        return self.power_target(rotor_rpm, air_density, pressure_altitude,
+                                 fat) / omega
 
-    def advance(self, dt, rotor_rpm, air_density=RHO_SEA_LEVEL):
+    def advance(self, dt, rotor_rpm, air_density=RHO_SEA_LEVEL,
+                pressure_altitude=None, fat=None):
         """One frame of the gas producer's lag, and the torque it leaves.
 
         The power moves a first order step of *dt* seconds toward what the
@@ -597,14 +635,23 @@ class Engine:
         state.rotor_rpm)`` and the answer goes straight into the shaft balance.
         A *dt* of zero advances nothing, which is what a caller re-evaluating
         forces inside a frame wants.
+
+        The air is the air the governor is asked in, and it is here that a
+        *flight* reads the manual's chart: the airframe hands its own pressure
+        altitude and free air temperature in on every frame
+        (:meth:`airframe.Airframe.engine_air`), so the power a frame is spooling
+        up to is the chart's ceiling for the altitude rather than a sea level
+        one scaled by a density.
         """
-        target = self.power_target(rotor_rpm, air_density)
+        target = self.power_target(rotor_rpm, air_density, pressure_altitude,
+                                   fat)
         if dt > 0.0:
             weight = 1.0 - math.exp(-float(dt) / self.governor.time_constant)
             self.power += (target - self.power) * weight
         return self.torque(rotor_rpm)
 
-    def settle(self, rotor_rpm, air_density=RHO_SEA_LEVEL):
+    def settle(self, rotor_rpm, air_density=RHO_SEA_LEVEL,
+               pressure_altitude=None, fat=None):
         """Start the engine on the power its governor is asking it for, W.
 
         What a reset calls when it has no stick positions to work from, so
@@ -613,8 +660,13 @@ class Engine:
         takes about three seconds of frames to catch up with a hovering rotor,
         which would put a sag into every script that started that way and is
         not a transient anybody asked for.
+
+        The air is :meth:`advance`'s, and so is the reason: a reset on an
+        aircraft at an altitude starts its engine on the chart's answer for that
+        altitude.
         """
-        self.power = self.power_target(rotor_rpm, air_density)
+        self.power = self.power_target(rotor_rpm, air_density, pressure_altitude,
+                                       fat)
         return self.power
 
     def settle_on(self, torque, rotor_rpm):

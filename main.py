@@ -206,7 +206,8 @@ from aerodynamics import (UH1_BLADE_COUNT, UH1_CHORD, UH1_COLLECTIVE_TRAVEL_IN,
                           UH1_TAIL_MAIN_RATIO, UH1_TAIL_RADIUS, Vector3)
 from airframe import (FOOT, POUND, UH1_HUB_HEIGHT, UH1_TAIL_ARM,
                       UH1_TAIL_HEIGHT)
-from engine import UH1_TORQUE_NM_PER_PSI, UH1_TRANSMISSION_LIMIT_PSI
+from engine import (UH1_ENGINE_POWER_W, UH1_TORQUE_NM_PER_PSI,
+                    UH1_TRANSMISSION_LIMIT_PSI)
 from simulation import (ChaseCamera, PAD_COLLECTIVE, SIM_TIME_STEP_S, Simulation,
                         UH1_CG_HEIGHT_ON_GROUND, UH1_ENVELOPE_CEILING_MPS,
                         airframe_preset)
@@ -3463,6 +3464,28 @@ def _self_check():
     assert abs(psi - 0.01 * UH1_TRANSMISSION_LIMIT_PSI
                * panel.torque_percent) < 1e-9
     assert 0.0 < panel.torque_percent < UH1_TRANSMISSION_LIMIT_PSI
+
+    # The air a run flies in rides on the airframe beside its mass, so a preset
+    # carries it: the same sandbox fitted with the T53 at 10,000 ft and +15 C -
+    # the cell figure 7.1-2's own worked example prints - has 36.8 psi of torque
+    # available where this deck aircraft has the 50 of the transmission, and the
+    # caption reads the same on both because what it prints is the torque being
+    # *delivered* rather than the torque there is.
+    aloft = Simulation(airframe=airframe_preset(AIRFRAME_PRESET, engine=True,
+                                                pressure_altitude=10000.0,
+                                                fat=15.0))
+    for _ in range(int(6.0 / SIM_TIME_STEP_S)):
+        aloft.step_fixed()
+    above = aloft.telemetry().engine
+    assert above.has_engine and not aloft.crashed
+    assert above.maximum_torque < panel.maximum_torque
+    # The maximum is a torque at the rotor's own speed, so the power behind it is
+    # that torque times that speed: the chart's 36.8 psi worth of the sea level
+    # power, rather than the 50 psi the deck aircraft's ceiling is worth.
+    available = above.maximum_torque * aloft.airframe.state.rotor_speed
+    assert abs(available - UH1_ENGINE_POWER_W * 36.8 / 50.0) \
+        < 1e-6 * UH1_ENGINE_POWER_W, available
+    assert "| AUTO" in window_title(aloft, VIEW_CHASE)
 
     # G is the GOV AUTO/EMER switch and X is an engine failure, and both read
     # back off the caption: those two words are the switch's own, and neither is
