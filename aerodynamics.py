@@ -59,9 +59,10 @@ solidity 0.0651, and confirms the rotation direction; it is UH1_MODEL_540.
 The tail rotor is the same table's 1.29 m radius, 0.2133 m chord and two blades
 at 5.56 times the main rotor speed, with zero twist and 1.5 deg of built in
 coning; see UH1_TAIL_TWIST_DEG and UH1_TAIL_PRECONE_DEG for why those two are
-the values the model ships with, and Rotor.uh1h_tail for the rotor itself.  The
-8.79 m arm from the main rotor hub to the tail rotor hub turns the main rotor
-torque into the tail rotor thrust that has to balance it.
+the values the model ships with, ``_rt_tail.py`` for the survey they are read
+off, and Rotor.uh1h_tail for the rotor itself.  The 8.79 m arm from the main
+rotor hub to the tail rotor hub turns the main rotor torque into the tail rotor
+thrust that has to balance it.
 
 Reverse flow is handled explicitly.  When the tangential velocity U_T goes
 negative, which happens near the retreating blade root at forward speed, the
@@ -264,28 +265,55 @@ UH1_TAIL_RPM = UH1_RPM * UH1_TAIL_MAIN_RATIO   # rpm, 1801.44 at the reference
 
 #: Tail rotor blade twist and built in coning.  Neither number is in TM-73254
 #: table 2 nor in TM 55-1520-210-10, so both come from the blade element survey
-#: the self test runs, and both are set to what that survey supports:
+#: this project runs: ``_rt_tail.py``, which is where the figures below were read,
+#: and the self test at the end of this file, which pins them.  Both are read
+#: against the tail rotor a *flight* uses as well as against this one, because
+#: they are not the same rotor: the model's flying tail rotor is TM-73254
+#: equation 37 (``airframe.tail_rotor_thrust``, the report's economical
+#: approximation to an isolated tail rotor), and it asks 10.16 deg of tail
+#: collective where an untwisted blade element asks 7.85 deg for the same 2180 N
+#: that balances the main rotor torque in a 4309 kg hover.  That is 1.51 in of
+#: pedal against 0.95 on the pedals' own 6.90 in of travel, so the two halves of
+#: the model are 0.57 in apart at the very condition these constants are chosen
+#: at - and that gap is the width of the band they are chosen inside: it closes to
+#: nothing at 3.07 deg of washout and stays inside 0.57 in for every twist from
+#: there to none at all.
 #:
-#: twist 0.  A tail rotor has to produce thrust in both directions (right pedal
-#: and left pedal, powered and autorotating), and a symmetric NACA 0012 blade
-#: with no twist does that with one blade design.  Washout buys little either:
-#: at the 2180 N that balances the main rotor torque in a 4309 kg hover, zero
-#: twist needs 7.85 deg of collective at a figure of merit of 0.664, -4 deg
-#: needs 10.85 at 0.672 and -10 deg needs 15.35 at 0.680.  The untwisted blade
-#: does run its inboard fifth at a negative angle of attack (down to -52 deg at
-#: the innermost station), so that part of the blade makes a little negative
-#: thrust, about 4 % of the total, which is real and small.
+#: twist 0.  What chooses it is authority rather than power, because a tail rotor
+#: has to make thrust in both directions (right pedal and left pedal, powered and
+#: autorotating): with no twist the two pedal stops pull within one per cent of
+#: the same newtons, 6710 N at full left pedal and -6650 N at full right, where
+#: 10 deg of washout halves the left stop to 3271 N and deepens the right one to
+#: -8014 - authority taken out of the direction a hover and a left crosswind want
+#: it in, and put where nothing asks for it.  Washout is not free either: it costs
+#: 0.75 deg of collective per degree of it (15.35 deg at -10 deg of twist against
+#: 7.85), and it buys 0.017 of figure of merit for that (0.680 against 0.663).  It
+#: does not even cure the inboard blade: the untwisted blade runs its inboard two
+#: fifths at a negative angle of attack - the angle changes sign at 0.42 R - and
+#: though those stations are slow enough to be worth -3.2 per cent of the thrust
+#: and no more, 10 deg of washout still leaves -0.9 per cent of it behind them.
+#: Note that a blade's angle of attack at the innermost *station* means nothing
+#: without its spacing: the same blade reads -39 deg at 10 stations, -57 at 20 and
+#: -69 at 40, so the share those stations make and the radius the angle changes
+#: sign at are the numbers to quote, and the angle on its own is not.
 #:
 #: precone 1.5 to 2 deg.  The flight manual has the tail rotor blades running on
 #: a flapping axis, so they cone to wherever the aerodynamic moment about the
 #: flap hinge balances the centrifugal field.  The model puts that at 0.88 deg
-#: for a 4 kg blade and 0.35 deg for a 10 kg blade, rising to 1.12 and 0.45 deg
-#: at 130 % of the hover thrust the torque balance sets.  A built in coning of
-#: 1.5 to 2 deg is therefore a mounting choice that holds the blades off the
-#: cone plane in hover and, more usefully, keeps them off the droop stop and the
-#: tail boom when the thrust goes away (left pedal, autorotation).  It raises
-#: the tips by R * sin(precone), 34 mm at 1.5 deg and 45 mm at 2 deg, and that
-#: clearance is the one number here that only a drawing could confirm.
+#: for a 4 kg blade and 0.35 deg for a 10 kg blade, rising to 1.12 and 0.45 deg at
+#: 130 % of the hover thrust the torque balance sets.  A built in coning of 1.5
+#: to 2 deg is therefore a mounting choice that holds the blades off the cone
+#: plane in hover and, more usefully, keeps them off the droop stop and the tail
+#: boom when the thrust goes away (left pedal, autorotation).  It raises the tips
+#: by R * sin(precone), 33.8 mm at 1.5 deg and 45.0 mm at 2 deg.  That bounds it
+#: from below - 1.5 deg is above everything the flight's own flapping ever asks of
+#: the blade, 0.38 deg of margin over the most it asks at any blade mass or
+#: throttle - and nothing here bounds it from above: the clearance is the one
+#: number in this pair that only a drawing could confirm.  Within the simulation
+#: the angle changes no load at all, which ``_rt_tail.py`` shows by comparing
+#: every station's thrust to the last bit: ``compute`` resolves the blades in the
+#: disc plane, so the precone only sets the flapping reference a teeter step will
+#: use.
 UH1_TAIL_TWIST_DEG = 0.0     # deg, untwisted blade
 UH1_TAIL_PRECONE_DEG = 1.5   # deg, built in coning, the low end of 1.5 to 2.0
 
@@ -1441,10 +1469,14 @@ def _demo():
     tail = Rotor.uh1h_tail()
     print("  " + tail.describe())
     tail_thrust = loads.shaft_torque / UH1_TAIL_ARM
-    tail_inflow, tail_loads = hover_loads(tail, 8.0)
-    print("  %.0f N of thrust balances the main rotor torque, and 8 deg of"
-          " collective gives %.0f N at %.1f m/s of inflow"
-          % (tail_thrust, tail_loads.thrust, tail_inflow))
+    # The collective that holds the balance, rather than a round 8 deg: 8 deg is
+    # 2.7 per cent of thrust above it, and the two numbers are what the constants
+    # above are read at.
+    tail_collective = collective_for_thrust(tail, tail_thrust)
+    tail_inflow, tail_loads = hover_loads(tail, tail_collective)
+    print("  %.0f N of thrust balances the main rotor torque, and %.2f deg of"
+          " collective holds it at %.1f m/s of inflow"
+          % (tail_thrust, tail_collective, tail_inflow))
     print("  " + str(tail_loads))
 
     _self_test()
@@ -1515,31 +1547,85 @@ def _self_test():
     # sense as a negative gearing per inch of pedal.
     assert UH1_TAIL_PEDAL_PER_IN < 0.0
 
-    # Tail rotor blade element check.  Neither the twist nor the built in
-    # coning is in the reference tables, so the values the model ships with are
-    # pinned here along with the loads that justify them: 8 deg of collective on
-    # the untwisted blade covers the thrust that balancing the main rotor torque
-    # demands, and the coning the blade wants about a root hinge stays far below
-    # the built in coning of the hub.
+    # Tail rotor blade element check.  Neither the twist nor the built in coning
+    # is in the reference tables, so the values the model ships with are pinned
+    # here, at the numbers `_rt_tail.py` measures them at and at the 20 stations
+    # that survey cuts the blade into: the collective that balances the main rotor
+    # torque is a bisection of this same blade element pass rather than a round 8
+    # deg (which the 25 per cent band this check used to allow was hiding), the
+    # figure of merit and the inboard share are its own, and the coning the blade
+    # wants about its flap hinge is checked against both ends of the blade mass a
+    # metal tail blade could have, at the hover and at 130 per cent of it.
     tail_thrust = loads.shaft_torque / UH1_TAIL_ARM
-    tail = Rotor.uh1h_tail(sample_count=10)
+    tail = Rotor.uh1h_tail(sample_count=20)
     assert abs(tail.solidity - UH1_TAIL_SOLIDITY) < 0.002
     assert tail.twist_deg == 0.0
     assert 1.5 <= tail.precone_deg <= 2.0
-    tail_inflow, tail_loads = hover_loads(tail, 8.0)
+    tail_collective = collective_for_thrust(tail, tail_thrust)
+    assert abs(tail_collective - 7.85) < 0.01, tail_collective
+    tail_inflow, tail_loads = hover_loads(tail, tail_collective)
     assert tail_inflow > 5.0
-    assert abs(tail_loads.thrust - tail_thrust) < 0.25 * tail_thrust, \
+    # The bisection that found the collective and the hover solve that is handed
+    # it are two paths through the same stations, so they have to land on the same
+    # thrust to far better than the figure either is quoted at.
+    assert abs(tail_loads.thrust - tail_thrust) < 1e-3 * tail_thrust, \
         tail_loads.thrust
-    assert tail_loads.figure_of_merit > 0.6
+    assert abs(tail_loads.figure_of_merit - 0.663) < 0.001
+    # The inboard blade pulling the wrong way: the angle of attack changes sign at
+    # 0.42 R, so eight of the twenty stations run negative and make -3.2 per cent
+    # of the thrust between them.  That share is the number a comment can quote -
+    # the angle at the innermost station is a function of the spacing (-39 deg at
+    # 10 stations, -57 at 20 and -69 at 40) and only means something beside one.
     blade = [s for s in tail_loads.samples if s.blade_index == 0]
-    flap_moment = sum((s.radius - tail.hinge_offset) * s.thrust_per_span
-                      * s.span for s in blade)
+    inboard = [s for s in blade if s.angle_of_attack_deg < 0.0]
+    assert len(inboard) == 8, len(inboard)
+    assert abs(blade[len(inboard)].radius / tail.radius - 0.42) < 0.01
+    share = sum(s.thrust_per_span * s.span for s in inboard) / tail_loads.thrust
+    assert abs(share + 0.032) < 0.002, share
     root_inertia = sum((s.radius - tail.hinge_offset) * s.radius * s.span
                        / tail.radius for s in blade)
-    for mass in (4.0, 10.0):
-        coning = math.degrees(flap_moment
-                              / (tail.omega ** 2 * root_inertia * mass))
-        assert 0.2 < coning < 1.3, (mass, coning)
+
+    def coning_of(loads_at, mass):
+        moment = sum((s.radius - tail.hinge_offset) * s.thrust_per_span * s.span
+                     for s in loads_at.samples if s.blade_index == 0)
+        return math.degrees(moment / (tail.omega ** 2 * root_inertia * mass))
+
+    assert abs(coning_of(tail_loads, 4.0) - 0.88) < 0.01
+    assert abs(coning_of(tail_loads, 10.0) - 0.35) < 0.01
+    overload = hover_loads(tail, collective_for_thrust(tail, 1.3 * tail_thrust))[1]
+    assert abs(coning_of(overload, 4.0) - 1.12) < 0.01
+    assert abs(coning_of(overload, 10.0) - 0.45) < 0.01
+    # ...which is what makes the built in coning a lower bound and not a fit: even
+    # at 130 per cent of the hover thrust the blade wants 1.12 deg, well inside
+    # the 1.5 the hub gives it.
+    assert coning_of(overload, 4.0) < tail.precone_deg
+
+    # Pushing both ways, which is what zero twist is chosen for and what washout
+    # breaks.  Table 2's pedal stops are +18 and -10 deg of tail collective
+    # (rotor_control carries them as UH1_TAIL_COLLECTIVE_LEFT_DEG and
+    # UH1_TAIL_COLLECTIVE_RIGHT_DEG), and the untwisted blade's two stops pull
+    # within one per cent of the same newtons where 10 deg of washout halves the
+    # left one to half of it and deepens the right one by a fifth.
+    stops = {}
+    for twist in (0.0, -10.0):
+        washer = Rotor.uh1h_tail(twist_deg=twist, sample_count=20)
+        stops[twist] = [hover_loads(washer, degrees)[1].thrust
+                        for degrees in (-10.0, 18.0)]
+    assert abs(stops[0.0][0] + stops[0.0][1]) < 0.01 * abs(stops[0.0][0]), \
+        stops[0.0]
+    assert abs(stops[-10.0][0] / stops[0.0][0] - 1.21) < 0.01, stops[-10.0][0]
+    assert abs(stops[-10.0][1] / stops[0.0][1] - 0.49) < 0.01, stops[-10.0][1]
+
+    # The twist the model ships against the two the argument above is about: the
+    # same balance, at -4 and -10 deg of washout, needs 0.75 deg of collective per
+    # degree of twist and buys 0.017 of figure of merit for it.
+    for twist, needed_want, fom_want in ((-4.0, 10.85, 0.672),
+                                         (-10.0, 15.35, 0.680)):
+        washer = Rotor.uh1h_tail(twist_deg=twist, sample_count=20)
+        needed = collective_for_thrust(washer, tail_thrust)
+        assert abs(needed - needed_want) < 0.01, (twist, needed)
+        _, washed = hover_loads(washer, needed)
+        assert abs(washed.figure_of_merit - fom_want) < 0.001, (twist, washed)
 
     # Forward flight: the inflow angle must stay inside +/- 90 degrees, and
     # every reversed flow station must have its in plane load opposing motion.

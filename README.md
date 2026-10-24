@@ -15,7 +15,7 @@ Layered, each one importing only what sits below it:
 
 | module | lines | what it is |
 | --- | --- | --- |
-| `aerodynamics.py` | 1718 | quasi-steady blade element theory for one rotor - section data, flapping, hover and forward flight loads - and the standard atmosphere that turns a pressure altitude and a free air temperature into the density it flies in |
+| `aerodynamics.py` | 1804 | quasi-steady blade element theory for one rotor - section data, flapping, hover and forward flight loads - and the standard atmosphere that turns a pressure altitude and a free air temperature into the density it flies in |
 | `rotor_control.py` | 1280 | the control path: inches of stick travel to swashplate angles, the mixing law and its rigging, the control lags |
 | `engine.py` | 1129 | the T53-L-13 on the other end of the shaft: the twist grip, the N2 governor and its droop band, the torque available read off a digitised figure 7.1-2 - each of its eight altitude curves read at every temperature the sheet prints, and the family read at the airframe's own pressure altitude and free air temperature - what EMER and bleed air cost, the ten degrees of inlet temperature that a prolonged hover in ground effect is read with (7.1-13(c)), and the gas producer's lag |
 | `airframe.py` | 4023 | TM-73254's force and moment model - main rotor, tail rotor, fuselage, fin, stabilizer - and the six degree of freedom equations of motion, with the rotor's own speed as a state when an engine is aboard, the second root of equation 10 read off a shaft with nothing driving it, the air it flies in as a pressure altitude and a free air temperature - set on the airframe, or read off the aircraft itself as a profile - or as a density, and the ground under it as one flat plane with a level and a normal |
@@ -559,7 +559,8 @@ its numbers are in `Done` beside them: see the phase 3 bullet above.
   10 stations, -57.1 at 20 and -69.0 at 40, since the innermost station is nearer
   the root the finer the blade is cut.  What is stable beside it is the share of
   the thrust those inboard stations make, -3.2 per cent at every spacing, against
-  the "about 4 per cent" the comment quotes from one of them.
+  the "about 4 per cent" the constants' comment used to quote from one of them -
+  and the comment, with the self test under it, now cites these numbers.
 
 Both phases hold the loops *above* the attitude at the model's own numbers on
 purpose: what they measure is the margin a hand has on the cyclic.  Whether a

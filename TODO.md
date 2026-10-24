@@ -241,6 +241,60 @@ These are choices, not oversights: each is stated where it lives.
   flew both missions and wrote `_rt_log.txt`, and every one exited 0.  The
   table's own row for `main.py` is read back at what it now is,
 * 2026-10-24 - **the tail rotor's two unwritten constants are measured, and the
+* 2026-10-24 - **the tail rotor's two constants now cite the measurement instead
+  of a memory, and the self test under them pins what they are built on.**  The
+  commit before this one wrote the ruler; this one is what it measured, in the two
+  places the model itself carries the argument - the comment on
+  `UH1_TAIL_TWIST_DEG` and `UH1_TAIL_PRECONE_DEG`, and the tail rotor block of
+  this module's own self test.  No arithmetic in the model changed: every figure
+  the survey asserts is the same figure before and after this commit.
+
+  * *the comment.*  It no longer argues from a symmetric section and a list of
+    numbers nothing computed.  It says where the numbers come from (`_rt_tail.py`
+    and the self test), which two tail rotors the model has and which of them
+    flies (equation 37, not the blade element these constants describe), and what
+    the two cost each other: 10.16 deg of tail collective against 7.85 for the same
+    2180 N - 1.51 in of pedal against 0.95 - with the gap closing to nothing at
+    3.07 deg of washout and staying inside 0.57 in for every twist from there to
+    none at all.  The twist argument is now one the model can support: authority
+    at the stops (6710 N and -6650 N either way at zero twist, against 3271 and
+    -8014 at 10 deg of washout), 0.75 deg of collective per degree of washout for
+    0.017 of figure of merit, and an inboard share of -3.2 per cent that washout
+    only takes to -0.9.  The stale figure went with it: "down to -52 deg at the
+    innermost station" is replaced by the three readings that stand beside their
+    spacings (-39, -57 and -69 deg at 10, 20 and 40 stations) and by the two numbers
+    that need none, the share those stations make and the 0.42 R the angle changes
+    sign at.  The precone half keeps its 1.5 to 2 deg band and now says which end of
+    it is measured (1.5 is 0.38 deg above everything the flight's own flapping asks
+    of the blade) and which is not (2 deg is a clearance, and only a drawing could
+    confirm it) - and both halves say the one thing the sweep found that the old
+    prose did not: the precone moves no load at all, because `compute` resolves the
+    blades in the disc plane.
+  * *the self test.*  The block that justified the constants ran at 10 stations,
+    checked the balance against a round 8 deg of tail collective, and allowed 25
+    per cent of thrust to cover the difference between them.  It now bisects the
+    collective the balance actually needs (7.85 deg, held to a hundredth), holds
+    the thrust itself to a tenth of a per cent instead of 25, pins the figure of
+    merit (0.663), the inboard share (-3.2 per cent at 0.42 R, at the 20 stations
+    the survey cuts the blade into) and the four conings the comment quotes (0.88
+    and 0.35 deg at the hover, 1.12 and 0.45 at 130 per cent of it, against a band
+    that used to be 0.2 to 1.3), asserts the built in coning above the most the
+    blade asks of the hub, and adds the two things the old block never checked: the
+    two pedal stops, which is where the twist is actually decided, and the two
+    twists the model did *not* ship (-4 and -10 deg of washout, their collectives
+    and their figures of merit).  The demo's own tail rotor paragraph reads the
+    balance rather than a round 8 deg, which was 2.7 per cent of thrust high.
+  * *verified.*  `python aerodynamics.py` prints `self test passed` with the
+    tightened block, and its demo prints the tail rotor at 7.85 deg of collective
+    for the same 2180 N; `python _rt_tail.py` still asserts all 91 of the survey's
+    numbers - which is the point, since the arithmetic did not move and the ruler
+    the comment cites is the same ruler; `python attic/_tmp_counts.py` is at 41
+    claims with none disagreeing; `python main.py --check` still prints `main.py
+    check passed`; `python regression_tm73254.py` still reproduces the report's own
+    figures; and `python _rt_check.py` still flies both missions at both reaction
+    times and the cruise.  `README.md`'s module table carries the module's new
+    count, and this commit touches no other module at all.
+
   two rulers they sit between turn out to be 0.57 in of pedal apart.**  The pair
   in `aerodynamics.py` - `UH1_TAIL_TWIST_DEG` and `UH1_TAIL_PRECONE_DEG` - is the
   only one the model ships that neither TM-73254 nor TM 55-1520-210-10 carries a
