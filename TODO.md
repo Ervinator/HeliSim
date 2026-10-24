@@ -196,51 +196,95 @@ These are choices, not oversights: each is stated where it lives.
   read against the flight and against the time of day, but neither is a measure of
   how long the window took to see the key.
 
-* 2026-10-22 - **the caption's torque gauge is read against the transmission, in
-  the manual's own psi.**  The sandbox entry further down names this where it
-  lives - "the caption's torque gauge is not read against the 50 psi
-  transmission limit" - and `Next` was carrying it as the first of the engine
-  level's two open halves.  It is closed without a new gauge and without a new
-  telemetry field, by printing one number in the manual's own units: the caption
-  reads
-
-      | rotor 100.0 % | N2 6600 rpm | Q  37 % (19/50 psi) | AUTO
-
-  on the T53 `F` fits live, which is the run the line above was printed by.
-
-  * *the two numbers it is made of.*  TM 55-1520-210-10 keeps the limit and the
-    calibration in consecutive paragraphs: "50 psi calibrated torque" is the
-    transmission's structural limit (7.1-13) and the 1125 ft-lb data plate is
-    "the indicated torque pressure at 1125 ft-lbs actual output shaft torque"
-    (7.1-14), i.e. where the gauge reads 100 per cent.  With this project's own
-    50 psi full scale (`engine.UH1_TRANSMISSION_LIMIT_PSI`) the two are the same
-    reading, which is why a percentage could stand for it - and is also why the
-    percentage was the wrong half of the pair: a pilot reads a psi against a
-    psi, and 100 per cent of this gauge is a full scale the manual never prints;
-  * *what it took.*  `EngineTelemetry` already carried the torque in newton
-    metres, so the psi on the caption are `telemetry.engine.torque` at that
-    slope - `engine.UH1_TORQUE_NM_PER_PSI`, 621.4 N m of rotor shaft torque per
-    psi - with `engine.UH1_TRANSMISSION_LIMIT_PSI` beside them as the limit the
-    reading is against.  Two imports in `main.py` (4714 lines), one format
-    string, and nothing under the physics touched: which limit a reading is read
-    against was always the caption's business, and the model already had both
-    numbers.  A gauge shown against what the transmission will take is also the
-    manual's own caution made visible - the engine "can exceed the transmission
-    structural limit ... under certain conditions" (7.1-13) - because in dense
-    air `Governor.power_available` scales the available torque past that limit,
-    and the same line then reads over 50 psi.
-
-  Verified: `main.py --check` printed `main.py check passed` with the new
-  assertions written in the style the check already keeps - the engine panel as
-  the exact string built from the telemetry it prints, `| Q %3.0f %% (%2.0f/%2.0f
-  psi) | AUTO` on the freshly fitted T53; the psi and the percentage agreeing to
-  1e-9, since they are one torque in two units; and the pad's own idling rotor
-  reading above zero and under the limit rather than reading nothing.  The gate
-  was re-run in full for it: the seven module self tests each printed their own
-  `self test passed`, `regression_tm73254.py` printed its own, `_rt_check.py`
-  flew both missions and wrote `_rt_log.txt`, and every one exited 0.  The
-  table's own row for `main.py` is read back at what it now is,
 * 2026-10-24 - **the tail rotor's two unwritten constants are measured, and the
+  two rulers they sit between turn out to be 0.57 in of pedal apart.**  The pair
+  in `aerodynamics.py` - `UH1_TAIL_TWIST_DEG` and `UH1_TAIL_PRECONE_DEG` - is the
+  only one the model ships that neither TM-73254 nor TM 55-1520-210-10 carries a
+  number for, and what stood behind them was a comment quoting figures that
+  nothing in the project computed: 2180 N, 7.85 deg, 0.664, -52 deg, "about 4 per
+  cent", 0.88 and 0.35 deg, "130 per cent", 34 and 45 mm.  The harness gained the
+  instrument that computes them: `_rt_tail.py` (708 lines), the tenth `_rt_`
+  module, the second of the ten that measures the model rather than flying it, and
+  the first that wants no pygame at all - it imports `aerodynamics`,
+  `rotor_control` and `airframe`, since what it measures is the model's own
+  arithmetic and not a flight.
+
+  * *two rulers, one thrust.*  The model answers this question with *two* tail
+    rotors: the one that **flies** is TM-73254's equation 37
+    (`airframe.tail_rotor_thrust`, the report's "economical approximation to the
+    tail rotor thrust of an isolated tail rotor", parametric in the collective),
+    and the one the two constants **describe** is blade element
+    (`Rotor.uh1h_tail`, which is what the self test runs).  Asked for the 2180 N
+    that a 4309 kg hover's torque balance sets - and the blade element main rotor
+    hover does ask exactly that - they answer 10.16 deg of tail collective against
+    7.85, i.e. 1.51 in of pedal against 0.95 on the pedals' own 6.90 in of travel.
+    The aircraft's own two trims say the same thing at the same mass:
+    `Airframe.trim_hover` puts the pedals at -1.42 in (with 2061 N of tail thrust
+    at them, against the 2038 N its own torque asks for) and
+    `RotorControlModel.trim_hover` at -0.92.  So the two halves of the model
+    disagree by 0.57 in at the very condition the constant was chosen at, and that
+    number is the width of the band the constant is chosen inside.
+  * *the twist.*  The gap closes to nothing at 3.07 deg of washout and stays
+    inside 0.57 in of pedal for every twist from there to none at all, so the
+    shipped zero is a choice inside a bracket rather than a figure on its own.  The
+    survey reproduces the comment's own readings, at the 10 stations it read them
+    at: 7.85 deg of collective at a figure of merit of 0.664 for no twist, 10.85
+    and 0.672 at -4 deg, 15.35 and 0.680 at -10 (a clean 0.75 deg of collective
+    per degree of washout).  What settles the twist at zero is not the figure of
+    merit but the *stops*: at 0 deg the two pedal stops pull within one per cent of
+    the same newtons - 6710 N at full left pedal and -6650 at full right, so the
+    tail rotor has the same authority either way, which is what a symmetric section
+    and no twist buy - while 10 deg of washout halves the left stop to 3271 N and
+    deepens the right one to -8014 N, taking the authority out of the direction a
+    hover and a left crosswind need it and putting it where nothing asks for it.
+    Washout does not even fix the inboard blade: it still pulls 0.9 per cent of
+    the thrust the wrong way at -10 deg, against 3.2 at zero - the one thing it
+    does buy, and bought at 0.75 deg of collective a degree.
+  * *the precone.*  1.5 deg of built in coning sits 0.38 deg above the most the
+    flight's own flapping ever asks of the blade: 0.88 deg for a 4 kg blade and
+    0.35 deg for a 10 kg one at the hover the torque balance sets, rising to 1.12
+    and 0.45 at 130 per cent of that thrust - the four numbers the comment quotes,
+    measured.  It raises the tips 33.8 mm at 1.5 deg and 45.0 mm at the 2 deg the
+    manual's band ends at, and it moves **no load at all**, which the sweep shows
+    by comparing every station's thrust to the last bit: `Rotor.compute` still
+    resolves the blades in the disc plane, so the angle only sets the flapping
+    reference a teeter step would use.  The lower end of the band is therefore
+    measured and the upper end is not: 1.5 deg is above everything the flight asks
+    of the blade, and 2 deg is a clearance question that only a drawing could
+    settle.
+  * *the boundary, which is now measured too.*  What the comment claims in prose -
+    that the flying tail rotor is equation 37 and not this blade element one - is
+    the one claim in it that can be *shown*: both constants are rebound on
+    `aerodynamics` (to -10 deg of twist and 3 deg of coning), the aircraft is
+    re-trimmed and flown for sixty frames, and all twenty numbers - the four
+    sticks, the tail collective they mix to, the tail thrust, the main rotor
+    torque, the position, the velocity, the attitude, the rates and the rotor speed
+    - come back identical to the last bit, while a tail rotor built after the
+    rebinding carries the new values.  The experiment is shown to bite where it
+    should and not to bite where it should not.
+  * *the one figure that did not reproduce.*  The comment's "down to -52 deg at
+    the innermost station" has no spacing attached and is right at none of them:
+    the worst angle of attack on the untwisted blade is -39.1 deg at 10 stations,
+    -57.1 at 20 and -69.0 at 40, because the innermost station is nearer the root
+    the finer the blade is cut.  What *is* stable - and is what the comment should
+    have quoted - is the share of the thrust those inboard stations make, -3.2 per
+    cent at every spacing ("about 4 per cent" is one reading of it), and the radius
+    the angle of attack changes sign at, 0.42 R: the untwisted blade's inboard
+    fifth is not what runs negative, its inboard *two fifths* does, which is why
+    the share is small and the angle is not.  Nothing is changed in the model by
+    this commit; the comment that cites the measurement, and the self test that
+    pins it, are the commit after it.
+  * *verified.*  `python _rt_tail.py` writes `_rt_tail.txt` and asserts all 91 of
+    its numbers, the tables above among them, from the two rulers to the station
+    convergence and the boundary; `python attic/_tmp_counts.py` is at 41 claims
+    with none disagreeing, `README.md`'s harness table and prose counting the tenth
+    module; `python main.py --check` still prints `main.py check passed`;
+    `python aerodynamics.py` still prints `self test passed`; `python _rt_check.py`
+    still flies both missions at both reaction times and the cruise; and the model
+    itself is untouched - the commit is one harness module and its transcript, the
+    `README.md` and `TODO.md` prose that counts and describes it, and
+    `.gitignore`'s and `attic/_tmp_counts.py`'s own comments.
+
 * 2026-10-24 - **the tail rotor's two constants now cite the measurement instead
   of a memory, and the self test under them pins what they are built on.**  The
   commit before this one wrote the ruler; this one is what it measured, in the two
@@ -295,96 +339,50 @@ These are choices, not oversights: each is stated where it lives.
     times and the cruise.  `README.md`'s module table carries the module's new
     count, and this commit touches no other module at all.
 
-  two rulers they sit between turn out to be 0.57 in of pedal apart.**  The pair
-  in `aerodynamics.py` - `UH1_TAIL_TWIST_DEG` and `UH1_TAIL_PRECONE_DEG` - is the
-  only one the model ships that neither TM-73254 nor TM 55-1520-210-10 carries a
-  number for, and what stood behind them was a comment quoting figures that
-  nothing in the project computed: 2180 N, 7.85 deg, 0.664, -52 deg, "about 4 per
-  cent", 0.88 and 0.35 deg, "130 per cent", 34 and 45 mm.  The harness gained the
-  instrument that computes them: `_rt_tail.py` (708 lines), the tenth `_rt_`
-  module, the second of the ten that measures the model rather than flying it, and
-  the first that wants no pygame at all - it imports `aerodynamics`,
-  `rotor_control` and `airframe`, since what it measures is the model's own
-  arithmetic and not a flight.
+* 2026-10-22 - **the caption's torque gauge is read against the transmission, in
+  the manual's own psi.**  The sandbox entry further down names this where it
+  lives - "the caption's torque gauge is not read against the 50 psi
+  transmission limit" - and `Next` was carrying it as the first of the engine
+  level's two open halves.  It is closed without a new gauge and without a new
+  telemetry field, by printing one number in the manual's own units: the caption
+  reads
 
-  * *two rulers, one thrust.*  The model answers this question with *two* tail
-    rotors: the one that **flies** is TM-73254's equation 37
-    (`airframe.tail_rotor_thrust`, the report's "economical approximation to the
-    tail rotor thrust of an isolated tail rotor", parametric in the collective),
-    and the one the two constants **describe** is blade element
-    (`Rotor.uh1h_tail`, which is what the self test runs).  Asked for the 2180 N
-    that a 4309 kg hover's torque balance sets - and the blade element main rotor
-    hover does ask exactly that - they answer 10.16 deg of tail collective against
-    7.85, i.e. 1.51 in of pedal against 0.95 on the pedals' own 6.90 in of travel.
-    The aircraft's own two trims say the same thing at the same mass:
-  * *the twist.*  The gap closes to nothing at 3.07 deg of washout and stays
-    inside 0.57 in of pedal for every twist from there to none at all, so the
-    shipped zero is a choice inside a bracket rather than a figure on its own.  The
-    survey reproduces the comment's own readings, at the 10 stations it read them
-    at: 7.85 deg of collective at a figure of merit of 0.664 for no twist, 10.85
-    and 0.672 at -4 deg, 15.35 and 0.680 at -10 (a clean 0.75 deg of collective
-    per degree of washout).  What settles the twist at zero is not the figure of
-    merit but the *stops*: at 0 deg the two pedal stops pull within one per cent of
-    the same newtons - 6710 N at full left pedal and -6650 at full right, so the
-    tail rotor has the same authority either way, which is what a symmetric section
-    and no twist buy - while 10 deg of washout halves the left stop to 3271 N and
-    deepens the right one to -8014 N, taking the authority out of the direction a
-    hover and a left crosswind need it and putting it where nothing asks for it.
-    Washout does not even fix the inboard blade: it still pulls 0.9 per cent of
-    the thrust the wrong way at -10 deg, against 3.2 at zero - the one thing it
-    does buy, and bought at 0.75 deg of collective a degree.
-  * *the precone.*  1.5 deg of built in coning sits 0.38 deg above the most the
-    flight's own flapping ever asks of the blade: 0.88 deg for a 4 kg blade and
-    0.35 deg for a 10 kg one at the hover the torque balance sets, rising to 1.12
-    and 0.45 at 130 per cent of that thrust - the four numbers the comment quotes,
-    measured.  It raises the tips 33.8 mm at 1.5 deg and 45.0 mm at the 2 deg the
-    manual's band ends at, and it moves **no load at all**, which the sweep shows
-    by comparing every station's thrust to the last bit: `Rotor.compute` still
-    resolves the blades in the disc plane, so the angle only sets the flapping
-    reference a teeter step would use.  The lower end of the band is therefore
-    measured and the upper end is not: 1.5 deg is above everything the flight asks
-  * *the boundary, which is now measured too.*  What the comment claims in prose -
-    that the flying tail rotor is equation 37 and not this blade element one - is
-    the one claim in it that can be *shown*: both constants are rebound on
-    `aerodynamics` (to -10 deg of twist and 3 deg of coning), the aircraft is
-    re-trimmed and flown for sixty frames, and all twenty numbers - the four
-    sticks, the tail collective they mix to, the tail thrust, the main rotor
-    torque, the position, the velocity, the attitude, the rates and the rotor speed
-    - come back identical to the last bit, while a tail rotor built after the
-    rebinding carries the new values.  The experiment is shown to bite where it
-    should and not to bite where it should not.
-  * *the one figure that did not reproduce.*  The comment's "down to -52 deg at
-    the innermost station" has no spacing attached and is right at none of them:
-    the worst angle of attack on the untwisted blade is -39.1 deg at 10 stations,
-    -57.1 at 20 and -69.0 at 40, because the innermost station is nearer the root
-    the finer the blade is cut.  What *is* stable - and is what the comment should
-    have quoted - is the share of the thrust those inboard stations make, -3.2 per
-    cent at every spacing ("about 4 per cent" is one reading of it), and the radius
-    the angle of attack changes sign at, 0.42 R: the untwisted blade's inboard
-    fifth is not what runs negative, its inboard *two fifths* does, which is why
-    the share is small and the angle is not.  Nothing is changed in the model by
-    this commit; the comment that cites the measurement, and the self test that
-    pins it, are the commit after it.
-  * *verified.*  `python _rt_tail.py` writes `_rt_tail.txt` and asserts all 91 of
-    its numbers, the tables above among them, from the two rulers to the station
-    convergence and the boundary; `python attic/_tmp_counts.py` is at 41 claims
-    with none disagreeing, `README.md`'s harness table and prose counting the tenth
-    module; `python main.py --check` still prints `main.py check passed`;
-    `python aerodynamics.py` still prints `self test passed`; `python _rt_check.py`
-    still flies both missions at both reaction times and the cruise; and the model
-    itself is untouched - the commit is one harness module and its transcript, the
-    `README.md` and `TODO.md` prose that counts and describes it, and
-    `.gitignore`'s and `attic/_tmp_counts.py`'s own comments.
+      | rotor 100.0 % | N2 6600 rpm | Q  37 % (19/50 psi) | AUTO
 
-    of the blade, and 2 deg is a clearance question that only a drawing could
-    settle.
+  on the T53 `F` fits live, which is the run the line above was printed by.
 
-    `Airframe.trim_hover` puts the pedals at -1.42 in (with 2061 N of tail thrust
-    at them, against the 2038 N its own torque asks for) and
-    `RotorControlModel.trim_hover` at -0.92.  So the two halves of the model
-    disagree by 0.57 in at the very condition the constant was chosen at, and that
-    number is the width of the band the constant is chosen inside.
+  * *the two numbers it is made of.*  TM 55-1520-210-10 keeps the limit and the
+    calibration in consecutive paragraphs: "50 psi calibrated torque" is the
+    transmission's structural limit (7.1-13) and the 1125 ft-lb data plate is
+    "the indicated torque pressure at 1125 ft-lbs actual output shaft torque"
+    (7.1-14), i.e. where the gauge reads 100 per cent.  With this project's own
+    50 psi full scale (`engine.UH1_TRANSMISSION_LIMIT_PSI`) the two are the same
+    reading, which is why a percentage could stand for it - and is also why the
+    percentage was the wrong half of the pair: a pilot reads a psi against a
+    psi, and 100 per cent of this gauge is a full scale the manual never prints;
+  * *what it took.*  `EngineTelemetry` already carried the torque in newton
+    metres, so the psi on the caption are `telemetry.engine.torque` at that
+    slope - `engine.UH1_TORQUE_NM_PER_PSI`, 621.4 N m of rotor shaft torque per
+    psi - with `engine.UH1_TRANSMISSION_LIMIT_PSI` beside them as the limit the
+    reading is against.  Two imports in `main.py` (4714 lines), one format
+    string, and nothing under the physics touched: which limit a reading is read
+    against was always the caption's business, and the model already had both
+    numbers.  A gauge shown against what the transmission will take is also the
+    manual's own caution made visible - the engine "can exceed the transmission
+    structural limit ... under certain conditions" (7.1-13) - because in dense
+    air `Governor.power_available` scales the available torque past that limit,
+    and the same line then reads over 50 psi.
 
+  Verified: `main.py --check` printed `main.py check passed` with the new
+  assertions written in the style the check already keeps - the engine panel as
+  the exact string built from the telemetry it prints, `| Q %3.0f %% (%2.0f/%2.0f
+  psi) | AUTO` on the freshly fitted T53; the psi and the percentage agreeing to
+  1e-9, since they are one torque in two units; and the pad's own idling rotor
+  reading above zero and under the limit rather than reading nothing.  The gate
+  was re-run in full for it: the seven module self tests each printed their own
+  `self test passed`, `regression_tm73254.py` printed its own, `_rt_check.py`
+  flew both missions and wrote `_rt_log.txt`, and every one exited 0.  The
+  table's own row for `main.py` is read back at what it now is,
   `README.md`'s caption paragraph names the limit the gauge is read against, and
   `attic/_tmp_counts.py` is at 39 claims - this entry's own line count among
   them - with none disagreeing.
