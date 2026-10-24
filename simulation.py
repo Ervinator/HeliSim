@@ -142,7 +142,8 @@ from airframe import (FOOT, KNOT, POUND, Airframe, BodyForces, FlightState,
                       GroundPlane, UH1_HUB_HEIGHT, UH1_OMEGA, UH1_SIM_MASS,
                       UH1_TEST_MASS, apply, direction_cosine_matrix,
                       transpose)
-from engine import (Engine, UH1_ENGINE_POWER_W, UH1_TRANSMISSION_LIMIT_PSI)
+from engine import (Engine, UH1_ENGINE_POWER_W, UH1_IGE_INLET_TEMPERATURE_RISE_C,
+                    UH1_TRANSMISSION_LIMIT_PSI)
 from rotor_control import PilotControls
 
 # ---------------------------------------------------------------------------
@@ -281,6 +282,16 @@ def airframe_preset(name="simulation", engine=None, **overrides):
     ``airframe_preset(air_density=1.19)`` is one flying in an air whose density a
     caller already knows.
 
+    ``air_profile`` is the same opt-in one step further on, and it is the
+    difference between an air that is *set* and an air that is *read*: given a
+    number - how far off the standard day the day is, in C - the pair follows the
+    aircraft instead of staying where it was put, so
+    ``airframe_preset(engine=True, air_profile=0.0)`` climbs into thinner air and
+    reads the engine's chart lower on the way up, which is what the manual has a
+    pilot doing by hand.  ``hover_ige=True`` adds 7.1-13(c) to either of them: the
+    chart read 10 C warmer, which is what a prolonged hover in ground effect is
+    (:attr:`airframe.Airframe.hover_ige`).
+
     *engine* is the opt-in that changes the aircraft rather than the trim:
     ``None``, the default, is no engine at all, i.e. the report's fixed rotor
     that every figure in TM-73254 was computed with; ``True`` is a fresh
@@ -341,6 +352,14 @@ class EngineTelemetry:
     calibration (TM 55-1520-210-10, 7.1-14), i.e. where the gauge points, and
     ``maximum_percent`` is what fraction of what the engine *could* give in this
     air is being asked of it.
+
+    ``inlet_temperature_c`` is the temperature the torque available chart was
+    *read* at, which is the engine's own reading of the air rather than the
+    pilot's: the free air temperature of :attr:`Telemetry.fat_c` in free air, and
+    10 C above it while the flight is the prolonged hover in ground effect that
+    7.1-13(c) corrects for (:attr:`airframe.Airframe.hover_ige`).  It is ``None``
+    where no chart was read at all - an aircraft with no engine, and one whose
+    governor was handed a density instead of the manual's pair of numbers.
     """
 
     has_engine: bool          # False on the report's fixed-rotor aircraft
@@ -351,6 +370,7 @@ class EngineTelemetry:
     torque_percent: float     # %, of the 1125 ft-lb data plate torque
     maximum_torque: float     # N m, available at this speed and air
     maximum_percent: float    # %, of that maximum being used
+    inlet_temperature_c: Optional[float]  # C, the chart's own temperature
     failed: bool              # the engine is out
     emer: bool                # the GOV switch is in EMER, the governor out
 
@@ -378,6 +398,15 @@ class Telemetry:
     ``engine`` is the engine's own panel, nested: see :class:`EngineTelemetry`,
     and note that ``rotor_percent`` beside it is the *rotor's* speed, which a
     governor holds a little under 100 on the aircraft that has an engine.
+
+    ``pressure_altitude_ft`` and ``fat_c`` are what the air the aircraft is in
+    *is*: the manual's own two numbers for it, and the pair every performance
+    chart in TM 55-1520-210-10 is drawn against.  They are the pair set on the
+    airframe when the air is a setting, and where the aircraft has actually got
+    to when it is a profile (:attr:`airframe.Airframe.air_profile`) - so a run
+    that climbs reads the thinner air it climbed into, and the engine's chart is
+    read at these two numbers (see :class:`EngineTelemetry`, which carries the one
+    case in which that reading is taken a temperature warmer).
     """
 
     sim_time: float           # s, physics time actually flown
@@ -412,6 +441,8 @@ class Telemetry:
     ground_effect: float      # K_G, 1 in free air
     inflow_ratio: float       # lambda, the report's
     advance_ratio: float      # mu
+    pressure_altitude_ft: float  # ft, the air the flight is in
+    fat_c: float              # C, its free air temperature
     engine: EngineTelemetry   # N2, throttle, torque gauge - see that class
     on_ground: bool
     crashed: bool
@@ -1667,6 +1698,11 @@ class Simulation:
         that distance is changing at, so both are clearances over the ground
         rather than coordinates of the world - which on level ground is the
         altitude and the vertical speed they have always been, exactly.
+
+        ``pressure_altitude_ft`` and ``fat_c`` are the airframe's own reading of
+        the air it is in (:attr:`airframe.Airframe.air_here`), which is the pair
+        it was given until a run asks for a profile and where the aircraft has
+        got to from then on.
         """
         state = self.airframe.state
         forces = self.forces
@@ -1676,6 +1712,7 @@ class Simulation:
         attitude = state.attitude_deg
         rates = state.rates_deg
         rotor = forces.rotor
+        air = self.airframe.air_here
         return Telemetry(
             sim_time=self.sim_time,
             alt_agl=plane.height(state.position),
@@ -1700,6 +1737,7 @@ class Simulation:
             lift=forces.lift, ground_effect=rotor.ground_effect,
             inflow_ratio=rotor.inflow_ratio,
             advance_ratio=rotor.advance_ratio,
+            pressure_altitude_ft=air[0], fat_c=air[1],
             engine=self.engine_telemetry(),
             on_ground=self.on_ground, crashed=self.crashed,
             crash_reason=self.crash_reason,
@@ -1716,7 +1754,10 @@ class Simulation:
         governor (:meth:`airframe.Airframe.engine_air`).
         With no engine aboard the gauges read zero and ``has_engine`` is False,
         while the *grip* is still reported, since it is a control position an
-        aircraft without an engine in the model still has.
+        aircraft without an engine in the model still has.  ``inlet_temperature_c``
+        is the third of those numbers the chart is read at, which is the free air
+        temperature and 10 C above it while the flight is the cushion hover of
+        7.1-13(c); it is ``None`` where there was no chart reading to report.
         """
         engine = self.airframe.engine
         rotor_rpm = self.airframe.state.rotor_rpm
@@ -1724,9 +1765,11 @@ class Simulation:
             return EngineTelemetry(
                 has_engine=False, throttle=self.pilot.throttle(), rpm=0.0,
                 power=0.0, torque=0.0, torque_percent=0.0, maximum_torque=0.0,
-                maximum_percent=0.0, failed=False, emer=False)
+                maximum_percent=0.0, inlet_temperature_c=None, failed=False,
+                emer=False)
         governor = engine.governor
-        maximum = engine.max_torque(rotor_rpm, *self.airframe.engine_air())
+        air = self.airframe.engine_air()
+        maximum = engine.max_torque(rotor_rpm, *air)
         torque = engine.torque(rotor_rpm)
         return EngineTelemetry(
             has_engine=True, throttle=governor.throttle,
@@ -1734,6 +1777,7 @@ class Simulation:
             torque_percent=engine.torque_percent(rotor_rpm),
             maximum_torque=maximum,
             maximum_percent=(100.0 * torque / maximum if maximum > 0.0 else 0.0),
+            inlet_temperature_c=air[2],
             failed=governor.failed, emer=governor.emer)
 
 
@@ -2117,6 +2161,47 @@ def _self_test():
     # what the aircraft needs and the ceiling is what the air has, so the manual's
     # own altitude warning (7.1-12) comes out of the telemetry as a percentage.
     assert high_panel.maximum_percent > low_panel.maximum_percent
+    # The panels carry the air itself as well, and on a preset it is the preset's
+    # own pair to the last bit: the manual's two numbers for what the air is, and
+    # the temperature the chart was read at, which is the free air one until a
+    # flight declares itself the prolonged hover in ground effect of 7.1-13(c).
+    assert deck.telemetry().pressure_altitude_ft == deck.airframe.pressure_altitude
+    assert deck.telemetry().fat_c == deck.airframe.fat
+    assert low_panel.inlet_temperature_c == deck.airframe.fat
+    assert aloft.telemetry().pressure_altitude_ft == 10000.0
+    assert aloft.telemetry().fat_c == 15.0
+    assert high_panel.inlet_temperature_c == 15.0
+
+    # A profile is that same pair *read off the aircraft* instead of set, and the
+    # panel says so: a run put at 10,000 ft reads 10,000 ft and the standard day's
+    # temperature there with nothing set on its airframe at all, and the chart
+    # under the engine is read at those two - the ISA tables' 0.9046 kg/m^3, where
+    # the +15 C air above reads 0.8424 - which is the difference between an air
+    # that is a setting and an air that follows the flight.
+    flying = Simulation(airframe=airframe_preset(engine=True, air_profile=0.0))
+    flying.reset(altitude=10000.0 * FOOT)
+    for _ in range(120):
+        flying.step_fixed()
+    carried = flying.telemetry()
+    assert not flying.crashed
+    assert carried.pressure_altitude_ft > 9000.0, carried.pressure_altitude_ft
+    assert abs(carried.pressure_altitude_ft - carried.alt_agl / FOOT) < 1e-9
+    assert abs(flying.airframe.density - 0.9046) < 1e-2, flying.airframe.density
+    assert abs(carried.fat_c - flying.airframe.fat) > 10.0   # not the setting
+    # And 7.1-13(c) on top of it, which is a declaration about the flight rather
+    # than a reading: the same aircraft, in the same air, at the same instant,
+    # with the chart read ten degrees warmer - so it flips on an aircraft already
+    # flying, and what moves is the ceiling under the engine and nothing else.
+    before = flying.telemetry()
+    flying.airframe.hover_ige = True
+    in_cushion = flying.telemetry()
+    assert in_cushion.fat_c == before.fat_c
+    assert in_cushion.engine.torque == before.engine.torque
+    assert in_cushion.engine.power == before.engine.power
+    assert (in_cushion.engine.inlet_temperature_c - before.fat_c
+            == UH1_IGE_INLET_TEMPERATURE_RISE_C)
+    assert in_cushion.engine.maximum_torque < before.engine.maximum_torque
+    assert in_cushion.engine.maximum_percent > before.engine.maximum_percent
 
     # EMER takes the governor out of the loop and the twist grip becomes the
     # fuel control (TM 55-1520-210-10, 9-3): half a grip is half of what the

@@ -40,10 +40,15 @@ has `--check` for the wiring that flying cannot test.  What follows is what
     - 36.8 psi against the 36.9 that 73.9 per cent of sea level density is worth
     at 10,000 feet - and off a standard day they do not, since at 10,000 feet
     and -30 C the chart reads 49.8 psi where that air's density is worth 40.8.
-    What is left is the air the flight is flown *through*: the pair is a setting
-    the run is given rather than something read off where the aircraft is, and
-    7.1-13's inlet temperature correction is still a pilot's job by hand - see
-    the limitations below.
+    What was left of it is closed too (2026-10-23, see `Done`): the pair can be
+    *read off the aircraft* rather than set - `Airframe.air_profile`, and
+    `--air-profile` in the sandbox - so a climb thins the air the chart is read at
+    and a trim solved at an altitude solves in that altitude's air, and 7.1-13(c)'s
+    inlet temperature correction is the model's own arithmetic
+    (`engine.inlet_temperature_c`, `Airframe.hover_ige`, `--ige-hover`) rather than
+    a pilot's by hand.  What no run can say yet is anything *about* that air beyond
+    a standard day shifted by a number: no wind field, no inversion, no weather -
+    see the limitations below.
 
 * **A hand has been put on the autorotation; the harness's other two missions
   have not had one.**  `_rt_autoro_hand.py` - see `Done` - flies the
@@ -162,18 +167,21 @@ These are choices, not oversights: each is stated where it lives.
 * **The model is evaluated in SI** while the reports tabulate English units.
   The conversions are written next to each constant, so both columns can be
   read, but a difference in the fourth figure can come from either.
-* **The air is a setting, not a profile.**  What a flight flies in is a pressure
-  altitude and a free air temperature on the airframe - `Airframe.pressure_altitude`,
-  `Airframe.fat` - with the density worked out from them
-  (`aerodynamics.isa_air_density`) or named outright, which is the manual's own
-  way of saying what the air is.  What is *not* in the model is that air changing
-  with where the aircraft is: nothing reads the state's own altitude, so a run
-  that climbs to 10,000 ft keeps the air it was configured with, and there is no
-  temperature profile and no wind field over the scenery - the ground is a plane
-  and the sky above it is one air, the same gap in one more place.  The inlet
-  temperature of 7.1-13 is not modelled either: the chart is read at the free air
-  temperature the pilot can see, and a prolonged hover in ground effect needs its
-  own 10 C correction by hand.
+* **The air is a profile now, but a standard one.**  What a flight flies in is a
+  pressure altitude and a free air temperature - the manual's own two numbers for
+  it - either named on the airframe (`Airframe.pressure_altitude`,
+  `Airframe.fat`), with the density worked out from them
+  (`aerodynamics.isa_air_density`) or named outright, or *read off the aircraft*:
+  `Airframe.air_profile` is the standard atmosphere the scenery stands in, lapsed
+  to the aircraft's own altitude and shifted by however far off standard the day
+  is, and `Airframe.hover_ige` is 7.1-13(c)'s ten degrees of inlet temperature in a
+  prolonged hover in the cushion.  What is *not* in the model is any air that is
+  not the standard atmosphere's shape: no inversion, no weather, and no wind field
+  over the scenery - the ground is a plane and the sky above it is one air, the
+  same gap in one more place.  The cushion correction is the flight's own
+  *declaration* rather than a reading, because "prolonged" is a word about a clock
+  and this model's ground effect is a smooth function of the rotor's height, with
+  no edge in it to call a hover on either side of.
 * **`main.py`'s key log is stamped where the loop handles the key**, not where it
   was pressed: the event is taken out of pygame's queue before the frame is flown,
   so a line is up to a frame late - inside the 1/60 s the physics steps in
@@ -207,7 +215,7 @@ These are choices, not oversights: each is stated where it lives.
     metres, so the psi on the caption are `telemetry.engine.torque` at that
     slope - `engine.UH1_TORQUE_NM_PER_PSI`, 621.4 N m of rotor shaft torque per
     psi - with `engine.UH1_TRANSMISSION_LIMIT_PSI` beside them as the limit the
-    reading is against.  Two imports in `main.py` (4582 lines), one format
+    reading is against.  Two imports in `main.py` (4714 lines), one format
     string, and nothing under the physics touched: which limit a reading is read
     against was always the caption's business, and the model already had both
     numbers.  A gauge shown against what the transmission will take is also the
@@ -232,6 +240,118 @@ These are choices, not oversights: each is stated where it lives.
 
 
 ## Done
+
+* 2026-10-23 - **the air is a profile a flight reads rather than a setting it is
+  given, and 7.1-13's inlet correction is the model's own arithmetic.**  The two
+  halves `Next` left open under the engine's own bullet, and with them the last of
+  that level: `airframe.py` reads the air off the aircraft, `engine.py` owns the
+  ten degrees a prolonged hover in the cushion is worth, and a run can ask for
+  either from the command line.
+
+  `airframe.Airframe.air_at` is the one place the manual's pair is worked out, and
+  it is worked out for an *altitude* rather than for the aircraft:
+  :attr:`air_here` is that at the state's own altitude.  With no profile the two
+  are the named `pressure_altitude` and `fat` whatever the altitude asked about,
+  which is what a setting means; with one - `air_profile`, the number of C the day
+  is off standard - the pressure altitude is the aircraft's own altitude over sea
+  level and the temperature is the standard day's lapsed to it, shifted by that
+  number.  The scenery stands in the standard atmosphere, so the altitude at which
+  that atmosphere has the pressure the aircraft is flying in *is* the aircraft's
+  own altitude: that is what makes the pressure altitude a reading here and not a
+  second setting.
+
+  It is the *state* the pair follows and not only the flight's own, which is the
+  other half of the same idea.  `density_at` and `forces` read the air at the state
+  being evaluated, so the rotor's forces in a trim are those of the altitude the
+  trim is *solved at* rather than of wherever the aircraft happens to be sitting,
+  and `engine_air` takes a state too, so the shaft a trim closes is closed in that
+  same air.  That is the promise the entry below made when the pair became a
+  preset's business, kept now for a run that climbs on its own: a trim at an
+  altitude and the loop that flies it read one chart.
+
+  `engine.inlet_temperature_c` is 7.1-13(c) in one function - "Prolonged IGE hover
+  may increase engine inlet temperature as much as 10 C, therefore a 10 C higher
+  FAT must be used to correct for this condition" - so the chart is read ten
+  degrees warmer and its answer is not corrected afterwards, which is the manual's
+  own order of operations.  `Airframe.hover_ige` is the condition that paragraph
+  is about, and it is the flight's *declaration* rather than a reading, for the
+  paragraph's own reason: "prolonged" is a clock's word, and this model's ground
+  effect is a smooth function of the rotor's height (equation 10a) with no edge in
+  it to call a hover on either side of.
+
+  Both are visible where a pilot would look.  `Telemetry` gained
+  `pressure_altitude_ft` and `fat_c` - the air the flight is in, the pair every
+  chart in the manual is drawn against - and `EngineTelemetry` gained
+  `inlet_temperature_c`, the temperature the torque available chart was read at:
+  the free air one in free air, ten above it in the cushion, and None where no
+  chart was read.  `main.py` gained `--air-profile [C]` and `--ige-hover`, prints
+  what they mean before the window opens, and carries the pair on the caption
+  while a profile is on with the chart's own temperature beside it in the cushion,
+  so the aircraft of the report's figures - which asks for neither - reads exactly
+  as it did.
+
+  Verified: the module that owns each number.  `engine.py`: the correction is the
+  manual's ten and nothing else, `inlet_temperature_c(15.0) == 15.0` to the last
+  bit, and its own worked example for the sheet is 36.8 psi at 10,000 ft and
+  +15 C read in free air against 32.7 read ten degrees warmer - 4.1 psi of the
+  transmission's 50 that a cushion hover has not got.  `airframe.py`: a profiled
+  aircraft at 10,000 ft reads 10,000 ft and -4.8 C with nothing set on it, the
+  0.9046 kg/m^3 and 44.2 psi of chart that a standard day there is, where the same
+  airframe holding the pair it was configured with reads the 50 psi of sea level
+  standard; a +10 C day is thinner at both; the cushion moves the chart's own
+  temperature and nothing else, the density the rotor flies in staying put; and
+  flown, two aircraft in the same state on the same sticks hold their hover, the
+  one in the thinner air making a little less of them.  `simulation.py` and
+  `main.py --check`: the two panels read the preset's own pair to the last bit and
+  the pair a profile reads off the aircraft, the inlet temperature is the free air
+  one until the cushion is declared, the caption carries both only when a run has
+  asked for them, and the six halves of the command line parse.  The gate was
+  re-run in full and every part of it held: the seven module self tests each
+  printed their own passed line, `main.py --check` printed `main.py check passed`,
+  `_rt_check.py` flew both missions, and `regression_tm73254.py` reproduced the
+  report's figures to the last bit - nothing in it asks for a profile, so its air
+  is the one air it always was - with `attic/_tmp_counts.py` printing its own
+  claims check over the files as they now stand.
+
+* 2026-10-23 - **the scratch the engine level's two commits were read through
+  has left the root, and the check the documents' own line counts are gated on
+  is where a clone can run it.**  Two halves of one housekeeping job, and no
+  change to the model in either.
+
+  The root had picked up nineteen files since it was last swept: `_m1.txt` to
+  `_m4.txt`, `_m_a1.txt`, `_m_a2.txt`, `_m_d1.txt`, `_m_p1.txt` to `_m_p4.txt`
+  and `_m_s1.txt` to `_m_s8.txt`.  They are excerpts of `main.py`,
+  `airframe.py`, `_rt_demo.py`, `_rt_pilot.py` and `simulation.py` read a region
+  at a time while figure 7.1-2 was being read curve by curve and then handed to
+  a flight - one of them a numbered grep rather than an excerpt - and nothing in
+  the project names any of them and nothing generates them, so they went to
+  `attic/` with the rest of the throwaway instead of being deleted, which is the
+  precedent the sweep of 2026-09-28 set.  What a run writes *for itself* stayed
+  where it is: the `_rt_*.txt` and `_tmp_*.txt` transcripts, `sim_demo.txt`, the
+  `log_*.txt` a detached run leaves and `keylog.txt`, which `attic/README.md`
+  already gives the reason for.
+
+  The other half is the gate.  `attic/_tmp_counts.py` reads every `(N lines)`
+  claim in `README.md`, `TODO.md` and `attic/README.md` back off the files
+  themselves, and that is what makes the numbers worth writing down - but
+  `attic/` was ignored wholesale, so a clone had neither the tool nor the README
+  it reads claims out of, and a check nobody can run is not one.  The rules at
+  the end of `.gitignore` put the directory, `attic/README.md` and the `.py`
+  tools beside it back under version control and leave the bulk ignored; the
+  nine `_tmp_` tools whose counts the three documents claim are among them, so
+  the gate runs from a clone now, and `README.md` says so under Self tests.
+
+  Verified: the nineteen files moved rather than copied, and the root listing is
+  the nine modules, the nine `_rt_` modules, `_tmp_shadow.py`, `README.md`,
+  `TODO.md`, `.gitignore`, the two XML files, `requirements.txt` and the
+  transcripts a run keeps; `attic/README.md` names the nineteen and now carries
+  the count of its own `.txt` files as 131.  The sweep's own `git status` showed
+  three modified files - `README.md`, `TODO.md` and `.gitignore` - and everything
+  it added was `attic/README.md` and the nineteen `.py` tools beside it, with no
+  dump, no crop and not `attic/_head_main.py` among them.  `python
+  attic/_tmp_counts.py` printed "39 claims, 0 disagreeing" and exited 0 both
+  before the sweep and after it - the same 39, no claim added or moved - which
+  is the evidence that moving the files disturbed no count in any document.
 
 * 2026-10-23 - **the air the aircraft flies in is a pressure altitude and a free
   air temperature, and a flight reads figure 7.1-2 off them.**  This is the

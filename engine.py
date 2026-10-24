@@ -274,6 +274,12 @@ def torque_available_psi(pressure_altitude, fat):
     is how the manual's appendix C reads a 1,000 foot value off its 2,000 foot
     neighbours.
 
+    The temperature it is handed is the one the *chart* is read at, which is the
+    free air temperature a thermometer shows - and :func:`inlet_temperature_c` of
+    it, 10 C warmer, in the prolonged hover in ground effect of 7.1-13(c).  That
+    correction belongs where the chart is read and not on its answer, which is
+    why it is a temperature a caller hands in rather than arithmetic done here.
+
     :data:`UH1_TORQUE_CHART_PSI` is the family itself, and
     :meth:`Governor.power_available` uses this when it is given a pressure
     altitude and a free air temperature.
@@ -290,6 +296,37 @@ def torque_available_psi(pressure_altitude, fat):
                  + _chart_curve(UH1_TORQUE_CHART_PSI[deep], temperature)
                  * share)
     return min(available, UH1_TRANSMISSION_LIMIT_PSI)
+
+
+#: 7.1-13(c), the inlet correction: "Prolonged IGE hover may increase engine
+#: inlet temperature as much as 10 C, therefore a 10 C higher FAT must be used
+#: to correct for this condition."  The chart is drawn against the temperature of
+#: the air going *into* the engine, and what a pilot has is the free air
+#: temperature: the two are the same number in free air, and this far apart in a
+#: prolonged hover in the cushion.
+UH1_IGE_INLET_TEMPERATURE_RISE_C = 10.0       # C, 7.1-13(c)
+
+
+def inlet_temperature_c(fat, hover_ige=False):
+    """The temperature the torque available chart is read at, C.
+
+    The free air temperature with 7.1-13(c) applied: a prolonged hover in ground
+    effect can raise the engine's inlet temperature by as much as
+    :data:`UH1_IGE_INLET_TEMPERATURE_RISE_C`, and the manual's own correction is
+    to read the chart that much warmer rather than to correct the reading
+    afterwards.  With *hover_ige* false this is the free air temperature
+    unchanged, to the last bit, which is what every flight but that one wants.
+
+    *hover_ige* is the flight's own condition, handed in rather than read here:
+    "prolonged" is a word about a clock, and the only reading of the ground this
+    project has is :func:`airframe.ground_effect_factor`, a smooth function of
+    the rotor's own height - so which flights the paragraph is about is the
+    flight's business (:attr:`airframe.Airframe.hover_ige`, and ``--ige-hover``
+    on the sandbox's command line) while the arithmetic is this function's.
+    """
+    rise = UH1_IGE_INLET_TEMPERATURE_RISE_C if hover_ige else 0.0
+    return float(fat) + rise
+
 
 #: The gas producer's time constant, sec: this project's own, like the rotor
 #: inertia over in :mod:`airframe` and for the same reason - a first order lag
@@ -389,11 +426,11 @@ class Governor:
         figure 7.1-2 answers the question directly and the air density is not
         used: :func:`torque_available_psi` returns the chart's own calibrated
         psi, the EMER and bleed penalties come off in psi as they do above,
-        and the temperature the chart is read at is the one the air is at,
-        which is the free air temperature the pilot reads, not the inlet one
-        (7.1-13 warns that a prolonged hover in ground effect can raise the
-        inlet temperature by 10 C, and says to correct for it by reading the
-        chart 10 C warmer).
+        and the temperature it reads that chart at is whatever it is handed - the
+        free air temperature of the air, or :func:`inlet_temperature_c` of it
+        when the flight is the prolonged hover in ground effect of 7.1-13(c) -
+        so a flight's own air is the one place that decides which of the two,
+        and this method never guesses (:meth:`airframe.Airframe.engine_air`).
 
         An airframe passes the pair for its *own* air and a density on its own
         when a caller names one instead (:meth:`airframe.Airframe.engine_air`),
@@ -944,6 +981,27 @@ def _self_test():
     assert abs(Governor(bleed_psi=UH1_BLEED_HEATER_PSI)
                .power_available(pressure_altitude=10000.0, fat=15.0)
                - UH1_ENGINE_POWER_W * (36.8 - 1.4) / 50.0) < 1e-6
+
+    # 7.1-13(c) as arithmetic: a prolonged hover in the cushion is the chart read
+    # 10 C warmer - the paragraph's own 10 and nothing of this project's - and at
+    # every other condition the free air temperature passes through untouched, to
+    # the last bit.  Warmer is the lower ceiling, and the correction is worth the
+    # psi the temperature is worth: the sheet's own worked example, 36.8 psi at
+    # 10,000 feet and +15 C, is 32.7 read 10 C warmer, so a hover in the cushion
+    # at that altitude is being offered 4.1 psi less than one out of it.
+    assert UH1_IGE_INLET_TEMPERATURE_RISE_C == 10.0
+    assert inlet_temperature_c(15.0) == 15.0
+    assert inlet_temperature_c(-30.0) == -30.0
+    assert inlet_temperature_c(-30.0, hover_ige=True) == -20.0
+    assert abs(torque_available_psi(10000.0, inlet_temperature_c(15.0, True))
+               - torque_available_psi(10000.0, 25.0)) < 1e-12
+    assert abs(torque_available_psi(10000.0, 25.0) - 32.7) < 0.2
+    # And the ceiling a flight is governed against is that psi of the sea level
+    # power, since the chart is where the pair turns into power: the corrected
+    # air is 32.7/50 of it and not a density scaled.
+    assert abs(Governor().power_available(
+        pressure_altitude=10000.0, fat=inlet_temperature_c(15.0, True))
+        - UH1_ENGINE_POWER_W * 32.7 / 50.0) < 1e-6
 
     # The settled torque, which is what a rotor speed trim closes the shaft on:
     # nothing at or above the speed the governor is asking for, since an idling

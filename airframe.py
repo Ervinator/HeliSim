@@ -107,7 +107,8 @@ from aerodynamics import (GRAVITY, isa_air_density, isa_temperature_c,
 from rotor_control import (ControlLags, MixingLaw, PilotControls,
                            UH1_COLLECTIVE_TRAVEL_IN,
                            UH1_ROTOR_TIME_CONSTANT_S, solve_linear)
-from engine import Engine, UH1_ENGINE_DROOP_RPM, UH1_ENGINE_RPM
+from engine import (Engine, inlet_temperature_c, UH1_ENGINE_DROOP_RPM,
+                    UH1_ENGINE_RPM)
 
 # ---------------------------------------------------------------------------
 # Unit conversions, so that the report's English column can be quoted next to
@@ -1504,6 +1505,21 @@ class Airframe:
     are sea level standard, where the two ways of saying what the air is agree
     to the last bit, so an airframe that never mentions its air is the aircraft
     of this report, flying where every figure in TM-73254 was computed.
+
+    The pair can also be *read off the aircraft* rather than named, which is what
+    :attr:`air_profile` is for: a run that asks for a profile flies the standard
+    atmosphere the scenery is standing in, so the pressure altitude is the
+    aircraft's own altitude and the temperature is the standard day's at that
+    altitude, shifted by however far off standard the day is.  A climb then thins
+    the air the rotor flies in and the air the engine's chart is read at, with
+    nothing to re-set on the way up.  It is off by default, because the named
+    pair is the air every figure in TM-73254 was computed in and a preset that
+    says nothing about its air has to keep flying it.
+
+    The one thing a profile cannot read off the aircraft is the *condition* of
+    :attr:`hover_ige`: 7.1-13(c) reads the engine's chart 10 C warmer in a
+    prolonged hover in ground effect, and "prolonged" is a clock's word rather
+    than a fact about a state.
     """
 
     mass: float = UH1_SIM_MASS
@@ -1534,6 +1550,39 @@ class Airframe:
     #: ``fat=isa_temperature_c(pressure_altitude * FOOT)``, which is -4.8 C at
     #: 10,000 ft, and every figure this project reproduces is a sea level one.
     fat: float = ISA_SEA_LEVEL_TEMPERATURE_C
+    #: The air read off the aircraft instead of named: how far off the standard
+    #: day the day is, C, or ``None`` - the default - for the pair above.
+    #: ``0.0`` is a standard day over the scenery and ``+10.0`` one ten degrees
+    #: warmer than standard, and what a flight then flies in is read off its own
+    #: state on every call: a pressure altitude of the aircraft's altitude over
+    #: sea level and a temperature of
+    #: :func:`aerodynamics.isa_temperature_c` there plus this, which together
+    #: are the standard atmosphere the scenery is standing in, on a day this far
+    #: off standard.  See :attr:`air_here`, which is the one place that reads it.
+    #:
+    #: What it buys is the thing a *setting* cannot do: a run that climbs to
+    #: 10,000 ft flies thinner air and reads the engine's chart lower on the way
+    #: up, where a named pair is the same air at every altitude - which is what
+    #: the manual expects a pilot to correct for by hand, reading the chart again
+    #: at the new pressure altitude and free air temperature.
+    air_profile: Optional[float] = None
+    #: Is this flight the prolonged hover in ground effect of 7.1-13(c)?
+    #:
+    #: The one condition in which the engine's chart is read at the *inlet*
+    #: temperature rather than at the free air temperature: a prolonged hover in
+    #: the cushion can raise it by as much as
+    #: :data:`engine.UH1_IGE_INLET_TEMPERATURE_RISE_C`, and
+    #: :func:`engine.inlet_temperature_c` is where the manual's correction is
+    #: made - in :meth:`engine_air`, so that the frame loop, the reset, all three
+    #: trims and the telemetry read the one chart.
+    #:
+    #: False by default, which is every flight but that one.  It is a
+    #: *declaration* and not a reading, for the reason "prolonged" is: the model's
+    #: own measure of the ground is a smooth function of the rotor's height
+    #: (:func:`ground_effect_factor`, equation 10a), so there is no edge in it to
+    #: call a hover on both sides of - and a run that is flying the condition says
+    #: so (``--ige-hover`` on the sandbox's command line).
+    hover_ige: bool = False
     twist_deg: float = UH1_TWIST_DEG
     rotor_time_constant: float = UH1_ROTOR_TIME_CONSTANT_S
     ground_effect: bool = True
@@ -1590,30 +1639,87 @@ class Airframe:
         """
         return self.engine is not None or self.engine_torque is not None
 
+    def air_at(self, altitude):
+        """``(pressure altitude, free air temperature)`` at an altitude, m.
+
+        In feet and C, which are the manual's own two numbers for what the air
+        *is*: the pair its performance charts are drawn against.  With no
+        :attr:`air_profile` this is the pair named on the airframe and nothing
+        else - :attr:`pressure_altitude` and :attr:`fat`, the air the aircraft was
+        configured to fly in, which does not move with the altitude it is asked
+        about, because a setting is one air.
+
+        With a profile it is read at the altitude it is asked about, which is the
+        whole of the difference: the pressure altitude is that altitude over sea
+        level - the altitude at which the standard atmosphere has the pressure the
+        scenery is standing in at that height, which is what a pressure altitude
+        *means* - and the temperature is the standard day's there
+        (:func:`aerodynamics.isa_temperature_c`) shifted by the profile's own
+        offset.
+
+        An altitude rather than a state, because the callers differ by exactly
+        that: the flight's own air is read where the aircraft is (:attr:`air_here`
+        is this at :attr:`state`'s altitude), and a *trim* is a condition at a
+        height it is solved at and not at wherever the aircraft happens to be
+        sitting, so its air is this at the height the condition is for.
+        """
+        if self.air_profile is None:
+            return self.pressure_altitude, self.fat
+        return (altitude / FOOT,
+                isa_temperature_c(altitude) + self.air_profile)
+
+    @property
+    def air_here(self):
+        """:meth:`air_at` at the aircraft's own altitude: the air it is in now.
+
+        One place reads the state's altitude, and this is it: the frame loop, the
+        reset and the engine's governor are all handed this air, and so is a
+        panel (:meth:`simulation.Simulation.telemetry`).
+        """
+        return self.air_at(self.state.altitude)
+
+    def density_at(self, altitude):
+        """The air at an altitude, kg/m^3: :attr:`air_density` if one was named.
+
+        :attr:`density` asked about a height instead of about the aircraft, and
+        the two are the same number wherever the aircraft is.  The rotor's own
+        forces in a trim are this at the altitude the trim is solved at
+        (:meth:`forces`), which is what keeps a condition solved at 10,000 ft in
+        10,000 ft's air when there is a profile.
+        """
+        if self.air_density is not None:
+            return float(self.air_density)
+        pressure_altitude, fat = self.air_at(altitude)
+        return isa_air_density(pressure_altitude * FOOT, fat)
+
     @property
     def density(self):
         """The air being flown, kg/m^3: :attr:`air_density` if one was named.
 
-        Otherwise the standard atmosphere's at :attr:`pressure_altitude` and
-        :attr:`fat` (:func:`aerodynamics.isa_air_density`, over the one unit
-        conversion from the feet the manual's charts are drawn in), which is the
-        same air the engine's torque available chart is read at: one air, said
-        the manual's way.  It is exactly :data:`aerodynamics.RHO_SEA_LEVEL` at
-        the defaults, so an airframe that says nothing about its air is the
-        1.225 kg/m^3 every other constant in this project was written against.
+        Otherwise the standard atmosphere's at the pressure altitude and free air
+        temperature of :attr:`air_here`
+        (:func:`aerodynamics.isa_air_density`, over the one unit conversion from
+        the feet the manual's charts are drawn in), which is the same air the
+        engine's torque available chart is read at: one air, said the manual's
+        way.  It is exactly :data:`aerodynamics.RHO_SEA_LEVEL` at the defaults, so
+        an airframe that says nothing about its air is the 1.225 kg/m^3 every
+        other constant in this project was written against.
         """
-        if self.air_density is not None:
-            return float(self.air_density)
-        return isa_air_density(self.pressure_altitude * FOOT, self.fat)
+        return self.density_at(self.state.altitude)
 
-    def engine_air(self, air_density=None):
+    def engine_air(self, air_density=None, state=None):
         """The three numbers the engine's governor is asked in, as it takes them.
 
-        ``(density, pressure altitude, free air temperature)``, in kg/m^3, feet
-        and C.  Which of them the governor *uses* is the whole of how the chart
-        gets read in a flight: handed the pair it answers from the digitised
-        figure 7.1-2, and handed a density on its own it scales the sea level
-        power by it - see :meth:`engine.Governor.power_available`.
+        ``(density, pressure altitude, temperature)``, in kg/m^3, feet and C, the
+        last being the temperature the chart is *read* at: the free air
+        temperature of :meth:`air_at`, or :func:`engine.inlet_temperature_c` of it
+        when this flight is the prolonged hover in ground effect of 7.1-13(c)
+        (:attr:`hover_ige`).  That is the one place the manual's correction is
+        made, so a flight reads its one chart everywhere it reads it.  Which of
+        the three the governor *uses* is the whole of how the chart gets read in a
+        flight: handed the pair it answers from the digitised figure 7.1-2, and
+        handed a density on its own it scales the sea level power by it - see
+        :meth:`engine.Governor.power_available`.
 
         A density *is* the other way of asking the same question, so it is the
         one that gets used when there is one: a caller's, if it named one, and
@@ -1624,12 +1730,20 @@ class Airframe:
         and a caller who named a density asked for the first one.  The trims
         hand a named density on the same way, so a trim solved in another air
         closes the shaft on the answer the frame loop is going to fly on.
+
+        *state* is the state the air is read at, the aircraft's own by default:
+        the frame loop, the reset and a panel all want it there, and a trim hands
+        the state it is *solving*, so a condition at 10,000 ft is closed in
+        10,000 ft's air (:meth:`shaft_residual`).
         """
         if air_density is not None:
             return float(air_density), None, None
         if self.air_density is not None:
             return float(self.air_density), None, None
-        return self.density, self.pressure_altitude, self.fat
+        state = self.state if state is None else state
+        pressure_altitude, fat = self.air_at(state.altitude)
+        return (self.density_at(state.altitude), pressure_altitude,
+                inlet_temperature_c(fat, self.hover_ige))
 
     @property
     def windmill(self):
@@ -1723,19 +1837,23 @@ class Airframe:
     def forces(self, control_pitch, state=None, wind=None, air_density=None):
         """The report's forces and moments for one instant, in body axes.
 
-        *air_density* defaults to the airframe's own, :attr:`density`; a trim at
-        some other density is what asks for another.  The table 3 constants are
-        taken at the state's own rotor speed, so a rotor that is turning slower
-        makes less thrust for the collective in the pilot's hand, which is the
-        whole of what the rotor speed state does to the airframe.  The ground
-        effect is whatever :meth:`hub_height` makes of :attr:`ground`, unless
-        :attr:`ground_effect` is off altogether.
+        *air_density* defaults to the air *at the state being evaluated*: the
+        airframe's own air when that state is the aircraft's own, which is what
+        the frame loop asks, and the same rule read at a trial state's own
+        altitude when a trim is solving - so a trim at an altitude is in that
+        altitude's air rather than in whatever air the aircraft happens to be
+        sitting in.  A density named outright is used as it stands.  The table 3
+        constants are taken at the state's own rotor speed, so a rotor that is
+        turning slower makes less thrust for the collective in the pilot's hand,
+        which is the whole of what the rotor speed state does to the airframe.
+        The ground effect is whatever :meth:`hub_height` makes of :attr:`ground`,
+        unless :attr:`ground_effect` is off altogether.
         """
         state = self.state if state is None else state
         return body_forces(
             control_pitch, self.air_relative_velocity(state, wind),
             state.rates,
-            air_density=(self.density if air_density is None
+            air_density=(self.density_at(state.altitude) if air_density is None
                          else air_density),
             rotor_height=(self.hub_height(state) if self.ground_effect
                           else 10.0 * 2.0 * UH1_RADIUS),
@@ -1844,7 +1962,7 @@ class Airframe:
             return 0.0
         return (self.engine_torque - forces.rotor.torque) / self.rotor_inertia
 
-    def shaft_torque(self, rotor_speed, air_density=None):
+    def shaft_torque(self, rotor_speed, air_density=None, state=None):
         """What is turning the rotor, N m, at *rotor_speed*, rad/s.
 
         The engine's settled torque when there is one - see
@@ -1860,10 +1978,13 @@ class Airframe:
         whose engine holds whatever speed the rotor is doing.  Asking it for a
         shaft torque raises rather than inventing one.
 
-        The air it is asked in is the airframe's own unless the caller names a
-        density of its own (:meth:`engine_air`), which is what keeps a trim
-        solved at an altitude on the same answer the frame loop flies on: both
-        read the manual's torque available chart.
+        The air it is asked in is the airframe's own at *state* unless the caller
+        names a density of its own (:meth:`engine_air`).  *state* defaults to the
+        aircraft's own; a trim hands the state it is solving, which is what keeps
+        a trim solved at an altitude on the same answer the frame loop flies on -
+        both read the manual's torque available chart, and both read it where the
+        aircraft *will be*: at 10,000 ft that is 10,000 ft's air, with or without
+        an :attr:`air_profile`.
         """
         if not self.shaft_driven:
             raise ValueError(
@@ -1875,7 +1996,7 @@ class Airframe:
             # being a gearing away from the rotor's rad/s.
             return self.engine.settled_torque(
                 rotor_speed * 60.0 / (2.0 * math.pi),
-                *self.engine_air(air_density))
+                *self.engine_air(air_density, state))
         return float(self.engine_torque)
 
     def shaft_residual(self, controls, state, air_density=None, wind=None,
@@ -1901,7 +2022,7 @@ class Airframe:
             pitch = ControlPitch.from_angles(self.command_angles(controls),
                                              controls.long_stick, self.twist_deg)
             forces = self.forces(pitch, state, wind=wind, air_density=air_density)
-        return (self.shaft_torque(state.rotor_speed, air_density)
+        return (self.shaft_torque(state.rotor_speed, air_density, state)
                 - forces.rotor.torque)
 
     def ground_velocity_of(self, state):
@@ -2052,14 +2173,17 @@ class Airframe:
         airframe's own plane, so a hover over a ramp is solved over the ramp.
 
         *air_density* is the air the hover is solved *in*, and left alone it is
-        the frame loop's own air: the rotor's forces and the engine's answer
-        both come off the airframe's air then, the engine's off the manual's
-        torque available chart at :attr:`pressure_altitude` and :attr:`fat`.  A
-        density named here is a trim in another air, and the engine is asked the
-        density question there instead of the chart's - :meth:`engine_air` is
-        what decides that, and what the frame loop goes through as well.
+        the airframe's own air read at the altitude being solved for: the rotor's
+        forces and the engine's answer both come off that air, the engine's off
+        the manual's torque available chart at that air's pressure altitude and
+        free air temperature.  That is the frame loop's own air whenever the
+        aircraft is where the hover is, and - with an :attr:`air_profile` - it is
+        what makes a hover solved at 10,000 ft a hover in 10,000 ft's air rather
+        than in whatever air the aircraft happens to be sitting in.  A density
+        named here is a trim in another air, and the engine is asked the density
+        question there instead of the chart's - :meth:`engine_air` is what decides
+        that, and what the frame loop goes through as well.
         """
-        density = self.density if air_density is None else air_density
         if weight is None:
             weight = self.mass * GRAVITY
         law = self.law
@@ -2085,6 +2209,13 @@ class Airframe:
         # is a height above whatever the aircraft is over rather than a NED
         # coordinate of its own.
         position = self.ground.above(Vector3(), altitude)
+        # The air this hover is solved in: a density the caller named, or else the
+        # airframe's own air read at the altitude being solved for.  The trial
+        # states are all at that position, so this is the air they are flying in,
+        # and the engine is closed on the same one (``shaft_residual`` below asks
+        # ``engine_air`` at them).
+        density = (air_density if air_density is not None
+                   else self.density_at(-position.z))
 
         def residual(values):
             controls = PilotControls(collective=values[0], pedal=values[1],
@@ -2208,10 +2339,9 @@ class Airframe:
         *altitude* is the height above :attr:`ground` the condition is solved
         at, m, on the same terms :meth:`trim_hover` takes it, and its
         *air_density* is the air it is solved in on those same terms too: the
-        airframe's own unless another is named, and the manual's chart for the
-        engine either way round.
+        airframe's own air at that altitude unless another is named, and the
+        manual's chart for the engine either way round.
         """
-        density = self.density if air_density is None else air_density
         if weight is None:
             weight = self.mass * GRAVITY
         law = self.law
@@ -2236,6 +2366,11 @@ class Airframe:
         if solving:
             guess.append(rotor_speed)
         position = self.ground.above(Vector3(), altitude)
+        # The air this condition is solved in, the hover's own rule: a density the
+        # caller named, or the airframe's own air at the altitude being solved
+        # for, which is where the trial states are.
+        density = (air_density if air_density is not None
+                   else self.density_at(-position.z))
 
         def trial_state(values):
             """The state a guess describes: level, north, at the airspeed asked."""
@@ -2365,10 +2500,9 @@ class Airframe:
         at, m, on the same terms :meth:`trim_hover` takes it.  The descent rate
         itself is still an earth-fixed velocity - the trim is level-headed and
         north - so this is the ground the state stands over, not a path along
-        it, and its *air_density* is the air it is solved in on the same terms
-        as well.
+        it, and its *air_density* is the air it is solved in on the same terms as
+        well: the airframe's own air at that altitude unless another is named.
         """
-        density = self.density if air_density is None else air_density
         if not self.windmill:
             raise ValueError(
                 "trim_autorotation needs a rotor with nothing driving it - an "
@@ -2394,6 +2528,11 @@ class Airframe:
         guess = [collective_in, 0.0, 0.0, 0.0, 0.0, 0.0,
                  TRIM_DESCENT_GUESS_MPS]
         position = self.ground.above(Vector3(), altitude)
+        # The air this descent is solved in, on the hover's own terms: a density
+        # the caller named, or the airframe's own air at the altitude being
+        # solved for, which is where the trial states are.
+        density = (air_density if air_density is not None
+                   else self.density_at(-position.z))
 
         def trial_state(values):
             """The state a guess describes: descending north at *airspeed*."""
@@ -3317,6 +3456,101 @@ def _self_test():
                                                     *above.engine_air())
             < sea_level.engine.governor.settled_rotor_rpm(
                 hover_power, *sea_level.engine_air()))
+
+    # ---------------------------------------------------------------------
+    # The air read off the aircraft rather than named: a profile.
+    # ---------------------------------------------------------------------
+
+    # No profile is the setting above, and an aircraft that has climbed is still
+    # flying the air it was configured in - the 0 ft and +15 C - which is what a
+    # named pair means and what every figure in the report was computed in.
+    aloft_state = FlightState(position=Vector3(0.0, 0.0, -ten_thousand * FOOT))
+    held_air = Airframe(engine=Engine()).reset(aloft_state)
+    assert held_air.air_here == (0.0, ISA_SEA_LEVEL_TEMPERATURE_C)
+    assert held_air.density == RHO_SEA_LEVEL
+    assert held_air.engine_air()[1:] == (0.0, ISA_SEA_LEVEL_TEMPERATURE_C)
+    assert held_air.engine_air(1.15) == (1.15, None, None)
+
+    # A profile reads it off the aircraft instead: the standard atmosphere the
+    # scenery is standing in, so 10,000 ft of climb is 10,000 ft of pressure
+    # altitude and the -4.8 C the ISA tables have there, with nothing set on the
+    # airframe at all.  The density is the tables' own 0.9046 kg/m^3 at that pair,
+    # and the chart is read at those two numbers rather than at the settings.
+    profiled = Airframe(engine=Engine(), air_profile=0.0).reset(aloft_state)
+    assert profiled.pressure_altitude == 0.0          # the setting never moved
+    assert abs(profiled.air_here[0] - ten_thousand) < 1e-9
+    assert abs(profiled.air_here[1]
+               - isa_temperature_c(ten_thousand * FOOT)) < 1e-9
+    assert abs(profiled.density - 0.9046) < 1e-3, profiled.density
+    profile_chart = torque_available_psi(*profiled.air_here)
+    assert abs(profiled.engine.max_torque(UH1_RPM, *profiled.engine_air())
+               - profile_chart * UH1_TORQUE_NM_PER_PSI) < 1e-6 * charted
+    # ...and that is a different day from the sheet's own worked example for that
+    # altitude, which is a +15 C one and reads 36.8 psi: the standard day there
+    # is -4.8 C, colder and denser, and the chart reads more off it.
+    assert profile_chart > chart
+    # The profile's own number is the *day* and not the aircraft: how far off
+    # standard it is, which is the one thing a state cannot say.  Ten degrees
+    # warmer is a thinner 10,000 ft on both accounts.
+    warm_day = Airframe(engine=Engine(), air_profile=10.0).reset(aloft_state)
+    assert abs(warm_day.air_here[1]
+               - (isa_temperature_c(ten_thousand * FOOT) + 10.0)) < 1e-9
+    assert warm_day.density < profiled.density
+    assert (warm_day.engine.max_torque(UH1_RPM, *warm_day.engine_air())
+            < profiled.engine.max_torque(UH1_RPM, *profiled.engine_air()))
+
+    # 7.1-13(c): the one condition in which the chart is read at the *inlet*
+    # temperature rather than at the free air temperature, and it is the flight's
+    # own declaration because "prolonged" is a clock's word.  The aircraft is
+    # unaffected - it is the engine's inlet the cushion warms, not the air the
+    # rotor flies in - so only the third number moves, and by the manual's ten.
+    cushioned = Airframe(engine=Engine(), air_profile=0.0,
+                         hover_ige=True).reset(aloft_state)
+    free_pair = profiled.engine_air()
+    inlet_pair = cushioned.engine_air()
+    assert inlet_pair[0] == free_pair[0] and inlet_pair[1] == free_pair[1]
+    assert abs(inlet_pair[2] - inlet_temperature_c(free_pair[2], True)) < 1e-12
+    assert inlet_pair[2] > free_pair[2]
+    inlet_ceiling = cushioned.engine.max_torque(UH1_RPM, *inlet_pair)
+    cushioned_chart = torque_available_psi(
+        profiled.air_here[0], inlet_temperature_c(profiled.air_here[1], True))
+    assert abs(inlet_ceiling - cushioned_chart * UH1_TORQUE_NM_PER_PSI) \
+        < 1e-6 * inlet_ceiling
+    assert cushioned_chart < profile_chart      # the same air, 10 C warmer
+    assert inlet_ceiling < profiled.engine.max_torque(UH1_RPM, *free_pair)
+
+    # And flown, which is where a profile's air bites in this model: two aircraft
+    # in the same state - 10,000 ft of it - stepping together on the same sticks,
+    # one reading its air off that state and the other holding the pair it was
+    # given.  The engine under the first is governed against 44.2 psi of the
+    # manual's own chart where the second's reads the 50 psi of sea level
+    # standard, and the two rotors fly in the two densities as well - which is the
+    # inflow's business here and not the constants': the report's table 3 carries
+    # sea level density already (see :func:`body_forces`), so what a thinned
+    # *rotor* does about it is small where the chart's bite is not.
+    hold, _ = sea_level.trim_hover(rotor_speed=None)
+    profile_aloft = Airframe(engine=Engine(),
+                             air_profile=0.0).reset(aloft_state, hold)
+    fixed_aloft = Airframe(engine=Engine()).reset(aloft_state, hold)
+    assert profile_aloft.density < fixed_aloft.density
+    assert abs(torque_available_psi(*profile_aloft.air_here) - 44.2) < 0.2
+    profile_ceiling = profile_aloft.engine.max_torque(UH1_RPM,
+                                                      *profile_aloft.engine_air())
+    assert profile_ceiling < fixed_aloft.engine.max_torque(
+        UH1_RPM, *fixed_aloft.engine_air())
+    for _ in range(600):
+        profile_aloft.step(1.0 / 60.0, hold)
+        fixed_aloft.step(1.0 / 60.0, hold)
+    # Both are flown, neither fell out of the sky (the sticks are the sea level
+    # hover's own, and the rotor is not scaled by the air it is in), and the one
+    # in the thinner air has made a little less of them - which is the difference
+    # between an air that follows the aircraft and an air that stays where it was
+    # set, read off the aircraft itself.
+    assert (abs(profile_aloft.state.altitude - aloft_state.altitude) < 5.0
+            and abs(fixed_aloft.state.altitude - aloft_state.altitude) < 5.0)
+    assert fixed_aloft.state.altitude > profile_aloft.state.altitude
+    assert abs(profile_aloft.density - 0.9046) < 1e-3
+    assert fixed_aloft.density == RHO_SEA_LEVEL
 
     # The other kind of driven shaft: a fixed torque, which has no droop curve
     # and settles where its own number crosses the rotor's drag.  That airframe

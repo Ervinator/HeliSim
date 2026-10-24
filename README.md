@@ -17,13 +17,13 @@ Layered, each one importing only what sits below it:
 | --- | --- | --- |
 | `aerodynamics.py` | 1718 | quasi-steady blade element theory for one rotor - section data, flapping, hover and forward flight loads - and the standard atmosphere that turns a pressure altitude and a free air temperature into the density it flies in |
 | `rotor_control.py` | 1280 | the control path: inches of stick travel to swashplate angles, the mixing law and its rigging, the control lags |
-| `engine.py` | 1071 | the T53-L-13 on the other end of the shaft: the twist grip, the N2 governor and its droop band, the torque available read off a digitised figure 7.1-2 - each of its eight altitude curves read at every temperature the sheet prints, and the family read at the airframe's own pressure altitude and free air temperature - what EMER and bleed air cost, and the gas producer's lag |
-| `airframe.py` | 3789 | TM-73254's force and moment model - main rotor, tail rotor, fuselage, fin, stabilizer - and the six degree of freedom equations of motion, with the rotor's own speed as a state when an engine is aboard, the second root of equation 10 read off a shaft with nothing driving it, the air it flies in as a pressure altitude and a free air temperature or as a density, and the ground under it as one flat plane with a level and a normal |
-| `simulation.py` | 3125 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the three trims, and what a renderer or a HUD asks for - the engine's panel among them, its maximum read in the same air the engine is governed in |
+| `engine.py` | 1129 | the T53-L-13 on the other end of the shaft: the twist grip, the N2 governor and its droop band, the torque available read off a digitised figure 7.1-2 - each of its eight altitude curves read at every temperature the sheet prints, and the family read at the airframe's own pressure altitude and free air temperature - what EMER and bleed air cost, the ten degrees of inlet temperature that a prolonged hover in ground effect is read with (7.1-13(c)), and the gas producer's lag |
+| `airframe.py` | 4023 | TM-73254's force and moment model - main rotor, tail rotor, fuselage, fin, stabilizer - and the six degree of freedom equations of motion, with the rotor's own speed as a state when an engine is aboard, the second root of equation 10 read off a shaft with nothing driving it, the air it flies in as a pressure altitude and a free air temperature - set on the airframe, or read off the aircraft itself as a profile - or as a density, and the ground under it as one flat plane with a level and a normal |
+| `simulation.py` | 3210 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the three trims, and what a renderer or a HUD asks for - the engine's panel among them, its maximum read in the same air the engine is governed in |
 | `regression_tm73254.py` | 661 | the report's figures 2 to 9 reflown: eight step inputs from 60 kt and from the hover, laid next to its published responses |
 | `scenery.py` | 603 | the XML scenery format and its loader - no pygame, no OpenGL, and the one module whose test needs no window and no physics |
 | `controls.py` | 1105 | the device map: which physical control flies which - keyboard or joystick, per control, with deadzone, invert and calibration - read from the XML of `default_controls.xml`, and likewise stdlib only |
-| `main.py` | 4582 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, the aircraft of `simulation.py` flown from its device map - keyboard, joystick, the mouse, or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it, with one `--engine` switch that fits the T53 before the first frame, the cursor on the cyclic and the wheel on the collective (`M`, `--mouse` and its own `--mouse-reverse`), and one line for the grip of a run that has none |
+| `main.py` | 4714 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, the aircraft of `simulation.py` flown from its device map - keyboard, joystick, the mouse, or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it, with the `--engine` switch that fits the T53 before the first frame, the two air switches (`--air-profile`, `--ige-hover`) that say what it flies in, the cursor on the cyclic and the wheel on the collective (`M`, `--mouse` and its own `--mouse-reverse`), and one line for the grip of a run that has none |
 
 Only `main.py` imports anything outside the standard library - and that is a
 claim about the nine modules above rather than about the project.  The nine
@@ -41,6 +41,7 @@ them needs an OpenGL context.  See *The harness* below.
     python main.py [scenery.xml] [--engine] [--log FILE | --no-log]
                    [--controls FILE | --no-controls]
                    [--mouse | --mouse-reverse]
+                   [--air-profile [C]] [--ige-hover]
     python main.py --check          # the wiring, headless, no window
 
 `sample_scenery.xml` is used when no path is given.  The scenery file lists
@@ -50,12 +51,29 @@ are implicit and are deliberately not part of the description.
 
 The aircraft is `simulation.py`'s own: the report's 6158 lb instrumented UH-1H,
 which starts parked on the pad with the collective lever three quarters of the
-way up its travel, and the keys fly it.  The one thing about that aircraft a run
-may decide before it starts is its engine, and `--engine` is how it says so: the
-T53 is fitted before the first frame, so the grip has a governor behind it from
-the beginning rather than from the `F` that would fit it live.  Flying without
-one is what a run that says nothing gets, and it is what the report's own figures
-were computed with.
+way up its travel, and the keys fly it.  Two things about that aircraft a run may
+decide before it starts, and the first is its engine: `--engine` fits the T53
+before the first frame, so the grip has a governor behind it from the beginning
+rather than from the `F` that would fit it live.  Flying without one is what a run
+that says nothing gets, and it is what the report's own figures were computed
+with.
+
+The second is the air it flies *in* - the manual's own pair of numbers for it, a
+pressure altitude and a free air temperature, which are what every performance
+chart in TM 55-1520-210-10 is drawn against.  A run that says nothing gets the
+pair its aircraft was configured with, which is sea level standard: one air, held
+wherever the flight goes.  `--air-profile` gives it an air that *follows* the
+aircraft instead - the pair read off where the flight actually is, so a climb
+thins the air the engine's chart is read at, which is what the manual has a pilot
+re-reading the chart for by hand - and the number after it is how far off the
+standard day the day is, in C: `--air-profile 0` is a standard day over the
+scenery, `--air-profile 10` one ten degrees warmer, and the switch with no number
+after it is a standard day.  `--ige-hover` adds 7.1-13(c) to either of them: the
+prolonged hover in ground effect, in which the chart is read 10 C warmer because
+the cushion raises the engine's *inlet* temperature by that much.  The caption
+carries the pair while a profile is on, and the temperature the chart was read at
+beside it in the cushion; `airframe.Airframe.air_profile`, `.hover_ige`,
+`.air_here` and `simulation.airframe_preset` are where both settings live.
 
 | key | what it does |
 | --- | --- |
@@ -223,8 +241,9 @@ reset put them and never move - which is why the caption names it and the cure.
 
 The window draws those same four positions as well, as three square panels in
 its bottom left corner, in the shapes of a mockup sketch kept in
-`attic/controls_simple.png` - the attic is this project's ignored scratch, so
-the panels are described in words here as well as drawn: the two pedals as red
+`attic/controls_simple.png` - the attic is this project's scratch, ignored
+except for the tools a check is run with, so the panels are described in words
+here as well as drawn: the two pedals as red
 lines that move oppositely, the cyclic as a red disc whose place in its panel is
 the stick's own position - forward at the top, right to the right - and the
 collective as a red lever on a green quadrant, the green field being the lever's
@@ -370,6 +389,17 @@ nothing - and the key log: the
 command line that names it, the names it gives a key and a hand, the columns of a
 line, the two clocks on it to a millisecond and the rate the flight is sampled
 at.  None of it needs an OpenGL context.
+
+The line counts the documents claim have a check of their own, and it runs the
+same way:
+
+    python attic/_tmp_counts.py
+
+It reads every `(N lines)` claim in this file, `TODO.md` and `attic/README.md`
+back off the files themselves - the module and harness tables and the prose in
+all three - prints a line for each and exits 1 when one has drifted, and names
+any `.py` in the root with no row in a table.  It is one of the tools in
+`attic/` that is tracked rather than ignored, so a clone can run it.
 
 ## The harness
 

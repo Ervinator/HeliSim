@@ -34,6 +34,7 @@ Usage::
     python main.py [scenery.xml] [--log FILE | --no-log]
                    [--controls FILE | --no-controls] [--engine]
                    [--mouse | --mouse-reverse]
+                   [--air-profile [C]] [--ige-hover]
     python main.py --check          # the wiring, headless, no window
 
 Keys:
@@ -145,6 +146,21 @@ same with the wheel's sense turned over - a notch of the wheel down for more
 collective rather than up for more - since which way a wheel should turn a lever
 is a hand's own habit.
 
+**The air is the other thing a run can be given rather than flown.**  The pair
+the aircraft flies in - a pressure altitude and a free air temperature, the two
+numbers every performance chart in TM 55-1520-210-10 is drawn against - is sea
+level standard unless the run says otherwise, which is the air every figure in the
+report was computed in.  `--air-profile` makes it an air that *follows* the
+aircraft instead, read off where the flight actually is, and the number after it
+is how far off the standard day the day is, C: `--air-profile 10` is ten degrees
+warmer than standard and the switch with no number after it is a standard day.
+`--ige-hover` says the flight is the prolonged hover in ground effect of
+7.1-13(c), in which the engine's torque available chart is read ten degrees warmer
+because the cushion raises the inlet temperature by that much.  While a profile is
+on, the caption carries the pair the aircraft is in and, in the cushion, the
+temperature the chart was read at - so both readings can be watched rather than
+taken on trust - and with neither switch the caption reads exactly as it did.
+
 The window's caption is this sandbox's instrument panel, and it carries all
 four control positions: the collective in per cent, the longitudinal and
 lateral cyclic and the pedals in inches of travel.  They are there because the
@@ -206,8 +222,8 @@ from aerodynamics import (UH1_BLADE_COUNT, UH1_CHORD, UH1_COLLECTIVE_TRAVEL_IN,
                           UH1_TAIL_MAIN_RATIO, UH1_TAIL_RADIUS, Vector3)
 from airframe import (FOOT, POUND, UH1_HUB_HEIGHT, UH1_TAIL_ARM,
                       UH1_TAIL_HEIGHT)
-from engine import (UH1_ENGINE_POWER_W, UH1_TORQUE_NM_PER_PSI,
-                    UH1_TRANSMISSION_LIMIT_PSI)
+from engine import (UH1_ENGINE_POWER_W, UH1_IGE_INLET_TEMPERATURE_RISE_C,
+                    UH1_TORQUE_NM_PER_PSI, UH1_TRANSMISSION_LIMIT_PSI)
 from simulation import (ChaseCamera, PAD_COLLECTIVE, SIM_TIME_STEP_S, Simulation,
                         UH1_CG_HEIGHT_ON_GROUND, UH1_ENVELOPE_CEILING_MPS,
                         airframe_preset)
@@ -244,6 +260,15 @@ MOUSE_OFF = "off"
 MOUSE_ON = "on"
 MOUSE_REVERSE = "reverse"
 MOUSE_MODES = (MOUSE_OFF, MOUSE_ON, MOUSE_REVERSE)
+
+#: What :func:`command_line` answers for the air when a run says nothing about
+#: it: no profile, so the pair stays what the preset names, and no prolonged
+#: hover in ground effect either.  The answer is a pair - ``(profile, hover_ige)``
+#: - because the two things a run can say are independent: ``profile`` is the
+#: number of C the day is off the standard one when the air is read off the
+#: aircraft (:attr:`airframe.Airframe.air_profile`), and ``hover_ige`` is the
+#: 7.1-13(c) condition (:attr:`airframe.Airframe.hover_ige`).
+NO_AIR = (None, False)
 
 #: The three controls the mouse flies, by the names
 #: :class:`simulation.PilotInput` reads its axes by: the cyclic's own two and the
@@ -2632,6 +2657,14 @@ def window_title(sim, view, focused=True):
     psi)`` is a reading and its limit, and the same line is what says whether
     the engine is being asked to take the transmission past it, which the
     manual's own caution is that it can (7.1-13).
+
+    The air is on it only when a run has said something about it.  The pair a
+    preset names is the air every figure in TM-73254 was computed in, and the
+    caption of the aircraft flying it reads as it always did; with a profile the
+    pair is read off the aircraft instead (:attr:`airframe.Airframe.air_here`) and
+    is printed in the manual's own feet and C.  In the cushion hover the
+    temperature the engine's chart was read at is printed beside it, ten degrees
+    above the free air one (7.1-13(c)).
     """
     telemetry = sim.telemetry()
     panel = telemetry.engine
@@ -2642,14 +2675,20 @@ def window_title(sim, view, focused=True):
                  panel.torque / UH1_TORQUE_NM_PER_PSI,
                  UH1_TRANSMISSION_LIMIT_PSI,
                  "FAILED" if panel.failed else "EMER" if panel.emer else "AUTO"))
+    air = ""
+    if sim.airframe.air_profile is not None:
+        air = (" | air %6.0f ft %+5.1f C"
+               % (telemetry.pressure_altitude_ft, telemetry.fat_c))
+        if sim.airframe.hover_ige and panel.inlet_temperature_c is not None:
+            air += " (inlet %+5.1f C)" % (panel.inlet_temperature_c,)
     return ("HeliSim - UH-1H%s | alt %6.1f m %+6.0f fpm | %5.1f kt"
-            " | coll %3.0f %% | cyc %+6.2f/%+6.2f in | ped %+5.2f in%s%s%s%s"
+            " | coll %3.0f %% | cyc %+6.2f/%+6.2f in | ped %+5.2f in%s%s%s%s%s"
             " | %s view"
             % ("" if focused else " | no keyboard: click the window",
                telemetry.alt_agl, telemetry.height_rate_fpm,
                telemetry.airspeed_kt, 100.0 * telemetry.collective_fraction,
                telemetry.long_stick_in, telemetry.lat_stick_in,
-               telemetry.pedal_in, engine,
+               telemetry.pedal_in, engine, air,
                " | trim" if telemetry.in_trim else "",
                " | on the ground" if telemetry.on_ground else "",
                (" | " + telemetry.crash_message) if telemetry.crashed else "",
@@ -2834,7 +2873,7 @@ def log_key(log, sim, kind, event, keyboard):
 
 
 def command_line(args):
-    """``(scenery path, key log path, controls path, engine, mouse)`` from the command line.
+    """``(scenery, key log, controls, engine, mouse, air)`` from the command line.
 
     The scenery file is the one bare argument, ``sample_scenery.xml`` when there
     is none, exactly as it always was.  The other three halves each have options
@@ -2866,6 +2905,17 @@ def command_line(args):
     either.  Both switches are stripped rather than left in the arguments, and
     ``--mouse-reverse`` implies ``--mouse``, since a reversed wheel that nothing
     reads is not a thing a run can ask for.
+
+    The air is the last half, and a pair of switches of its own because the two
+    things a run can say about it are independent: ``--air-profile`` flies an air
+    that follows the aircraft (:attr:`airframe.Airframe.air_profile`), and the
+    number after it is how far off the standard day the day is, C - say it with
+    no number and the day is standard, ``--air-profile 10`` is ten degrees warmer
+    than one - while ``--ige-hover`` is the prolonged hover in ground effect of
+    7.1-13(c), in which the engine's torque available chart is read
+    10 C warmer.  Both are off by default, which is :data:`NO_AIR`: the pair a
+    preset names, and no cushion, which is the air every figure in TM-73254 was
+    computed in.
 
     ``--check`` never reaches here: it is read at the bottom of the file, before
     ``main()`` is called at all.
@@ -2911,15 +2961,33 @@ def command_line(args):
             del args[index:index + 2]
         else:
             del args[index]
+    # The air, last of the six: a pair of switches like the mouse's, and stripped
+    # for the engine's reason - an unread switch left in the arguments would be
+    # taken for the scenery path.  The number after --air-profile is read as one
+    # only when it is not another switch, so ``--air-profile --engine`` is a
+    # standard day with the T53 fitted rather than a complaint.
+    air_profile = None
+    while "--air-profile" in args:
+        index = args.index("--air-profile")
+        if index + 1 < len(args) and not args[index + 1].startswith("--"):
+            air_profile = float(args[index + 1])
+            del args[index:index + 2]
+        else:
+            air_profile = 0.0
+            del args[index]
+    hover_ige = "--ige-hover" in args
+    while "--ige-hover" in args:
+        args.remove("--ige-hover")
     return ((args[0] if args else DEFAULT_SCENERY_FILE), log_path,
-            controls_path, engine, mouse)
+            controls_path, engine, mouse, (air_profile, hover_ige))
 
 
 def main():
     global SCENERY
 
-    path, log_path, controls_path, engine, mouse_mode = command_line(
+    path, log_path, controls_path, engine, mouse_mode, air = command_line(
         sys.argv[1:])
+    air_profile, hover_ige = air
     loaded = load_scenery(path)
     if loaded is None:
         sys.exit(2)
@@ -2948,10 +3016,21 @@ def main():
 
     # The aircraft, before there is a window: the trim is solved here, which
     # takes a moment, and the flight it describes is worth having in writing.
-    sim = Simulation(airframe=airframe_preset(AIRFRAME_PRESET))
+    sim = Simulation(airframe=airframe_preset(AIRFRAME_PRESET,
+                                             air_profile=air_profile,
+                                             hover_ige=hover_ige))
     print("aircraft: the report's %s configuration, %.0f lb, rotor R6 %.3f s"
           % (AIRFRAME_PRESET, sim.airframe.mass / POUND,
              sim.airframe.rotor_time_constant))
+    if air_profile is not None:
+        # The run's own air, said in the model's own terms: the pair is read off
+        # the aircraft from here on, and the number is the day.
+        print("air: a profile %+.1f C off the standard day, so the pair the"
+              " engine's chart is read at follows the aircraft" % (air_profile,))
+    if hover_ige:
+        print("air: the prolonged hover in ground effect of 7.1-13(c), so the"
+              " chart is read %+.0f C warmer"
+              % (UH1_IGE_INLET_TEMPERATURE_RISE_C,))
     print("  the run's own trim: %s" % (sim.trim_controls,))
     sim.on_the_pad()
     if engine:
@@ -3486,6 +3565,32 @@ def _self_check():
     assert abs(available - UH1_ENGINE_POWER_W * 36.8 / 50.0) \
         < 1e-6 * UH1_ENGINE_POWER_W, available
     assert "| AUTO" in window_title(aloft, VIEW_CHASE)
+
+    # The air itself is on the caption only when a run has said something about
+    # it, so the aircraft of the report's figures - and the same aircraft given a
+    # pair of numbers - read as they always did.  With a profile the pair is read
+    # off the aircraft, in the manual's own feet and C, and with the cushion hover
+    # of 7.1-13(c) the temperature the chart was read at is beside it: ten degrees
+    # above the free air one, and the ceiling under the engine lower for it.
+    assert "| air" not in window_title(sim, VIEW_CHASE)
+    assert "| air" not in window_title(aloft, VIEW_CHASE)
+    carried = Simulation(airframe=airframe_preset(AIRFRAME_PRESET, engine=True,
+                                                 air_profile=0.0))
+    carried.reset(altitude=10000.0 * FOOT)
+    for _ in range(60):
+        carried.step_fixed()
+    aloft_air = carried.telemetry()
+    caption = window_title(carried, VIEW_CHASE)
+    assert ("| air %6.0f ft %+5.1f C" % (aloft_air.pressure_altitude_ft,
+                                         aloft_air.fat_c)) in caption, caption
+    assert "inlet" not in caption               # in free air, and none is owed
+    carried.airframe.hover_ige = True
+    cushioned = carried.telemetry()
+    assert (" (inlet %+5.1f C)" % (cushioned.engine.inlet_temperature_c,)) \
+        in window_title(carried, VIEW_CHASE)
+    assert (cushioned.engine.inlet_temperature_c - cushioned.fat_c
+            == UH1_IGE_INLET_TEMPERATURE_RISE_C)
+    assert cushioned.engine.maximum_torque < aloft_air.engine.maximum_torque
 
     # G is the GOV AUTO/EMER switch and X is an engine failure, and both read
     # back off the caption: those two words are the switch's own, and neither is
@@ -4194,18 +4299,19 @@ def _self_check():
     # the name a key is given, the columns of a log line, the two clocks on it
     # and the rate that keeps the flight sampled rather than written every frame.
     assert command_line([]) == (DEFAULT_SCENERY_FILE, DEFAULT_KEYLOG_FILE,
-                                DEFAULT_CONTROLS_FILE, False, MOUSE_OFF)
+                                DEFAULT_CONTROLS_FILE, False, MOUSE_OFF, NO_AIR)
     assert command_line(["scene.xml"]) == ("scene.xml", DEFAULT_KEYLOG_FILE,
                                            DEFAULT_CONTROLS_FILE, False,
-                                           MOUSE_OFF)
+                                           MOUSE_OFF, NO_AIR)
     assert command_line(["scene.xml", "--log", "run.csv"]) == (
-        "scene.xml", "run.csv", DEFAULT_CONTROLS_FILE, False, MOUSE_OFF)
+        "scene.xml", "run.csv", DEFAULT_CONTROLS_FILE, False, MOUSE_OFF, NO_AIR)
     assert command_line(["--log", "run.csv"]) == (
-        DEFAULT_SCENERY_FILE, "run.csv", DEFAULT_CONTROLS_FILE, False, MOUSE_OFF)
+        DEFAULT_SCENERY_FILE, "run.csv", DEFAULT_CONTROLS_FILE, False, MOUSE_OFF,
+        NO_AIR)
     assert command_line(["--no-log"])[1] is None
     assert command_line(["scene.xml", "--no-log"]) == ("scene.xml", None,
                                                        DEFAULT_CONTROLS_FILE,
-                                                       False, MOUSE_OFF)
+                                                       False, MOUSE_OFF, NO_AIR)
     assert command_line(["--log"])[1] == DEFAULT_KEYLOG_FILE  # no file named
     assert command_line(["--no-log", "--log", "run.csv"])[1] == "run.csv"
     # The device map has the same two options, and the same rule that a file
@@ -4224,30 +4330,56 @@ def _self_check():
     # scenery path would be.
     assert command_line(["--engine"]) == (DEFAULT_SCENERY_FILE,
                                           DEFAULT_KEYLOG_FILE,
-                                          DEFAULT_CONTROLS_FILE, True, MOUSE_OFF)
+                                          DEFAULT_CONTROLS_FILE, True, MOUSE_OFF,
+                                          NO_AIR)
     assert command_line(["scene.xml", "--engine", "--no-log"]) == (
-        "scene.xml", None, DEFAULT_CONTROLS_FILE, True, MOUSE_OFF)
+        "scene.xml", None, DEFAULT_CONTROLS_FILE, True, MOUSE_OFF, NO_AIR)
     assert command_line([])[3] is False and command_line(["--engine"])[3] is True
     assert command_line(["--engine", "--engine"])[3] is True   # as often as said
-    # The mouse is the last half and the only pair of switches among them: the
-    # default is off, which is the option, so there is no --no-mouse either -
+    # The mouse is the last half but one and the only pair of switches among them:
+    # the default is off, which is the option, so there is no --no-mouse either -
     # and --mouse-reverse implies --mouse, since a reversed wheel that nothing
     # reads is not a thing a run can ask for.  Both are stripped, so neither is
     # left in the arguments to be read as the scenery path.
     assert command_line([])[4] == MOUSE_OFF
     assert command_line(["--mouse"]) == (DEFAULT_SCENERY_FILE,
                                          DEFAULT_KEYLOG_FILE,
-                                         DEFAULT_CONTROLS_FILE, False, MOUSE_ON)
+                                         DEFAULT_CONTROLS_FILE, False, MOUSE_ON,
+                                         NO_AIR)
     assert command_line(["--mouse-reverse"])[4] == MOUSE_REVERSE
     assert command_line(["--mouse", "--mouse-reverse"])[4] == MOUSE_REVERSE
     assert command_line(["--mouse-reverse", "--mouse"])[4] == MOUSE_REVERSE
     assert command_line(["--mouse", "--mouse"])[4] == MOUSE_ON  # as often as said
     assert command_line(["scene.xml", "--mouse"])[0] == "scene.xml"
     assert command_line(["scene.xml", "--mouse", "--engine"])[0] == "scene.xml"
-    # ...and the key log and the map are still read with the mouse on: the five
-    # halves are one command line and not four command lines.
+    # ...and the key log and the map are still read with the mouse on: the six
+    # halves are one command line and not six command lines.
     assert command_line(["--mouse", "--no-log", "--controls", "panel.xml"]) == (
-        DEFAULT_SCENERY_FILE, None, "panel.xml", False, MOUSE_ON)
+        DEFAULT_SCENERY_FILE, None, "panel.xml", False, MOUSE_ON, NO_AIR)
+
+    # The air is the last half, and its own pair of switches: --air-profile is an
+    # air that follows the aircraft, the number after it the day's own offset from
+    # standard - and a switch with no number after it is a standard day rather
+    # than a mistake - while --ige-hover is the 7.1-13(c) cushion hover, which a
+    # run can declare whether or not it also asked for a profile.  Both are off by
+    # default and both are stripped.
+    assert command_line([])[5] == NO_AIR
+    assert command_line(["--air-profile"])[5] == (0.0, False)
+    assert command_line(["--air-profile", "10"])[5] == (10.0, False)
+    assert command_line(["--air-profile", "-10.5"])[5] == (-10.5, False)
+    assert command_line(["--air-profile", "--engine"])[5] == (0.0, False)
+    assert command_line(["--air-profile", "--engine"])[3] is True
+    assert command_line(["--air-profile", "10", "--engine"]) == (
+        DEFAULT_SCENERY_FILE, DEFAULT_KEYLOG_FILE, DEFAULT_CONTROLS_FILE, True,
+        MOUSE_OFF, (10.0, False))
+    assert command_line(["--ige-hover"])[5] == (None, True)
+    assert command_line(["--ige-hover", "--air-profile", "0"])[5] == (0.0, True)
+    assert command_line(["--ige-hover", "--ige-hover"])[5] == (None, True)
+    # ...and the scenery argument is still the scenery argument with all six of
+    # them said at once, in any order.
+    assert command_line(["scene.xml", "--ige-hover", "--engine",
+                         "--air-profile", "5", "--mouse", "--no-log"]) == (
+        "scene.xml", None, DEFAULT_CONTROLS_FILE, True, MOUSE_ON, (5.0, True))
 
     # A flight key is named by the position the controls read it from, and every
     # other key - the four command keys among them - by pygame's own name.
