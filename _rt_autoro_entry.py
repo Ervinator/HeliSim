@@ -351,17 +351,24 @@ def kill_by_failure(sim, pilot):
 KILLS = {KILL_BY_GRIP: kill_by_grip, KILL_BY_FAILURE: kill_by_failure}
 
 
-def flight(way, reaction, trims, stream):
+def flight(way, reaction, trims, stream, engine=None):
     """One killing of the shaft, flown by the mission's own pilot.
 
     Driven one frame at a time exactly as ``main.py``'s frame loop drives it, and
     the switch is thrown on the frame the mission reaches its own cut - the
     instant the two entries are comparable from, since from there on the mission's
     hands are the same in both flights.  Returns the flown :class:`Flight`.
+
+    *engine* is the T53 the aircraft is fitted with, and ``None`` - the default -
+    is a bare :class:`engine.Engine`, the manual's own rigging.  It is what lets a
+    caller fly this entry on an engine of its own: ``_rt_engine.py`` hands in gas
+    producers built around the time constant it is measuring, so that the catch
+    this file commits is read against the constant it was cut with instead of
+    being assumed independent of it.  Nothing else about the flight changes.
     """
     sim = Simulation(airframe=airframe_preset(PRESET))
     sim.on_the_pad()
-    sim.fit_engine()
+    sim.fit_engine(engine=engine)
     pilot = AutorotationPilot(sim, trims, reaction=reaction)
     say(stream, "the %s: %s" % (way, WORDS[way]))
     flown = None

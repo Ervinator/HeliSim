@@ -26,15 +26,16 @@ Layered, each one importing only what sits below it:
 | `main.py` | 4714 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, the aircraft of `simulation.py` flown from its device map - keyboard, joystick, the mouse, or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it, with the `--engine` switch that fits the T53 before the first frame, the two air switches (`--air-profile`, `--ige-hover`) that say what it flies in, the cursor on the cyclic and the wheel on the collective (`M`, `--mouse` and its own `--mouse-reverse`), and one line for the grip of a run that has none |
 
 Only `main.py` imports anything outside the standard library - and that is a
-claim about the nine modules above rather than about the project.  The ten
+claim about the nine modules above rather than about the project.  The eleven
 `_rt_*.py` files in the root beside them are *the harness*: the pilots that fly
-the model and the instruments that measure it, and nine of the ten want pygame,
-four of them by name (`_rt_pilot` for the nine scancodes its keys are, `_rt_demo`
-for the window it opens, `_rt_autoro_probe` for the grip's own two, and
-`_rt_autoro_entry` for the failure key's name) and the other five through
-`_rt_pilot` - `_rt_tail.py` is the one that wants nothing but the model.  No
-harness but `_rt_demo` opens a window and none of them needs an OpenGL context.
-See *The harness* below.
+the model and the instruments that measure it, and ten of the eleven want pygame,
+five of them by name (`_rt_pilot` for the nine scancodes its keys are, `_rt_demo`
+for the window it opens, `_rt_autoro_probe` for the grip's own two,
+`_rt_autoro_entry` for the failure key's name, and `_rt_engine` for the mission's
+own autorotation it borrows) and the other five through `_rt_pilot` or `main` -
+`_rt_tail.py` and `_rt_engine.py` are the two that want nothing but the model, the
+second of them for six of its seven tables.  No harness but `_rt_demo` opens a
+window and none of them needs an OpenGL context.  See *The harness* below.
 
 ## Running
 
@@ -404,14 +405,15 @@ any `.py` in the root with no row in a table.  It is one of the tools in
 
 ## The harness
 
-The nine modules above are the model.  The ten `_rt_*.py` files in the root
+The nine modules above are the model.  The eleven `_rt_*.py` files in the root
 beside them are the harness: the pilots that *fly* the model, and the instruments
 that measure whether it can be flown at all.  Nothing in the model imports one,
-all ten are tracked, and the `_rt_` prefix is the project's own word for what
-they are - scratch.  They arrived in three groups: the four the missions are flown
+all eleven are tracked, and the `_rt_` prefix is the project's own word for what
+they are - scratch.  They arrived in four groups: the four the missions are flown
 with, in one commit on 8 October 2026; the five the autorotation and the human
-flyability programme added on 20, 21 and 22 October; and the one the tail rotor's
-own two constants were measured with, on 24 October 2026.
+flyability programme added on 20, 21 and 22 October; and the two the model's own
+unsourced constants were measured with, both on 24 October 2026 - the tail
+rotor's pair first, and the gas producer's own constant after it.
 
 | module | lines | what it is |
 | --- | --- | --- |
@@ -422,9 +424,10 @@ own two constants were measured with, on 24 October 2026.
 | `_rt_handling.py` | 1172 | human flyability, phase 1: a clock, a transport delay, a gain, a lead and a lag closed around the model's own hover |
 | `_rt_axes.py` | 1433 | phase 2: the lever and the pedals under scales of their own, and all four axes again at sixty knots |
 | `_rt_autoro_probe.py` | 192 | the autorotation measured rather than guessed: its entry, its descent, and the rate its skids arrive at |
-| `_rt_autoro_entry.py` | 676 | the autorotation's *other* switch: the engine failure flown through the mission's own loops and printed against the grip's own cut, at two decision rates |
+| `_rt_autoro_entry.py` | 683 | the autorotation's *other* switch: the engine failure flown through the mission's own loops and printed against the grip's own cut, at two decision rates, on an engine of the caller's own |
 | `_rt_autoro_hand.py` | 1417 | phase 3: those two switches worked by a person's hands on the *mission's* own loops, at the instrument's clock and at the slowest one it will fly, with the mission's own row beside them and every number asserted |
 | `_rt_tail.py` | 708 | the tail rotor's two unwritten constants measured: the two rulers on one thrust in inches of pedal, the twist sweep with both pedal stops, the precone sweep and the coning the flight's own flapping wants, and the boundary that shows nothing which flies reads either of them |
+| `_rt_engine.py` | 1034 | the gas producer's own time constant measured: the rotor's clock beside the engine's, the droop band that no constant moves, the lag's own arithmetic, the spool that brackets the constant against the manual's green arc, the lever pull it is nearly invisible on, EMER's runaway, and the published autorotation catch read at three constants |
 
 `_rt_pilot.py` is the one the others stand on, and it is three ideas.  A UH-1 has
 a force trim and the handbook has numbers, so the loops are small-signal about the
@@ -449,24 +452,28 @@ Each is run the way every other module here is:
     python _rt_autoro_entry.py     # both of its switches: _rt_autoro_entry.txt
     python _rt_autoro_hand.py      # both entries by hand: _rt_autoro_hand.txt
     python _rt_tail.py             # the tail rotor's own two constants: _rt_tail.txt
+    python _rt_engine.py           # the gas producer's own constant: _rt_engine.txt
 
 Every transcript is written by the run itself rather than by the shell's
-redirection, and `_rt_*.txt` in `.gitignore` covers all eight of them, so what is
+redirection, and `_rt_*.txt` in `.gitignore` covers all nine of them, so what is
 committed is the code that made them.  `_rt_handling.py`, `_rt_axes.py`,
-`_rt_autoro_entry.py`, `_rt_autoro_hand.py`, `_rt_tail.py` and `_rt_check.py`
-assert every number they print, so a regression is a traceback and not a table
-nobody read.  `_rt_demo.py` is the only one that needs a display, and one thing in
-it is asked of a key a *watcher* would press rather than by the pilot: the engine,
-because an unattended pilot cannot press `F` and a rotor *held* at a hundred per
-cent cannot autorotate at all - which is the aircraft `_rt_autoro_probe.py`,
-`_rt_autoro_entry.py` and `_rt_autoro_hand.py` all measure.  Every harness but
-`_rt_tail.py` wants pygame installed, for the scancodes a pilot's keys are;
-`_rt_tail.py` measures the model's own arithmetic and wants nothing but the model.
+`_rt_autoro_entry.py`, `_rt_autoro_hand.py`, `_rt_tail.py`, `_rt_engine.py` and
+`_rt_check.py` assert every number they print, so a regression is a traceback and
+not a table nobody read.  `_rt_demo.py` is the only one that needs a display, and
+one thing in it is asked of a key a *watcher* would press rather than by the
+pilot: the engine, because an unattended pilot cannot press `F` and a rotor *held*
+at a hundred per cent cannot autorotate at all - which is the aircraft
+`_rt_autoro_probe.py`, `_rt_autoro_entry.py` and `_rt_autoro_hand.py` all measure.
+Every harness but `_rt_tail.py` wants pygame installed, for the scancodes a
+pilot's keys are; `_rt_tail.py` measures the model's own arithmetic and wants
+nothing but the model, and `_rt_engine.py` is the same for six of its seven
+tables - the last one flies the mission's own autorotation, and imports
+`_rt_pilot`, and pygame with it, where it is called.
 
-The last six are the part of the harness that measures rather than flies: the
+The last seven are the part of the harness that measures rather than flies: the
 autorotation's own three instruments, the human flyability programme - three
 phases flown, all three written up in `TODO.md` with their findings and numbers
-together - and the tail rotor's own two constants:
+together - the tail rotor's own two constants, and the gas producer's own:
 
 * **phase 1**, `_rt_handling.py` (20 October).  The model's own hover closed
   around a person's dynamics - twenty decisions a second, 0.2 s of transport delay
@@ -562,6 +569,62 @@ its numbers are in `Done` beside them: see the phase 3 bullet above.
   the "about 4 per cent" the constants' comment used to quote from one of them -
   and the comment, with the self test under it, now cites these numbers.
 
+* **the gas producer's own time constant**, `_rt_engine.py` (24 October).  The one
+  constant in the model whose own comment admits it has no source -
+  `UH1_ENGINE_TIME_CONSTANT_S`, 0.6 sec, "the order of a T53's spool time" - and
+  the seventh of the harness's instruments, and the third that measures the model
+  rather than a flight.  It is on the flying path in the hardest way there is: it
+  is the whole of what stands between the governor's demand and the torque at the
+  shaft, so every spool, every droop and every wind down in the model is flown
+  through it.  What the file measures is the two things a time constant has to be
+  judged against.
+
+  The first is the *other* clock in the loop.  The rotor's own, `I omega / Q` at
+  the hover, is 6.89 sec on the report's 8700 lb aircraft and 9.70 on the flight
+  test one - 11.5 and 16.2 times the engine's 0.6 - so the gas producer's lag is a
+  correction on a rotor that is very much the slow thing, which is why the honest
+  answer is a band and not a number.  The second is the manual's own +-40 rpm
+  droop band, and the file's own table is what shows the constant's first duty:
+  *not* to touch it.  The band read as a curve is 20.87 rpm of N2 at the 8700 lb
+  hover (1.02 rpm of rotor, 0.32 per cent of 324) and the whole 40 at full power
+  (1.96 rpm, 0.61 per cent), the gain is the ceiling per band - 26,355 W per rpm
+  of N2 - and the settled speed is the same number at every constant in the sweep,
+  to the last bit, because a proportional governor's droop is a law and not a
+  behaviour.  What the constant *is* worth is then measured three ways, and they
+  agree.  The lag's arithmetic is the same shape at every constant (63.21 per cent
+  of the target at one time constant and 95.02 at three - the two numbers
+  `engine.py`'s own self test asserts) and a clock that is the constant: what it
+  chooses is only *when*.  The spool is that clock read on the aircraft - a dead
+  shaft in a trimmed hover with the fuel coming back on leaves the rotor 2.52 per
+  cent down at the shipped 0.6 sec and puts it back on the trim half a second
+  after the low point - and the dip grows with the constant until at 3 sec the
+  rotor leaves the manual's own green arc, which is the upper edge of the bracket;
+  the lower one is the engine fast enough to be a switch, which barely lets the
+  rotor move at all.  And the third is the autorotation's *own* instrument, flown
+  by `_rt_autoro_entry.flight` with an engine handed to it: the mission's failure
+  entry catches at 190, 188 and 189 ft at 0.6, 0.2 and 1.5 sec while the fuel's
+  departure moves from 0.68 to 5.03 sec - the published catch read against the
+  constant it is cut with, and a rotor this heavy reading the shaft's seconds
+  through eleven times the engine's own clock.
+
+  Two of its results are negative, and they matter as much: a lever pull to the up
+  stop never reaches the ceiling (it peaks at 63 per cent of the transmission), so
+  the rotor dips 0.21 per cent where the manual's curve accounts for 0.07 of it -
+  on the maneuvers the aircraft is actually flown through, the constant is worth a
+  fifth of what the curve is - and EMER, the switch that takes the governor out of
+  the loop, shows what a pilot has when the constant is all there is: the rotor
+  leaves the arc's top 0.87 sec after the switch and reaches 137.6 per cent with
+  the ceiling's whole 907 kW still going into it, which is 9-3's overspeed in the
+  model, while the same switch with the grip moved to the fraction the hover's own
+  demand is of the ceiling holds the trim.  The constant's boundary is checked the
+  opposite way round from the tail rotor's: nothing there reads the two constants,
+  and here the flight *does* read this one - the same dead shaft leaves the rotor
+  at 97.16 per cent on the shipped engine and 99.68 on an instant one - and it
+  reads it once, because `Governor.time_constant` takes its default when the class
+  is built.  The comment on the constant, and the paragraph in `engine.py`'s
+  docstring that repeats it, now cite this run and the band it draws; the self test
+  beside them holds the spool and the decay to the numbers the survey measured.
+
 Both phases hold the loops *above* the attitude at the model's own numbers on
 purpose: what they measure is the margin a hand has on the cyclic.  Whether a
 person's clock can hold the height, the speed and the heading that `_rt_check.py`'s
@@ -594,7 +657,7 @@ was worked out with - went to `attic/` on 21 October.
     |-- scenery.py
     |-- controls.py
     |-- main.py
-    |-- _rt_*.py                   the ten of the harness: see The harness
+    |-- _rt_*.py                   the eleven of the harness: see The harness
     |-- _tmp_shadow.py             the one scratch tool kept: names bound twice
     |-- sample_scenery.xml         the default scenery
     |-- requirements.txt           pygame and PyOpenGL: a window and scancodes

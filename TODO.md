@@ -196,6 +196,77 @@ These are choices, not oversights: each is stated where it lives.
   read against the flight and against the time of day, but neither is a measure of
   how long the window took to see the key.
 
+* 2026-10-24 - **the gas producer's own time constant is measured, which was the
+  last constant in the model that had no source.**  `engine.py` carried it as a
+  number with the words "sec, no source: see docstring" beside it - 0.6 sec, "the
+  order of a T53's spool time" - and it is the one everything the engine does is
+  flown through, since it is the whole of what stands between the governor's
+  demand and the torque at the shaft.  The harness gained the instrument that
+  measures what it is worth: `_rt_engine.py` (1034 lines), the eleventh `_rt_`
+  module, the seventh instrument, and the third that measures the model rather
+  than a flight.
+
+  * *the two clocks.*  The constant is a time, so the file measures it against the
+    other time in the loop: the rotor's own, `I omega / Q` at the hover, is
+    6.89 sec on the report's 8700 lb aircraft and 9.70 on the flight test one -
+    11.5 and 16.2 times the engine's 0.6 - so the gas producer's lag is a
+    correction on a rotor that is very much the slow thing, which is why the
+    answer is a band rather than a number.
+  * *the manual's ruler, which the constant does not touch.*  The governor is
+    proportional, so a demand settles `P / gain` under the selected speed, clipped
+    to the +-40 rpm band of 2-23, and that is a *law*: the same power settles at
+    the same rotor speed at every constant in the sweep, to the last bit.  20.87 rpm
+    of N2 at the 8700 lb hover (1.02 rpm of rotor, 0.32 per cent of 324), the whole
+    40 at full power (1.96 rpm, 0.61 per cent), and the gain between them is the
+    ceiling per band - 26,355 W per rpm of N2.
+  * *the clock it does move.*  The lag's arithmetic is the same shape at every
+    constant (63.21 per cent of the target at one time constant, 95.02 at three -
+    the two numbers the self test asserts) and a clock that is the constant itself:
+    0.6 sec reaches 95 per cent in 1.80 sec and 99 in 2.77, which is the "about
+    three seconds" `Engine.settle`'s docstring quotes, and the same arithmetic run
+    backwards is what makes a failure a wind down - the fuel is gone in 2.77 sec at
+    0.6, 0.93 at 0.2 and 6.92 at 1.5.
+  * *the bracket, drawn by the spool.*  A dead shaft in a trimmed hover, with the
+    fuel coming back on, is the one maneuver where a slow engine has to be caught
+    by a live governor: the rotor drops 2.52 per cent at the shipped 0.6 sec and is
+    back on the trim 0.55 sec after the low point, the dip grows with the constant
+    (0.92 per cent at 0.2, 5.48 at 1.5), and at 3 sec the rotor leaves the manual's
+    own green arc - the upper edge.  The lower edge is the engine fast enough to be
+    a switch, which barely lets the rotor move at all: that is the instant torque
+    the constant's own docstring refuses, flown as a control row.
+  * *the two negative results.*  A lever pull to the up stop never reaches the
+    ceiling - it peaks at 63 per cent of the transmission, so the rotor dips
+    0.21 per cent of the reference where the manual's curve accounts for 0.07 - and
+    on the maneuvers the aircraft is flown through the constant is worth a fifth of
+    what the curve is.  EMER, the switch that takes the governor out of the loop,
+    shows the other end of the same fact: with the grip where the AUTO hover had
+    it, the rotor leaves the arc's top 0.87 sec after the switch and reaches
+    137.6 per cent with the ceiling's whole 907 kW still going into it - 9-3's own
+    overspeed, in the model - while the grip at the fraction the hover's own demand
+    is of the ceiling holds the trim.
+  * *the published catch, read against the constant it is cut with.*  The
+    autorotation's own instrument is the third ruler, and `_rt_autoro_entry.flight`
+    gained an `engine` argument so that it can be handed one: the mission's failure
+    entry catches at 190, 188 and 189 ft at 0.6, 0.2 and 1.5 sec while the fuel's
+    departure moves from 0.68 to 5.03 sec, so the README's 190 ft is a number this
+    constant is cut with and not one it is independent of - read through a rotor
+    whose inertia is eleven times the engine's own clock.
+  * *the boundary, the opposite way round from the tail rotor's.*  Nothing that
+    flies reads the tail rotor's two constants, which is what `_rt_tail.py`'s
+    boundary measures; the flight *does* read this one - the same dead shaft leaves
+    the rotor at 97.16 per cent on the shipped engine and 99.68 on an instant one -
+    and it reads it once, when the class is built, since `Governor.time_constant`
+    takes its default from the module constant at import.  That is why this
+    transcript is the source the constant's "no source" tag needed.
+  * *verified.*  `python _rt_engine.py` writes `_rt_engine.txt` (298 lines) and
+    asserts all 157 of its numbers; `python _rt_autoro_entry.py` still flies both
+    of its switches through the same `flight` (the new argument defaulting to the
+    engine it built before); `python _rt_check.py` still flies both missions at
+    both reaction times and the cruise; `python main.py --check`, the seven module
+    self tests and `python regression_tm73254.py` are all still green; and
+    `python attic/_tmp_counts.py` is at 43 claims with none disagreeing, this
+    module's own row and line count among them.
+
 * 2026-10-24 - **the tail rotor's two unwritten constants are measured, and the
   two rulers they sit between turn out to be 0.57 in of pedal apart.**  The pair
   in `aerodynamics.py` - `UH1_TAIL_TWIST_DEG` and `UH1_TAIL_PRECONE_DEG` - is the
@@ -778,7 +849,7 @@ These are choices, not oversights: each is stated where it lives.
   `--engine` fits the engine the report's own aircraft has not got - and what had
   never been done was measure what the model does *between* a switch and the
   trimmed descent.  So the harness gained a second autorotation instrument:
-  `_rt_autoro_entry.py` (676 lines), which flies the mission's own pilot through
+  `_rt_autoro_entry.py` (683 lines), which flies the mission's own pilot through
   both switches, at two of a person's decision rates, and asserts every number it
   prints, the way `_rt_axes.py` and `_rt_handling.py` do.
 
