@@ -161,9 +161,15 @@ These are choices, not oversights: each is stated where it lives.
   its two neighbours - so a key is a step and not a throw, and the same travel
   takes four times the presses; a key still has no force behind it.
 * **Two tail rotor numbers are not in either report.**  The tail blade twist and
-  its built in coning come from this project's own blade element survey - what
-  `aerodynamics.py`'s self test runs - rather than from TM-73254 or
-  TM 55-1520-210-10.
+  its built in coning come from this project's own blade element survey -
+  `_rt_tail.py`, and the figures `aerodynamics.py`'s self test pins - rather than
+  from TM-73254 or TM 55-1520-210-10.  They are read against the tail rotor the
+  model actually *flies*, which is equation 37 and not a blade element at all: the
+  two rules are 0.57 in of pedal apart at the hover the constants are set at, so
+  the twist is the model's own reading of the thrust its own tail rotor asks for
+  rather than a figure either report or a drawing could supply.  What is missing
+  for the precone is a drawing: the 1.5 to 2 deg of built in coning is a ground
+  and tail boom clearance question, and the survey only bounds it from below.
 * **The model is evaluated in SI** while the reports tabulate English units.
   The conversions are written next to each constant, so both columns can be
   read, but a difference in the fourth figure can come from either.
@@ -234,6 +240,97 @@ These are choices, not oversights: each is stated where it lives.
   `self test passed`, `regression_tm73254.py` printed its own, `_rt_check.py`
   flew both missions and wrote `_rt_log.txt`, and every one exited 0.  The
   table's own row for `main.py` is read back at what it now is,
+* 2026-10-24 - **the tail rotor's two unwritten constants are measured, and the
+  two rulers they sit between turn out to be 0.57 in of pedal apart.**  The pair
+  in `aerodynamics.py` - `UH1_TAIL_TWIST_DEG` and `UH1_TAIL_PRECONE_DEG` - is the
+  only one the model ships that neither TM-73254 nor TM 55-1520-210-10 carries a
+  number for, and what stood behind them was a comment quoting figures that
+  nothing in the project computed: 2180 N, 7.85 deg, 0.664, -52 deg, "about 4 per
+  cent", 0.88 and 0.35 deg, "130 per cent", 34 and 45 mm.  The harness gained the
+  instrument that computes them: `_rt_tail.py` (708 lines), the tenth `_rt_`
+  module, the second of the ten that measures the model rather than flying it, and
+  the first that wants no pygame at all - it imports `aerodynamics`,
+  `rotor_control` and `airframe`, since what it measures is the model's own
+  arithmetic and not a flight.
+
+  * *two rulers, one thrust.*  The model answers this question with *two* tail
+    rotors: the one that **flies** is TM-73254's equation 37
+    (`airframe.tail_rotor_thrust`, the report's "economical approximation to the
+    tail rotor thrust of an isolated tail rotor", parametric in the collective),
+    and the one the two constants **describe** is blade element
+    (`Rotor.uh1h_tail`, which is what the self test runs).  Asked for the 2180 N
+    that a 4309 kg hover's torque balance sets - and the blade element main rotor
+    hover does ask exactly that - they answer 10.16 deg of tail collective against
+    7.85, i.e. 1.51 in of pedal against 0.95 on the pedals' own 6.90 in of travel.
+    The aircraft's own two trims say the same thing at the same mass:
+  * *the twist.*  The gap closes to nothing at 3.07 deg of washout and stays
+    inside 0.57 in of pedal for every twist from there to none at all, so the
+    shipped zero is a choice inside a bracket rather than a figure on its own.  The
+    survey reproduces the comment's own readings, at the 10 stations it read them
+    at: 7.85 deg of collective at a figure of merit of 0.664 for no twist, 10.85
+    and 0.672 at -4 deg, 15.35 and 0.680 at -10 (a clean 0.75 deg of collective
+    per degree of washout).  What settles the twist at zero is not the figure of
+    merit but the *stops*: at 0 deg the two pedal stops pull within one per cent of
+    the same newtons - 6710 N at full left pedal and -6650 at full right, so the
+    tail rotor has the same authority either way, which is what a symmetric section
+    and no twist buy - while 10 deg of washout halves the left stop to 3271 N and
+    deepens the right one to -8014 N, taking the authority out of the direction a
+    hover and a left crosswind need it and putting it where nothing asks for it.
+    Washout does not even fix the inboard blade: it still pulls 0.9 per cent of
+    the thrust the wrong way at -10 deg, against 3.2 at zero - the one thing it
+    does buy, and bought at 0.75 deg of collective a degree.
+  * *the precone.*  1.5 deg of built in coning sits 0.38 deg above the most the
+    flight's own flapping ever asks of the blade: 0.88 deg for a 4 kg blade and
+    0.35 deg for a 10 kg one at the hover the torque balance sets, rising to 1.12
+    and 0.45 at 130 per cent of that thrust - the four numbers the comment quotes,
+    measured.  It raises the tips 33.8 mm at 1.5 deg and 45.0 mm at the 2 deg the
+    manual's band ends at, and it moves **no load at all**, which the sweep shows
+    by comparing every station's thrust to the last bit: `Rotor.compute` still
+    resolves the blades in the disc plane, so the angle only sets the flapping
+    reference a teeter step would use.  The lower end of the band is therefore
+    measured and the upper end is not: 1.5 deg is above everything the flight asks
+  * *the boundary, which is now measured too.*  What the comment claims in prose -
+    that the flying tail rotor is equation 37 and not this blade element one - is
+    the one claim in it that can be *shown*: both constants are rebound on
+    `aerodynamics` (to -10 deg of twist and 3 deg of coning), the aircraft is
+    re-trimmed and flown for sixty frames, and all twenty numbers - the four
+    sticks, the tail collective they mix to, the tail thrust, the main rotor
+    torque, the position, the velocity, the attitude, the rates and the rotor speed
+    - come back identical to the last bit, while a tail rotor built after the
+    rebinding carries the new values.  The experiment is shown to bite where it
+    should and not to bite where it should not.
+  * *the one figure that did not reproduce.*  The comment's "down to -52 deg at
+    the innermost station" has no spacing attached and is right at none of them:
+    the worst angle of attack on the untwisted blade is -39.1 deg at 10 stations,
+    -57.1 at 20 and -69.0 at 40, because the innermost station is nearer the root
+    the finer the blade is cut.  What *is* stable - and is what the comment should
+    have quoted - is the share of the thrust those inboard stations make, -3.2 per
+    cent at every spacing ("about 4 per cent" is one reading of it), and the radius
+    the angle of attack changes sign at, 0.42 R: the untwisted blade's inboard
+    fifth is not what runs negative, its inboard *two fifths* does, which is why
+    the share is small and the angle is not.  Nothing is changed in the model by
+    this commit; the comment that cites the measurement, and the self test that
+    pins it, are the commit after it.
+  * *verified.*  `python _rt_tail.py` writes `_rt_tail.txt` and asserts all 91 of
+    its numbers, the tables above among them, from the two rulers to the station
+    convergence and the boundary; `python attic/_tmp_counts.py` is at 41 claims
+    with none disagreeing, `README.md`'s harness table and prose counting the tenth
+    module; `python main.py --check` still prints `main.py check passed`;
+    `python aerodynamics.py` still prints `self test passed`; `python _rt_check.py`
+    still flies both missions at both reaction times and the cruise; and the model
+    itself is untouched - the commit is one harness module and its transcript, the
+    `README.md` and `TODO.md` prose that counts and describes it, and
+    `.gitignore`'s and `attic/_tmp_counts.py`'s own comments.
+
+    of the blade, and 2 deg is a clearance question that only a drawing could
+    settle.
+
+    `Airframe.trim_hover` puts the pedals at -1.42 in (with 2061 N of tail thrust
+    at them, against the 2038 N its own torque asks for) and
+    `RotorControlModel.trim_hover` at -0.92.  So the two halves of the model
+    disagree by 0.57 in at the very condition the constant was chosen at, and that
+    number is the width of the band the constant is chosen inside.
+
   `README.md`'s caption paragraph names the limit the gauge is read against, and
   `attic/_tmp_counts.py` is at 39 claims - this entry's own line count among
   them - with none disagreeing.
