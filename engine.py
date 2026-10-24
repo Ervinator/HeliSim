@@ -71,7 +71,13 @@ the only way the manual expresses it, in psi of calibrated torque.
   time, and it is this project's second choice about the engine - the first
   being the rotor inertia in :mod:`airframe`, and the reason is the same one: a
   first order lag on a number nobody published is honest, and an instant torque
-  is not;
+  is not.  What that number is worth on this aircraft is measured by
+  ``_rt_engine.py`` rather than argued: it is a correction on a rotor whose own
+  clock is eleven to sixteen times longer, it cannot move the manual's droop band,
+  which is a law of the proportional loop, and what it *does* move - the dip a
+  dead shaft leaves the rotor with, and the seconds the fuel takes to go - keeps
+  the rotor inside the green arc from 0.2 sec up and takes it out of the arc at 3,
+  which is the band the constant sits in;
 * **density and altitude.**  Torque available falls with pressure altitude and
   with air temperature (7.1-12), and both of those reach the model as one
   number, the air density the airframe is already flying at, so the available
@@ -332,8 +338,27 @@ def inlet_temperature_c(fat, hover_ige=False):
 #: inertia over in :mod:`airframe` and for the same reason - a first order lag
 #: on a number neither report carries.  It is the order of a T53's spool time,
 #: and it is what makes an engine failure a *wind down* rather than a switch,
-#: and a governor a lagged answer rather than an instant one.
-UH1_ENGINE_TIME_CONSTANT_S = 0.6              # sec, no source: see docstring
+#: and a governor a lagged answer rather than an instant one.  What it is worth on
+#: this aircraft is measured rather than argued, by ``_rt_engine.py``:
+#:
+#: * the *other* clock in the loop is the rotor's own, ``I omega / Q`` at the
+#:   hover - 6.89 sec on the report's 8700 lb aircraft and 9.70 on the flight test
+#:   one, so this lag is a correction on a rotor eleven to sixteen times slower
+#:   than it, which is why the honest answer is a band and not a number;
+#: * the manual's +-40 rpm droop band (2-23) is a *law* this constant cannot move:
+#:   20.87 rpm of N2 at the 8700 lb hover and the whole 40 at full power, at the
+#:   same settled speed for every constant in the survey's sweep, to the last bit;
+#: * the clock it does move is read on the aircraft by a dead shaft in a trimmed
+#:   hover with the fuel coming back on.  The rotor drops 2.52 per cent at 0.6 sec
+#:   and is back on its trim half a second after the low point, the dip grows with
+#:   the constant, and at 3 sec the spool takes the rotor out of the manual's own
+#:   green arc - so the band is drawn by an engine fast enough to be a switch
+#:   barely letting the rotor move at all at one end, and one slower than the arc
+#:   allows at the other;
+#: * and the spool's own arithmetic is the other half of :meth:`Engine.settle`'s
+#:   "about three seconds": 63.21 per cent of the target at one time constant, 99
+#:   per cent at 2.77 sec, and the fuel gone in the same 2.77 from a dead shaft.
+UH1_ENGINE_TIME_CONSTANT_S = 0.6              # sec, measured: see _rt_engine.py
 
 
 def _clip(value, low, high):
@@ -829,6 +854,29 @@ def _self_test():
     for _ in range(120):
         engine.advance(1.0 / 60.0, slow)
     assert abs(engine.power / target - 1.0) < 0.01
+    # And the clock that constant is, at the frame loop's own step: 99 per cent of
+    # the target at 2.77 sec, which is the "about three seconds" settle()'s own
+    # docstring quotes, and the same 2.77 to the last per cent of the gauge from a
+    # dead shaft - which is what makes a failure a wind down and not a switch.
+    # Both are _rt_engine.py's numbers: the survey measures the rise, the decay and
+    # the band the constant sits in, and this holds the three the constant itself
+    # is built on.
+    engine.reset()
+    reached = None
+    when = 0.0
+    while when < 5.0 and reached is None:
+        engine.advance(1.0 / 60.0, slow)
+        when += 1.0 / 60.0
+        if engine.power >= 0.99 * target:
+            reached = when
+    assert reached is not None and abs(reached - 2.77) < 0.02, reached
+    dead = Engine(governor=Governor(failed=True))
+    dead.power = UH1_ENGINE_POWER_W
+    when = 0.0
+    while when < 5.0 and dead.power > 0.01 * UH1_ENGINE_POWER_W:
+        dead.advance(1.0 / 60.0, UH1_RPM)
+        when += 1.0 / 60.0
+    assert abs(when - 2.77) < 0.02, when
 
     # A free turbine's output torque is P / omega, so the same gas is worth
     # more torque at a lower rotor speed: 11 per cent more at 90 per cent of
@@ -1057,9 +1105,22 @@ def _demo():
           % (UH1_TRANSMISSION_LIMIT_PSI, UH1_TORQUE_NM_PER_PSI,
              UH1_ENGINE_MAIN_TORQUE_NM))
     print("  droop compensator holds N2 to +-%.0f rpm; GOV EMER costs %.0f psi"
-          " (the manual's 6 to 8); gas producer lag %.2f s, this project's own"
+          " (the manual's 6 to 8); gas producer lag %.2f s, this project's own,"
           % (UH1_ENGINE_DROOP_RPM, UH1_GOVERNOR_EMER_PSI,
              UH1_ENGINE_TIME_CONSTANT_S))
+    # The lag's own clock, which is what _rt_engine.py measures it by: 99 per cent
+    # of the governor's answer in 2.77 sec, and the same from a dead shaft with the
+    # fuel gone - which is the "about three seconds" settle() quotes.
+    rising = Engine()
+    rising.power = 0.0
+    asked = rising.power_target(0.95 * UH1_RPM)
+    when = 0.0
+    while when < 5.0 and rising.power < 0.99 * asked:
+        rising.advance(1.0 / 60.0, 0.95 * UH1_RPM)
+        when += 1.0 / 60.0
+    print("  which reaches 99 %% of what the governor asks in %.2f s, and the"
+          " same seconds" % (when,))
+    print("  from a dead shaft's fuel: the wind down the 0.6 sec is chosen for.")
 
     print()
     print("droop, which is the manual's definition read as a curve")

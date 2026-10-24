@@ -196,6 +196,48 @@ These are choices, not oversights: each is stated where it lives.
   read against the flight and against the time of day, but neither is a measure of
   how long the window took to see the key.
 
+* 2026-10-24 - **the gas producer's constant now cites the measurement, and the
+  self test under it holds the clock the number is.**  The commit before this one
+  wrote the ruler; this one is what it measured, in the two places the model itself
+  carries the argument - the comment on `engine.UH1_ENGINE_TIME_CONSTANT_S` and the
+  lag block of `engine.py`'s own self test - and in the line that module's demo
+  prints beside them.  No arithmetic in the model changed: every figure the survey
+  asserts is the same figure before and after this commit.
+
+  * *the comment.*  It no longer says "sec, no source: see docstring".  It says the
+    number is `_rt_engine.py`'s, and what the survey behind it measured: the two
+    clocks (the rotor's own 6.89 and 9.70 sec against the engine's 0.6), the droop
+    band the constant cannot move because it is a law of the proportional loop, the
+    dip a dead shaft leaves the rotor with at 0.6 sec - 2.52 per cent, back on the
+    trim half a second after the low point - and the 3 sec at which the spool takes
+    the rotor out of the manual's green arc, which is the band.  The spool's own
+    arithmetic goes with it: 63.21 per cent of the target at one time constant, 99
+    per cent at 2.77 sec and the fuel gone in the same 2.77, which is the other half
+    of `Engine.settle`'s "about three seconds".
+  * *the paragraph in the module docstring*, which is where a reader met the
+    constant first.  It argued from the order of a T53's spool time and stopped
+    there; it now says what the number is worth on this aircraft as well, so its own
+    "an instant torque is not honest" is the *lower* edge of a band rather than a
+    preference.
+  * *the self test.*  The block that held the lag to its shape - 63 per cent of the
+    way in one time constant, 95 in three, nothing in a frame of no time - now also
+    holds the *clock*: a dead shaft's rise to 99 per cent of the governor's answer
+    at 2.77 sec and the fuel's own departure at 2.77, both at the frame loop's own
+    1/60 s step, which are two of the figures the survey's table prints.  A constant
+    that moved would fail the module's own test rather than a document's memory of
+    it.
+  * *the demo's own line*, which printed "gas producer lag 0.60 s, this project's
+    own" and left it at that.  It now prints the clock with it, computed at its own
+    step rather than written in: the seconds to 99 per cent of what the governor
+    asks, and the same seconds from a dead shaft's fuel.
+  * *verified.*  `python engine.py` prints `self test passed` with the new block and
+    its demo prints the new clock; `python main.py --check`, the other six module
+    self tests, `python regression_tm73254.py` and `python _rt_check.py` are all
+    still green - no arithmetic moved, so every number they assert is the same
+    number; `python _rt_engine.py` still asserts its 157; and
+    `python attic/_tmp_counts.py` is at 44 claims with none disagreeing, with
+    `README.md`'s module table carrying `engine.py` (1190 lines).
+
 * 2026-10-24 - **the gas producer's own time constant is measured, which was the
   last constant in the model that had no source.**  `engine.py` carried it as a
   number with the words "sec, no source: see docstring" beside it - 0.6 sec, "the
