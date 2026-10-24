@@ -8,7 +8,9 @@ __pycache__/
 # and per-page extraction dumps from the reference PDFs, the pre-scenery
 # main.py, and the throwaway greps that went with them.  Kept on disk because
 # the numbers in the physics modules can be traced back through it, but it is
-# not part of the project - see attic/README.md.
+# not part of the project - see attic/README.md.  The directory is ignored and
+# its bulk stays that way; the tools inside it that a check is run with are
+# re-included at the end of this file, where the reason is.
 attic/
 
 # The reference documents themselves: third party PDFs and their 83 scanned
@@ -55,3 +57,22 @@ _tmp_*.py
 _tmp_*.txt
 _tmp_*.log
 log_*.txt
+
+# attic/, revisited on 2026-10-23.  Ignoring the directory was right for the 131
+# text dumps, the 43 page crops and the pre-scenery main.py in it - but it also
+# kept out `attic/_tmp_counts.py`, the tool that reads every `(N lines)` claim
+# in README.md, TODO.md and attic/README.md back off the files themselves and
+# exits 1 when one of them has drifted.  That is a check, and a check nobody can
+# run is not one, the same reason `_tmp_shadow.py` above is tracked: so the
+# directory, its README (the third document the tool reads claims out of) and
+# the `.py` tools beside it are put back here, and the bulk stays ignored.
+# `attic/*` matches a directory too, so git never descends into `attic/_imgs/`,
+# and `attic/_head_main.py` - a 380 KB excerpt of main.py rather than a tool -
+# is ignored again on the last line.  These lines come last because `_tmp_*.py`
+# above matches at any depth and would otherwise take the ten `_tmp_` tools in
+# here back out with it.
+!attic/
+attic/*
+!attic/README.md
+!attic/*.py
+attic/_head_main.py
