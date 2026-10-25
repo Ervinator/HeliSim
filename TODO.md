@@ -46,9 +46,17 @@ has `--check` for the wiring that flying cannot test.  What follows is what
     and a trim solved at an altitude solves in that altitude's air, and 7.1-13(c)'s
     inlet temperature correction is the model's own arithmetic
     (`engine.inlet_temperature_c`, `Airframe.hover_ige`, `--ige-hover`) rather than
-    a pilot's by hand.  What no run can say yet is anything *about* that air beyond
-    a standard day shifted by a number: no wind field, no inversion, no weather -
-    see the limitations below.
+    a pilot's by hand.  The air is now more than one number in the two ways a
+    *field* can be - both landed 2026-10-25, see `Done`: a profile may name the
+    day's own *shape* rather than an offset from the standard one
+    (`Airframe.air_profile` as a callable of altitude, which is how an *inversion*
+    is expressible at all), and the wind may vary over the scenery
+    (`airframe.as_wind`, a callable of position, with `--wind KT FROM` in the
+    sandbox and the reading *at the aircraft* on the caption).  What no run can say
+    yet is where such a field's *numbers* would come from - nothing in this project
+    supplies a wind profile, a lapse that is not the standard atmosphere's, or a
+    gust, and the manual's own words on the air are limits rather than physics,
+    which nothing reads either - so see the limitations below.
 
 * **A hand has been put on the autorotation; the harness's other two missions
   have not had one.**  `_rt_autoro_hand.py` - see `Done` - flies the
@@ -173,21 +181,39 @@ These are choices, not oversights: each is stated where it lives.
 * **The model is evaluated in SI** while the reports tabulate English units.
   The conversions are written next to each constant, so both columns can be
   read, but a difference in the fourth figure can come from either.
-* **The air is a profile now, but a standard one.**  What a flight flies in is a
-  pressure altitude and a free air temperature - the manual's own two numbers for
-  it - either named on the airframe (`Airframe.pressure_altitude`,
-  `Airframe.fat`), with the density worked out from them
-  (`aerodynamics.isa_air_density`) or named outright, or *read off the aircraft*:
-  `Airframe.air_profile` is the standard atmosphere the scenery stands in, lapsed
-  to the aircraft's own altitude and shifted by however far off standard the day
-  is, and `Airframe.hover_ige` is 7.1-13(c)'s ten degrees of inlet temperature in a
-  prolonged hover in the cushion.  What is *not* in the model is any air that is
-  not the standard atmosphere's shape: no inversion, no weather, and no wind field
-  over the scenery - the ground is a plane and the sky above it is one air, the
-  same gap in one more place.  The cushion correction is the flight's own
-  *declaration* rather than a reading, because "prolonged" is a word about a clock
-  and this model's ground effect is a smooth function of the rotor's height, with
-  no edge in it to call a hover on either side of.
+* **The air can be a field, and nothing in this project supplies one.**  What a
+  flight flies in is a pressure altitude and a free air temperature - the manual's
+  own two numbers for it - either named on the airframe
+  (`Airframe.pressure_altitude`, `Airframe.fat`), with the density worked out from
+  them (`aerodynamics.isa_air_density`) or named outright, or *read off the
+  aircraft*: `Airframe.air_profile` is the standard atmosphere the scenery stands
+  in, lapsed to the aircraft's own altitude and shifted by however far off standard
+  the day is - or, if it is a callable, the day's own shape at that altitude - and
+  `Airframe.hover_ige` is 7.1-13(c)'s ten degrees of inlet temperature in a
+  prolonged hover in the cushion.  The wind is the same arrangement on the other
+  axis: a run names it (`Simulation.wind`, `--wind KT FROM`) as one vector over the
+  whole scenery or as a callable of position, a *field*, and what the caption reads
+  is that field at the aircraft.
+
+  What is missing is the *numbers* and not the machinery, and no document read
+  here has them.  A profile may be any shape a caller writes - an inversion is a
+  callable that stops lapsing - but nothing supplies a lapse that is not the
+  standard atmosphere's, because a thermometer at one height says nothing about the
+  air above it; a wind may be a field, but nothing supplies a field, so the upwash
+  off a ridge and the sink over a valley are still the terrain's own work (`Next`,
+  the ground's bullet) rather than an air this model generates; and no weather is
+  modelled at all - no gust, no turbulence, no icing, no inversion that arrived
+  with a front.  The manual's own words on the air are *limits* rather than
+  physics, and nothing reads those either: "Maximum cross wind for hover is 30
+  knots", "Maximum tail wind for hover Is 30 knots", a 30 knot wind or a 15 knot
+  gust spread to start in, the elastomeric springs off below -20 C, and flight
+  into known icing, service or extreme turbulence and thunderstorms prohibited
+  (5-13(b) to (f)).  The model has no envelope to read them into, so a run may be
+  flown in any air it names and a reader is the one checking the limit.  The
+  cushion correction is the flight's own *declaration* rather than a reading,
+  because "prolonged" is a word about a clock and this model's ground effect is a
+  smooth function of the rotor's height, with no edge in it to call a hover on
+  either side of.
 * **`main.py`'s key log is stamped where the loop handles the key**, not where it
   was pressed: the event is taken out of pygame's queue before the frame is flown,
   so a line is up to a frame late - inside the 1/60 s the physics steps in
@@ -477,7 +503,7 @@ These are choices, not oversights: each is stated where it lives.
     metres, so the psi on the caption are `telemetry.engine.torque` at that
     slope - `engine.UH1_TORQUE_NM_PER_PSI`, 621.4 N m of rotor shaft torque per
     psi - with `engine.UH1_TRANSMISSION_LIMIT_PSI` beside them as the limit the
-    reading is against.  Two imports in `main.py` (4714 lines), one format
+    reading is against.  Two imports in `main.py` (4819 lines), one format
     string, and nothing under the physics touched: which limit a reading is read
     against was always the caption's business, and the model already had both
     numbers.  A gauge shown against what the transmission will take is also the
@@ -502,6 +528,85 @@ These are choices, not oversights: each is stated where it lives.
 
 
 ## Done
+
+* 2026-10-25 - **the air is a field: the wind can vary over the scenery and the
+  day can have a shape.**  The sentence `Next` left open under the engine's own
+  bullet - "no wind field, no inversion, no weather" - turned out to be two
+  different things.  Two of the three are *machinery* the model can have with no
+  document behind it, and those are what this landed; the third is the numbers a
+  field would be drawn from, which nothing read here has, so it is stated as a
+  boundary instead (`Known limitations`, and the manual's own environmental
+  restrictions, which are limits rather than physics).
+
+  `airframe.as_wind` is the wind's contract, and it is
+  `aerodynamics.as_airflow`'s shape one level up: `None` is still air, a
+  `Vector3` is one wind over the whole scenery, and a *callable* is a field,
+  handed the aircraft's position in NED metres and answering the air's velocity
+  there.  A vector is handed straight through and the position thrown away, so a
+  run that names one wind flies the identical arithmetic it flew before a field
+  was possible - the self test asserts exactly that, the old expression written
+  out by hand beside the new one - and there is one reading of it,
+  `Airframe.air_relative_velocity`, which is why the frame loop, the derivatives,
+  all three trims and the shaft residual all see a field the same way.  It is read
+  at the *state's* position and not the aircraft's, which is the rule the density
+  already followed: a trim solves a condition and hands trial states, so a
+  condition at a place is closed in the air at that place.
+
+  `Airframe.air_profile` may now be the day's own *shape* rather than an offset
+  from the standard one: a callable of altitude, handed metres and answering the
+  free air temperature there.  That is the one way an *inversion* can be in this
+  model - a profile that stops lapsing somewhere under the aircraft - and nothing
+  else was needed for it, because `air_at` was already the one place the pair is
+  worked out: the density, the engine's chart, the trims and the telemetry follow
+  a shape for free.
+
+  The sandbox can fly in a wind at last.  `main.py` gained `--wind KT FROM` - a
+  speed in knots and the direction it blows *from*, which is the way a wind is
+  reported and the way the manual prints its own limits - and
+  `airframe.wind_from_deg` and `airframe.wind_polar` are that conversion and its
+  inverse.  A wind is the *flight's* rather than the aircraft's, so it is set on
+  the `Simulation` and not on a preset, and it is set before the park: the park
+  flies a zero length step to get the first frame's forces, so the aircraft is
+  parked in the wind it is about to be flown in.  `Telemetry` gained
+  `wind_speed_kt` and `wind_from_deg` - the field read *at the aircraft*, `None`
+  in still air - and the caption carries them in those units only when a run has
+  named a wind, so the aircraft of the report's own figures still reads exactly
+  as it did.
+
+  Verified: the module that owns each number, and the round trip between them.
+  `airframe.py`: 20 kt from 240 is air travelling north east at the 20 knots the
+  conversion is for, and `wind_polar` gives the 20 and the 240 back; a wind out of
+  the north is a negative x, north being +x in this frame; a wind with nothing in
+  the horizontal reports no bearing; `as_wind` on a vector returns that vector's
+  own answer to the last bit, as the pre-field expression written beside it; a
+  field read at 100 ft and at 600 ft gives the 5 kt and the 30 kt the shear is
+  drawn with; the same field at the same state is the same answer twice; and a
+  field of zeros is still air exactly.  A day shaped as a warm layer over the
+  standard one reads standard below it and 20 C above it, where a *number* ten
+  degrees off standard is a different air at both heights and the same day at
+  neither - and the layer is thinner air at its own pressure altitude with the
+  engine's chart lower for it, which is where a shape reaches the physics.
+  `simulation.py`: a 5 m/s wind still drifts the hover downwind and now reports as
+  a wind out of the west in knots; still air reports `None` where a field of zeros
+  reports a wind of zero; and one field with a seam 500 m north - still under it,
+  20 kt out of the west over it - leaves the aircraft under the seam with
+  `state.values()` identical, to the last bit, to the same aircraft flown in no
+  wind at all, while the one over it is going east at over half a metre a second.
+  `main.py --check`: the seventh switch parses in every order and shape - both
+  numbers, neither, a switch in the second place, said twice, and with the scenery
+  argument either side of it - and the caption carries `| wind 20 kt from 240` for
+  a run that set one and nothing for a run that did not, that vector being the
+  object the simulation holds and the numbers the telemetry reports, out of one
+  `wind_polar` call.
+
+  The gate was re-run in full for it: the seven module self tests each printed
+  their own `self test passed`, `regression_tm73254.py` printed its own,
+  `_rt_check.py` flew both missions and wrote `_rt_log.txt`, and `main.py --check`
+  printed `main.py check passed`.  `README.md`'s module table was read back at
+  what the three files now are - `airframe.py` (4231 lines),
+  `simulation.py` (3318 lines), `main.py` (4819 lines) - its air section carries
+  the wind and the day's shape, and `attic/_tmp_counts.py` is at 47 claims with
+  none disagreeing.
 
 * 2026-10-23 - **the air is a profile a flight reads rather than a setting it is
   given, and 7.1-13's inlet correction is the model's own arithmetic.**  The two

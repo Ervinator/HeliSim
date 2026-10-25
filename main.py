@@ -34,7 +34,7 @@ Usage::
     python main.py [scenery.xml] [--log FILE | --no-log]
                    [--controls FILE | --no-controls] [--engine]
                    [--mouse | --mouse-reverse]
-                   [--air-profile [C]] [--ige-hover]
+                   [--air-profile [C]] [--ige-hover] [--wind KT FROM]
     python main.py --check          # the wiring, headless, no window
 
 Keys:
@@ -221,7 +221,7 @@ from aerodynamics import (UH1_BLADE_COUNT, UH1_CHORD, UH1_COLLECTIVE_TRAVEL_IN,
                           UH1_TAIL_BLADE_COUNT, UH1_TAIL_CHORD,
                           UH1_TAIL_MAIN_RATIO, UH1_TAIL_RADIUS, Vector3)
 from airframe import (FOOT, POUND, UH1_HUB_HEIGHT, UH1_TAIL_ARM,
-                      UH1_TAIL_HEIGHT)
+                      UH1_TAIL_HEIGHT, wind_from_deg, wind_polar)
 from engine import (UH1_ENGINE_POWER_W, UH1_IGE_INLET_TEMPERATURE_RISE_C,
                     UH1_TORQUE_NM_PER_PSI, UH1_TRANSMISSION_LIMIT_PSI)
 from simulation import (ChaseCamera, PAD_COLLECTIVE, SIM_TIME_STEP_S, Simulation,
@@ -262,13 +262,16 @@ MOUSE_REVERSE = "reverse"
 MOUSE_MODES = (MOUSE_OFF, MOUSE_ON, MOUSE_REVERSE)
 
 #: What :func:`command_line` answers for the air when a run says nothing about
-#: it: no profile, so the pair stays what the preset names, and no prolonged
-#: hover in ground effect either.  The answer is a pair - ``(profile, hover_ige)``
-#: - because the two things a run can say are independent: ``profile`` is the
-#: number of C the day is off the standard one when the air is read off the
-#: aircraft (:attr:`airframe.Airframe.air_profile`), and ``hover_ige`` is the
-#: 7.1-13(c) condition (:attr:`airframe.Airframe.hover_ige`).
-NO_AIR = (None, False)
+#: it: no profile, so the pair stays what the preset names, no prolonged hover in
+#: ground effect either, and still air.  The answer is a triple - ``(profile,
+#: hover_ige, wind)`` - because the three things a run can say are independent:
+#: ``profile`` is the number of C the day is off the standard one when the air is
+#: read off the aircraft (:attr:`airframe.Airframe.air_profile`), ``hover_ige`` is
+#: the 7.1-13(c) condition (:attr:`airframe.Airframe.hover_ige`), and ``wind`` is
+#: the air's own velocity in NED m/s, ``None`` for still air, as
+#: :func:`airframe.wind_from_deg` builds it and
+#: :meth:`simulation.Simulation.set_wind` takes it.
+NO_AIR = (None, False, None)
 
 #: The three controls the mouse flies, by the names
 #: :class:`simulation.PilotInput` reads its axes by: the cyclic's own two and the
@@ -2665,6 +2668,13 @@ def window_title(sim, view, focused=True):
     is printed in the manual's own feet and C.  In the cushion hover the
     temperature the engine's chart was read at is printed beside it, ten degrees
     above the free air one (7.1-13(c)).
+
+    A wind is on it when the run named one, in the units a wind is reported in -
+    knots and the direction it blows *from* - and it is the wind *at the
+    aircraft* (:attr:`simulation.Telemetry.wind_speed_kt`), so a run flying a
+    *field* reads the air it is in rather than the air it was handed.  A run that
+    says nothing about the wind has no wind on the caption at all, which is every
+    run of the report's own aircraft and every one that flies in still air.
     """
     telemetry = sim.telemetry()
     panel = telemetry.engine
@@ -2681,14 +2691,18 @@ def window_title(sim, view, focused=True):
                % (telemetry.pressure_altitude_ft, telemetry.fat_c))
         if sim.airframe.hover_ige and panel.inlet_temperature_c is not None:
             air += " (inlet %+5.1f C)" % (panel.inlet_temperature_c,)
+    wind = ""
+    if telemetry.wind_speed_kt is not None:
+        wind = (" | wind %2.0f kt from %03.0f"
+                % (telemetry.wind_speed_kt, telemetry.wind_from_deg))
     return ("HeliSim - UH-1H%s | alt %6.1f m %+6.0f fpm | %5.1f kt"
-            " | coll %3.0f %% | cyc %+6.2f/%+6.2f in | ped %+5.2f in%s%s%s%s%s"
+            " | coll %3.0f %% | cyc %+6.2f/%+6.2f in | ped %+5.2f in%s%s%s%s%s%s"
             " | %s view"
             % ("" if focused else " | no keyboard: click the window",
                telemetry.alt_agl, telemetry.height_rate_fpm,
                telemetry.airspeed_kt, 100.0 * telemetry.collective_fraction,
                telemetry.long_stick_in, telemetry.lat_stick_in,
-               telemetry.pedal_in, engine, air,
+               telemetry.pedal_in, engine, air, wind,
                " | trim" if telemetry.in_trim else "",
                " | on the ground" if telemetry.on_ground else "",
                (" | " + telemetry.crash_message) if telemetry.crashed else "",
@@ -2906,16 +2920,30 @@ def command_line(args):
     ``--mouse-reverse`` implies ``--mouse``, since a reversed wheel that nothing
     reads is not a thing a run can ask for.
 
-    The air is the last half, and a pair of switches of its own because the two
+    The air is the last half, and a set of switches of its own because the three
     things a run can say about it are independent: ``--air-profile`` flies an air
     that follows the aircraft (:attr:`airframe.Airframe.air_profile`), and the
     number after it is how far off the standard day the day is, C - say it with
     no number and the day is standard, ``--air-profile 10`` is ten degrees warmer
     than one - while ``--ige-hover`` is the prolonged hover in ground effect of
     7.1-13(c), in which the engine's torque available chart is read
-    10 C warmer.  Both are off by default, which is :data:`NO_AIR`: the pair a
-    preset names, and no cushion, which is the air every figure in TM-73254 was
-    computed in.
+    10 C warmer.  All are off by default, which is :data:`NO_AIR`: the pair a
+    preset names, no cushion, and still air, which is the air every figure in
+    TM-73254 was computed in.
+
+    ``--wind`` is a *pair* of numbers rather than a switch, because that is how a
+    wind is reported: a speed in knots and the direction it blows *from*, so
+    ``--wind 20 240`` is twenty knots out of the south west and
+    :func:`airframe.wind_from_deg` is the one place that becomes the NED vector
+    :attr:`simulation.Simulation.wind` holds.  Both numbers or neither - a wind
+    with a speed and no direction is not a wind - so a ``--wind`` with one number
+    behind it, or at the end of the line, leaves still air, which is the same
+    thing as not having said it.  It is the *flight's* and not the aircraft's,
+    which is why a preset cannot carry it: the same aircraft flies in still air
+    and in a gale.  Nothing checks it against the manual's own wind limits - 30
+    knots of cross wind or of tail wind for a hover, and 30 knots or a 15 knot
+    gust spread for a start (5-13(c) and (d)) - because the model has no envelope
+    to read them into; see ``TODO.md``, ``Known limitations``.
 
     ``--check`` never reaches here: it is read at the bottom of the file, before
     ``main()`` is called at all.
@@ -2961,7 +2989,7 @@ def command_line(args):
             del args[index:index + 2]
         else:
             del args[index]
-    # The air, last of the six: a pair of switches like the mouse's, and stripped
+    # The air, last of the seven: a set of switches like the mouse's, and stripped
     # for the engine's reason - an unread switch left in the arguments would be
     # taken for the scenery path.  The number after --air-profile is read as one
     # only when it is not another switch, so ``--air-profile --engine`` is a
@@ -2978,8 +3006,25 @@ def command_line(args):
     hover_ige = "--ige-hover" in args
     while "--ige-hover" in args:
         args.remove("--ige-hover")
+    # The wind, the one switch that is two numbers: a speed in knots and the
+    # direction it blows from, which is the way a wind is reported.  Both are read
+    # or neither is - a wind with a speed and no direction is not a wind - and
+    # None is still air anyway, so a half said --wind is the same as one that was
+    # not said at all.  Each of the two is taken as a number only when it is not
+    # another switch, which is --air-profile's own reading of the argument after
+    # it, so ``--wind --engine`` is still air with the T53 fitted.
+    wind = None
+    while "--wind" in args:
+        index = args.index("--wind")
+        pair = args[index + 1:index + 3]
+        if len(pair) == 2 and not any(item.startswith("--") for item in pair):
+            wind = wind_from_deg(float(pair[0]), float(pair[1]))
+            del args[index:index + 3]
+        else:
+            wind = None
+            del args[index]
     return ((args[0] if args else DEFAULT_SCENERY_FILE), log_path,
-            controls_path, engine, mouse, (air_profile, hover_ige))
+            controls_path, engine, mouse, (air_profile, hover_ige, wind))
 
 
 def main():
@@ -2987,7 +3032,7 @@ def main():
 
     path, log_path, controls_path, engine, mouse_mode, air = command_line(
         sys.argv[1:])
-    air_profile, hover_ige = air
+    air_profile, hover_ige, wind = air
     loaded = load_scenery(path)
     if loaded is None:
         sys.exit(2)
@@ -3031,6 +3076,18 @@ def main():
         print("air: the prolonged hover in ground effect of 7.1-13(c), so the"
               " chart is read %+.0f C warmer"
               % (UH1_IGE_INLET_TEMPERATURE_RISE_C,))
+    if wind is not None:
+        # The wind is the *flight's* rather than the aircraft's, so it is set on
+        # the simulation and not on the preset - and it is set before the pad,
+        # because the park flies a zero length step to get the first frame's
+        # forces: the aircraft is parked in the wind it is about to be flown in.
+        # It is printed in the units it was asked for in, which are the units a
+        # wind is reported in.
+        sim.set_wind(wind)
+        speed_kt, from_deg = wind_polar(wind)
+        print("air: a wind of %.0f kt from %03.0f, so the aircraft is parked in"
+              " it and drifts downwind as soon as it is flying"
+              % (speed_kt, from_deg))
     print("  the run's own trim: %s" % (sim.trim_controls,))
     sim.on_the_pad()
     if engine:
@@ -3591,6 +3648,32 @@ def _self_check():
     assert (cushioned.engine.inlet_temperature_c - cushioned.fat_c
             == UH1_IGE_INLET_TEMPERATURE_RISE_C)
     assert cushioned.engine.maximum_torque < aloft_air.engine.maximum_torque
+
+    # A wind is on the caption the same way the air is - only when a run has named
+    # one - and in the units a wind is reported in: knots and the bearing it blows
+    # *from*, which is how the manual prints its own wind limits.  The run of the
+    # report's own aircraft above has no wind on it at all.
+    assert "| wind" not in window_title(sim, VIEW_CHASE)
+    wind_vector = wind_from_deg(20.0, 240.0)
+    drifting = Simulation(airframe=airframe_preset(AIRFRAME_PRESET))
+    drifting.set_wind(wind_vector)
+    # The wind is the *flight's* rather than the aircraft's, so it is the
+    # simulation's - and read at the aircraft, which is why a run's own `--wind`
+    # sets it before the park: the aircraft on the pad is already in it.
+    drifting.on_the_pad()
+    assert drifting.wind is wind_vector
+    pad_wind = drifting.telemetry()
+    assert wind_polar(drifting.wind) == (pad_wind.wind_speed_kt,
+                                         pad_wind.wind_from_deg)
+    assert " | wind 20 kt from 240" in window_title(drifting, VIEW_CHASE)
+    # ...and flown: the numbers on the caption are the flight's own reading of the
+    # wind it is in, and the aircraft is going downwind in it.
+    drifting.reset(altitude=200.0)
+    for _ in range(240):
+        drifting.step_fixed()
+    assert drifting.airframe.state.ground_velocity().y > 0.0
+    assert abs(drifting.telemetry().wind_speed_kt - 20.0) < 1e-9
+    assert abs(drifting.telemetry().wind_from_deg - 240.0) < 1e-9
 
     # G is the GOV AUTO/EMER switch and X is an engine failure, and both read
     # back off the caption: those two words are the switch's own, and neither is
@@ -4352,34 +4435,56 @@ def _self_check():
     assert command_line(["--mouse", "--mouse"])[4] == MOUSE_ON  # as often as said
     assert command_line(["scene.xml", "--mouse"])[0] == "scene.xml"
     assert command_line(["scene.xml", "--mouse", "--engine"])[0] == "scene.xml"
-    # ...and the key log and the map are still read with the mouse on: the six
-    # halves are one command line and not six command lines.
+    # ...and the key log and the map are still read with the mouse on: the seven
+    # halves are one command line and not seven command lines.
     assert command_line(["--mouse", "--no-log", "--controls", "panel.xml"]) == (
         DEFAULT_SCENERY_FILE, None, "panel.xml", False, MOUSE_ON, NO_AIR)
 
-    # The air is the last half, and its own pair of switches: --air-profile is an
+    # The air is the last half and three switches of its own: --air-profile is an
     # air that follows the aircraft, the number after it the day's own offset from
     # standard - and a switch with no number after it is a standard day rather
     # than a mistake - while --ige-hover is the 7.1-13(c) cushion hover, which a
-    # run can declare whether or not it also asked for a profile.  Both are off by
-    # default and both are stripped.
+    # run can declare whether or not it also asked for a profile, and --wind is
+    # the air's own motion in the two numbers a wind is reported in.  All three
+    # are off by default and all three are stripped.
     assert command_line([])[5] == NO_AIR
-    assert command_line(["--air-profile"])[5] == (0.0, False)
-    assert command_line(["--air-profile", "10"])[5] == (10.0, False)
-    assert command_line(["--air-profile", "-10.5"])[5] == (-10.5, False)
-    assert command_line(["--air-profile", "--engine"])[5] == (0.0, False)
+    assert command_line(["--air-profile"])[5] == (0.0, False, None)
+    assert command_line(["--air-profile", "10"])[5] == (10.0, False, None)
+    assert command_line(["--air-profile", "-10.5"])[5] == (-10.5, False, None)
+    assert command_line(["--air-profile", "--engine"])[5] == (0.0, False, None)
     assert command_line(["--air-profile", "--engine"])[3] is True
     assert command_line(["--air-profile", "10", "--engine"]) == (
         DEFAULT_SCENERY_FILE, DEFAULT_KEYLOG_FILE, DEFAULT_CONTROLS_FILE, True,
-        MOUSE_OFF, (10.0, False))
-    assert command_line(["--ige-hover"])[5] == (None, True)
-    assert command_line(["--ige-hover", "--air-profile", "0"])[5] == (0.0, True)
-    assert command_line(["--ige-hover", "--ige-hover"])[5] == (None, True)
-    # ...and the scenery argument is still the scenery argument with all six of
+        MOUSE_OFF, (10.0, False, None))
+    assert command_line(["--ige-hover"])[5] == (None, True, None)
+    assert command_line(["--ige-hover", "--air-profile", "0"])[5] == (
+        0.0, True, None)
+    assert command_line(["--ige-hover", "--ige-hover"])[5] == (None, True, None)
+
+    # --wind is the one switch that is *two* numbers: a speed in knots and the
+    # direction the wind blows from, which is the way a wind is reported and the
+    # way the manual prints its own wind limits.  One number is not a wind and
+    # neither is a switch, so either of those leaves still air rather than a
+    # guessed direction - and still air is what a run that says nothing gets.
+    assert command_line(["--wind", "20", "240"])[5] == (
+        None, False, wind_from_deg(20.0, 240.0))
+    assert command_line(["--wind", "20", "240"])[0] == DEFAULT_SCENERY_FILE
+    assert command_line(["--wind", "0", "0"])[5] == (
+        None, False, Vector3(0.0, 0.0, 0.0))
+    assert command_line(["--wind", "20"])[5] == NO_AIR     # no direction, no wind
+    assert command_line(["--wind"])[5] == NO_AIR
+    assert command_line(["--wind", "--engine"])[5] == NO_AIR
+    assert command_line(["--wind", "--engine"])[3] is True
+    assert command_line(["--wind", "20", "240", "--wind", "10", "90"])[5] == (
+        None, False, wind_from_deg(10.0, 90.0))
+    assert command_line(["--wind", "20", "240", "scene.xml"])[0] == "scene.xml"
+    # ...and the scenery argument is still the scenery argument with all seven of
     # them said at once, in any order.
     assert command_line(["scene.xml", "--ige-hover", "--engine",
-                         "--air-profile", "5", "--mouse", "--no-log"]) == (
-        "scene.xml", None, DEFAULT_CONTROLS_FILE, True, MOUSE_ON, (5.0, True))
+                         "--air-profile", "5", "--mouse", "--no-log",
+                         "--wind", "20", "240"]) == (
+        "scene.xml", None, DEFAULT_CONTROLS_FILE, True, MOUSE_ON,
+        (5.0, True, wind_from_deg(20.0, 240.0)))
 
     # A flight key is named by the position the controls read it from, and every
     # other key - the four command keys among them - by pygame's own name.

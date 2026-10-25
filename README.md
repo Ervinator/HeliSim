@@ -18,12 +18,12 @@ Layered, each one importing only what sits below it:
 | `aerodynamics.py` | 1804 | quasi-steady blade element theory for one rotor - section data, flapping, hover and forward flight loads - and the standard atmosphere that turns a pressure altitude and a free air temperature into the density it flies in |
 | `rotor_control.py` | 1280 | the control path: inches of stick travel to swashplate angles, the mixing law and its rigging, the control lags |
 | `engine.py` | 1190 | the T53-L-13 on the other end of the shaft: the twist grip, the N2 governor and its droop band, the torque available read off a digitised figure 7.1-2 - each of its eight altitude curves read at every temperature the sheet prints, and the family read at the airframe's own pressure altitude and free air temperature - what EMER and bleed air cost, the ten degrees of inlet temperature that a prolonged hover in ground effect is read with (7.1-13(c)), and the gas producer's lag - 0.6 sec, which `_rt_engine.py` measures against the rotor's own clock and the band a spool draws around it |
-| `airframe.py` | 4023 | TM-73254's force and moment model - main rotor, tail rotor, fuselage, fin, stabilizer - and the six degree of freedom equations of motion, with the rotor's own speed as a state when an engine is aboard, the second root of equation 10 read off a shaft with nothing driving it, the air it flies in as a pressure altitude and a free air temperature - set on the airframe, or read off the aircraft itself as a profile - or as a density, and the ground under it as one flat plane with a level and a normal |
-| `simulation.py` | 3210 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the three trims, and what a renderer or a HUD asks for - the engine's panel among them, its maximum read in the same air the engine is governed in |
+| `airframe.py` | 4231 | TM-73254's force and moment model - main rotor, tail rotor, fuselage, fin, stabilizer - and the six degree of freedom equations of motion, with the rotor's own speed as a state when an engine is aboard, the second root of equation 10 read off a shaft with nothing driving it, the air it flies in as a pressure altitude and a free air temperature - set on the airframe, or read off the aircraft itself as a profile - or as a density, and the ground under it as one flat plane with a level and a normal |
+| `simulation.py` | 3318 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the three trims, and what a renderer or a HUD asks for - the engine's panel among them, its maximum read in the same air the engine is governed in |
 | `regression_tm73254.py` | 661 | the report's figures 2 to 9 reflown: eight step inputs from 60 kt and from the hover, laid next to its published responses |
 | `scenery.py` | 603 | the XML scenery format and its loader - no pygame, no OpenGL, and the one module whose test needs no window and no physics |
 | `controls.py` | 1105 | the device map: which physical control flies which - keyboard or joystick, per control, with deadzone, invert and calibration - read from the XML of `default_controls.xml`, and likewise stdlib only |
-| `main.py` | 4714 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, the aircraft of `simulation.py` flown from its device map - keyboard, joystick, the mouse, or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it, with the `--engine` switch that fits the T53 before the first frame, the two air switches (`--air-profile`, `--ige-hover`) that say what it flies in, the cursor on the cyclic and the wheel on the collective (`M`, `--mouse` and its own `--mouse-reverse`), and one line for the grip of a run that has none |
+| `main.py` | 4819 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, the aircraft of `simulation.py` flown from its device map - keyboard, joystick, the mouse, or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it, with the `--engine` switch that fits the T53 before the first frame, the three air switches (`--air-profile`, `--ige-hover`, `--wind`) that say what it flies in, the cursor on the cyclic and the wheel on the collective (`M`, `--mouse` and its own `--mouse-reverse`), and one line for the grip of a run that has none |
 
 Only `main.py` imports anything outside the standard library - and that is a
 claim about the nine modules above rather than about the project.  The eleven
@@ -43,7 +43,7 @@ window and none of them needs an OpenGL context.  See *The harness* below.
     python main.py [scenery.xml] [--engine] [--log FILE | --no-log]
                    [--controls FILE | --no-controls]
                    [--mouse | --mouse-reverse]
-                   [--air-profile [C]] [--ige-hover]
+                   [--air-profile [C]] [--ige-hover] [--wind KT FROM]
     python main.py --check          # the wiring, headless, no window
 
 `sample_scenery.xml` is used when no path is given.  The scenery file lists
@@ -75,7 +75,24 @@ prolonged hover in ground effect, in which the chart is read 10 C warmer because
 the cushion raises the engine's *inlet* temperature by that much.  The caption
 carries the pair while a profile is on, and the temperature the chart was read at
 beside it in the cushion; `airframe.Airframe.air_profile`, `.hover_ige`,
-`.air_here` and `simulation.airframe_preset` are where both settings live.
+`.air_here` and `simulation.airframe_preset` are where both settings live.  A
+profile can name the day's own *shape* as well as an offset from the standard one
+- `airframe.Airframe.air_profile` takes a callable of altitude - which is the one
+way an *inversion*, a temperature that stops lapsing with height, can be flown at
+all: nothing in the project supplies such a day, and no document here gives a
+temperature against a height for anything but a standard one.
+
+The air also has a *wind*, and `--wind KT FROM` is how a run names one: a speed in
+knots and the direction it blows from, which is how a wind is reported and how the
+manual prints its own limits.  It is the flight's and not the aircraft's
+(`simulation.Simulation.set_wind`), so the same aircraft flies in still air and in
+a gale, and the caption carries it in those same units beside the air.  What it
+prints is the wind *at the aircraft*: a wind may be a *field* as well as one
+vector over the whole scenery - a callable of position, `airframe.as_wind` - so a
+run can be flying in one air at 100 m and another at 200, and the reading is where
+the flight has got to rather than where it started.  The model supplies no field
+of its own, and nothing checks a wind against the limits the manual prints:
+`TODO.md` carries both under `Known limitations`.
 
 | key | what it does |
 | --- | --- |

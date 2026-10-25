@@ -131,7 +131,7 @@ Standard library only, so it runs and tests headless.
 
 import math
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Callable, Optional, Union
 
 from aerodynamics import (GRAVITY, UH1_COLLECTIVE_TRAVEL_IN,
                           UH1_HUB_WATERLINE_M, UH1_LAT_STICK_TRAVEL_IN,
@@ -140,8 +140,8 @@ from aerodynamics import (GRAVITY, UH1_COLLECTIVE_TRAVEL_IN,
                           Vector3)
 from airframe import (FOOT, KNOT, POUND, Airframe, BodyForces, FlightState,
                       GroundPlane, UH1_HUB_HEIGHT, UH1_OMEGA, UH1_SIM_MASS,
-                      UH1_TEST_MASS, apply, direction_cosine_matrix,
-                      transpose)
+                      UH1_TEST_MASS, apply, as_wind, direction_cosine_matrix,
+                      transpose, wind_from_deg, wind_polar)
 from engine import (Engine, UH1_ENGINE_POWER_W, UH1_IGE_INLET_TEMPERATURE_RISE_C,
                     UH1_TRANSMISSION_LIMIT_PSI)
 from rotor_control import PilotControls
@@ -290,7 +290,17 @@ def airframe_preset(name="simulation", engine=None, **overrides):
     reads the engine's chart lower on the way up, which is what the manual has a
     pilot doing by hand.  ``hover_ige=True`` adds 7.1-13(c) to either of them: the
     chart read 10 C warmer, which is what a prolonged hover in ground effect is
-    (:attr:`airframe.Airframe.hover_ige`).
+    (:attr:`airframe.Airframe.hover_ige`).  Given a *callable* of altitude instead
+    of a number it is the day's own *shape*, for a day the standard atmosphere
+    cannot describe: an inversion is a profile that stops lapsing somewhere under
+    the aircraft, and the pair, the density and the engine's chart all follow it.
+
+    A *wind* is deliberately not a preset's business.  It is the simulation's
+    (:attr:`Simulation.wind`, :meth:`Simulation.set_wind`), because a wind is not
+    a property of an aircraft: the same airframe flies in still air and in a
+    gale, and a run that wants a wind says so about the flight rather than about
+    the machine - and a *field*, a wind that varies with where the aircraft is, is
+    the same opt-in read where the aircraft has got to.
 
     *engine* is the opt-in that changes the aircraft rather than the trim:
     ``None``, the default, is no engine at all, i.e. the report's fixed rotor
@@ -379,10 +389,11 @@ class EngineTelemetry:
 class Telemetry:
     """One instant of the aircraft, in the units an instrument panel wants.
 
-    SI through and through, with knots and feet on the four numbers a pilot
-    reads in those, because TM-73254's own figures are in them.  ``sim_time``
-    belongs to the simulation and not to the aircraft, and is here rather than in
-    a class of its own because a HUD shows it next to the rest.
+    SI through and through, with knots and feet on the numbers a pilot reads in
+    those, because TM-73254's own figures are in them and the manual prints its
+    own wind limits in knots.  ``sim_time`` belongs to the simulation and not to
+    the aircraft, and is here rather than in a class of its own because a HUD
+    shows it next to the rest.
 
     The control angles are what the *mixing* commands, not what the rotor is
     holding: the lags between the two are :class:`rotor_control.ControlLags`,
@@ -407,6 +418,16 @@ class Telemetry:
     that climbs reads the thinner air it climbed into, and the engine's chart is
     read at these two numbers (see :class:`EngineTelemetry`, which carries the one
     case in which that reading is taken a temperature warmer).
+
+    ``wind_speed_kt`` and ``wind_from_deg`` are the air's own motion *at the
+    aircraft*, in the units a wind is reported in and *from* the direction it
+    blows from: a :func:`airframe.wind_polar` reading of :func:`airframe.as_wind`
+    read at the state's own position, so a run flying a *field* reports the wind
+    the aircraft is in rather than the one that was set.  Both are ``None`` in
+    still air, which is what every run flies unless it names a wind
+    (:meth:`Simulation.set_wind`); neither is checked against the manual's own
+    limits, which is one of the things ``TODO.md`` carries under ``Known
+    limitations``.
     """
 
     sim_time: float           # s, physics time actually flown
@@ -443,6 +464,8 @@ class Telemetry:
     advance_ratio: float      # mu
     pressure_altitude_ft: float  # ft, the air the flight is in
     fat_c: float              # C, its free air temperature
+    wind_speed_kt: Optional[float]  # kt, the air's own speed at the aircraft
+    wind_from_deg: Optional[float]  # deg true, the direction it blows from
     engine: EngineTelemetry   # N2, throttle, torque gauge - see that class
     on_ground: bool
     crashed: bool
@@ -954,7 +977,14 @@ class Simulation:
     pilot: PilotInput = field(default_factory=PilotInput)
     dt: float = SIM_TIME_STEP_S
     max_steps_per_frame: int = SIM_MAX_STEPS_PER_FRAME
-    wind: Optional[Vector3] = None
+    #: The air's own velocity, NED m/s, or a *field* of them: ``None`` - the
+    #: default - is still air, a :class:`airframe.Vector3` is one wind over the
+    #: whole scenery, and a callable is a wind that varies with where the aircraft
+    #: is, read where the frame loop asks (:func:`airframe.as_wind`).
+    #: :meth:`set_wind` is how a run says either, and
+    #: :func:`airframe.wind_from_deg` how a wind that is *reported* - a speed in
+    #: knots and the direction it blows from - becomes one.
+    wind: Union[Vector3, Callable[[Vector3], Vector3], None] = None
     start_altitude: float = 200.0
     trim_at_start: bool = True
 
@@ -1275,7 +1305,27 @@ class Simulation:
                           collective=collective)
 
     def set_wind(self, wind):
-        """A steady wind, in NED m/s (``None`` for still air)."""
+        """The air's own velocity, in NED m/s: a wind or a *field* of them.
+
+        ``None``, the default, is still air.  Anything else is kept and read by
+        :meth:`airframe.Airframe.air_relative_velocity` where the frame loop asks
+        for it - :func:`airframe.wind_from_deg` builds one from the way a wind is
+        reported - and :func:`airframe.as_wind` is the contract: a
+        :class:`airframe.Vector3` is one wind over the whole scenery, and a
+        *callable* is a wind that varies with where the aircraft is, handed its
+        position and answering the air's velocity there.
+
+        Called before :meth:`reset` (which every :class:`Simulation` does on the
+        way up and ``on_the_pad`` does again afterwards) it is the wind the
+        aircraft is parked in as well as the one it flies in, since the reset
+        flies a zero length step to get the first frame's forces.
+
+        Nothing here reads the manual's own wind limits - 30 knots of cross wind
+        or of tail wind for a hover, and 30 knots or a 15 knot gust spread for a
+        start (TM 55-1520-210-10, 5-13(c) and (d)) - because the model has no
+        envelope to read them into: a run may be flown in any air it names, and
+        ``TODO.md`` carries what that leaves open under ``Known limitations``.
+        """
         self.wind = wind
         return self
 
@@ -1703,8 +1753,16 @@ class Simulation:
         the air it is in (:attr:`airframe.Airframe.air_here`), which is the pair
         it was given until a run asks for a profile and where the aircraft has
         got to from then on.
+
+        ``wind_speed_kt`` and ``wind_from_deg`` are the air's own motion where the
+        aircraft is: :attr:`wind` read at the state's own position, so a *field*
+        answers here - this aircraft's wind, at this place - rather than once for
+        the run.  Both are ``None`` in still air.
         """
         state = self.airframe.state
+        wind = self.wind
+        if wind is not None:
+            wind = wind_polar(as_wind(wind)(state.position))
         forces = self.forces
         angles = self.airframe.command_angles(self.controls)
         ground = state.ground_velocity()
@@ -1738,6 +1796,8 @@ class Simulation:
             inflow_ratio=rotor.inflow_ratio,
             advance_ratio=rotor.advance_ratio,
             pressure_altitude_ft=air[0], fat_c=air[1],
+            wind_speed_kt=None if wind is None else wind[0],
+            wind_from_deg=None if wind is None else wind[1],
             engine=self.engine_telemetry(),
             on_ground=self.on_ground, crashed=self.crashed,
             crash_reason=self.crash_reason,
@@ -2869,6 +2929,54 @@ def _self_test():
         windy.step(SIM_TIME_STEP_S)
     assert windy.airframe.state.ground_velocity().y > 0.5
     assert windy.telemetry().ground_speed > 0.5
+    # ...and it is reported the way a wind is reported - knots and the bearing it
+    # blows *from*, which is the way the manual prints its own wind limits - and
+    # read off the air the aircraft is in rather than off the setting: the vector
+    # above is 5 m/s towards the east, which is a wind out of the west.
+    assert abs(windy.telemetry().wind_speed_kt - 5.0 / KNOT) < 1e-9
+    assert abs(windy.telemetry().wind_from_deg - 270.0) < 1e-9
+    # Still air is not a wind of zero: it has no reading at all, which is what a
+    # run that says nothing about its air gets.
+    assert Simulation().telemetry().wind_speed_kt is None
+    assert Simulation().telemetry().wind_from_deg is None
+
+    # A wind may be a *field* - a callable of position - and then it is read where
+    # the aircraft is rather than once for the run.  This one is still south of
+    # 500 m north of the origin and 20 kt out of the west north of it: one field,
+    # three aircraft, and only some of them have any air moving over them.
+    def seam(position):
+        """A wind, NED m/s: 20 kt out of the west, north of 500 m only."""
+        return wind_from_deg(0.0 if position.x < 500.0 else 20.0, 270.0)
+
+    def hovering(x):
+        """A level, still hover at 200 m, *x* metres north of the origin."""
+        return FlightState(position=Vector3(x, 0.0, -200.0), velocity=Vector3(),
+                           attitude=Vector3(), rates=Vector3())
+
+    under, north, calm = Simulation(), Simulation(), Simulation()
+    under.set_wind(seam).reset(state=hovering(0.0),
+                               controls=under.trim_controls)
+    north.set_wind(seam).reset(state=hovering(1000.0),
+                               controls=north.trim_controls)
+    calm.reset(state=hovering(0.0), controls=calm.trim_controls)
+    # Read before a frame has flown: nothing under the seam, the field's own 20
+    # knots over it - and a field of zeros has a reading where still air has none,
+    # which is the one thing the two cannot say the same way.
+    assert under.telemetry().wind_speed_kt == 0.0
+    assert under.telemetry().wind_from_deg == 0.0     # no speed, no bearing
+    assert abs(north.telemetry().wind_speed_kt - 20.0) < 1e-9
+    assert abs(north.telemetry().wind_from_deg - 270.0) < 1e-9
+    # Ten seconds of the same sticks in three airs: the aircraft in the field's
+    # windy half is going east, the one under the seam is where it was - and it is
+    # flying the identical flight, to the last bit, that the same aircraft flies
+    # in no wind at all, which is what makes the field's still half *still*.
+    for _ in range(600):
+        under.step(SIM_TIME_STEP_S)
+        north.step(SIM_TIME_STEP_S)
+        calm.step(SIM_TIME_STEP_S)
+    assert north.telemetry().ground_speed > 0.5
+    assert under.airframe.state.values() == calm.airframe.state.values()
+    assert under.telemetry().wind_speed_kt == 0.0     # still under the seam
 
     # The renderer's world: east is +x, up is +y, south is +z, so a helicopter
     # pointing east is drawn pointing east with its right hand to the south.

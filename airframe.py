@@ -86,17 +86,19 @@ the wind down after a failure live.  The inertia matrix carries the UH-1H's
 
 The ground is one flat plane, not a landscape: :class:`GroundPlane` has a level
 and a lean and no shape, so a ridge, a valley, a step or a moving deck is not
-something this module can be flown over yet - and neither is the air underneath
-one, which is a wind field this model has no notion of.  What it can be flown
-over is level ground, a slope, a ramp or any other single flat area, parked on
-it and hovered in its cushion.
+something this module can be flown over yet - and while the *wind* can vary over
+the scenery (:func:`as_wind`, handed the aircraft's position), nothing here
+supplies one: the upwash off a ridge and the sink over a valley are the seam a
+terrain would hand in, and there is no terrain here to hand anything in.  What it
+can be flown over is level ground, a slope, a ramp or any other single flat area,
+parked on it and hovered in its cushion.
 
 Standard library only, so it runs and tests headless.
 """
 
 import math
 from dataclasses import dataclass, field
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple, Union
 
 from aerodynamics import (GRAVITY, isa_air_density, isa_temperature_c,
                           ISA_SEA_LEVEL_TEMPERATURE_C, RHO_SEA_LEVEL, Vector3,
@@ -1436,6 +1438,59 @@ def _trim_converged(values, tolerance, torque_tolerance):
     return len(values) < 7 or abs(values[6]) < torque_tolerance
 
 
+def wind_from_deg(speed_kt, from_deg):
+    """A wind, NED m/s, built the way a wind is *reported*: speed, direction.
+
+    In knots and degrees true, which is how the manual prints its own wind limits
+    (5-13(c) and (d)), and blowing *from* the direction named - so
+    ``wind_from_deg(30.0, 0.0)`` is a 30 knot wind out of the north, the air
+    itself travelling south and the vector ``(0, 0, -30 kt)`` in NED, +x being
+    north.  The turn from a bearing to this frame is the renderer's own: north is
+    +x and east is +y, so a wind out of 090 is air travelling west, -y.
+
+    :func:`wind_polar` is the same conversion the other way round, and it is
+    where a panel's wind reading comes from.
+    """
+    speed = float(speed_kt) * KNOT
+    radians = math.radians(float(from_deg))
+    return Vector3(-speed * math.cos(radians), -speed * math.sin(radians), 0.0)
+
+
+def wind_polar(wind):
+    """``(speed_kt, from_deg)`` for a wind in NED m/s: :func:`wind_from_deg` back.
+
+    A wind with nothing in the horizontal comes back as no speed from due north,
+    since a wind of zero has no direction to report at all.
+    """
+    speed = math.hypot(wind.x, wind.y)
+    if speed <= 0.0:
+        return 0.0, 0.0
+    return (speed / KNOT,
+            math.degrees(math.atan2(-wind.y, -wind.x)) % 360.0)
+
+
+def as_wind(wind):
+    """Accept ``None``, a vector or a callable; return a callable of position.
+
+    The air's own velocity, in NED m/s, in the one shape everything that flies in
+    a wind can be handed: ``None`` is still air, a :class:`Vector3` - or anything
+    else :func:`apply` takes - is one wind over the whole scenery, and a
+    *callable* is a wind that varies with where the aircraft is.  The callable is
+    handed the aircraft's position, NED metres, and answers the air's velocity
+    there; that is the hook for a wind field rather than a model of one, since
+    the air over a ridge is not the air over the valley beside it and a caller
+    who knows the difference says so here.
+
+    A vector is handed on unchanged and the position thrown away, so a run that
+    names one wind flies the identical arithmetic, to the last bit, that it flew
+    before a field was possible - see :meth:`Airframe.air_relative_velocity`,
+    which is the one place either is read.
+    """
+    if callable(wind):
+        return wind
+    return lambda position: wind
+
+
 @dataclass
 class Airframe:
     """The whole aircraft: control path, aerodynamics and equations of motion.
@@ -1516,6 +1571,15 @@ class Airframe:
     pair is the air every figure in TM-73254 was computed in and a preset that
     says nothing about its air has to keep flying it.
 
+    A profile may name a *shape* rather than an offset - a callable of altitude
+    answering the free air temperature there - which is the one way a day that is
+    not a standard one shifted can be in the model.  An inversion is the plain
+    case, and both the density and the engine's chart follow it, since both come
+    off :meth:`air_at`.  The wind is a field in the same sense and read in the
+    same spirit: a callable of position rather than one vector over the whole
+    scenery (:func:`as_wind`, :meth:`air_relative_velocity`), and :meth:`step`'s
+    ``wind`` argument is where a run hands either in.
+
     The one thing a profile cannot read off the aircraft is the *condition* of
     :attr:`hover_ige`: 7.1-13(c) reads the engine's chart 10 C warmer in a
     prolonged hover in ground effect, and "prolonged" is a clock's word rather
@@ -1565,7 +1629,22 @@ class Airframe:
     #: up, where a named pair is the same air at every altitude - which is what
     #: the manual expects a pilot to correct for by hand, reading the chart again
     #: at the new pressure altitude and free air temperature.
-    air_profile: Optional[float] = None
+    #:
+    #: A *callable* is the day's own shape instead of an offset from the standard
+    #: one: it is handed an altitude in metres, this module's working unit, and
+    #: answers the free air temperature there, so a day the standard atmosphere
+    #: cannot describe is a function its caller writes.  An *inversion* is the
+    #: plain case - a profile that stops lapsing, or rises, somewhere under the
+    #: aircraft - and it reaches everything an offset reaches, because
+    #: :meth:`density_at` and :meth:`engine_air` both come off :meth:`air_at`:
+    #: thinner air, a lower chart reading, a higher lever for the hover.
+    #:
+    #: Nothing here supplies such a shape, and nothing can: a thermometer at one
+    #: height says nothing about the lapse above it, and no document in
+    #: ``reference/`` gives a temperature against a height for anything but a
+    #: standard day.  So the shape is the caller's, written for the flight being
+    #: flown, exactly as a wind field is (:func:`as_wind`).
+    air_profile: Union[float, Callable[[float], float], None] = None
     #: Is this flight the prolonged hover in ground effect of 7.1-13(c)?
     #:
     #: The one condition in which the engine's chart is read at the *inlet*
@@ -1657,6 +1736,14 @@ class Airframe:
         (:func:`aerodynamics.isa_temperature_c`) shifted by the profile's own
         offset.
 
+        A profile said as a *number* is a day that far off standard; said as a
+        *callable* it is the day's own shape, handed the altitude in metres and
+        answering the temperature at it.  The pressure altitude is the aircraft's
+        own either way: a shape moves the temperature, and so the density at a
+        pressure altitude, rather than the pressure altitude itself - which is
+        what keeps the engine's chart read against the pair the manual says it is
+        read against.
+
         An altitude rather than a state, because the callers differ by exactly
         that: the flight's own air is read where the aircraft is (:attr:`air_here`
         is this at :attr:`state`'s altitude), and a *trim* is a condition at a
@@ -1665,6 +1752,8 @@ class Airframe:
         """
         if self.air_profile is None:
             return self.pressure_altitude, self.fat
+        if callable(self.air_profile):
+            return altitude / FOOT, float(self.air_profile(altitude))
         return (altitude / FOOT,
                 isa_temperature_c(altitude) + self.air_profile)
 
@@ -1863,17 +1952,29 @@ class Airframe:
     def air_relative_velocity(self, state, wind=None):
         """The aircraft's velocity relative to the air, in body axes, m/s.
 
-        ``wind`` is a steady air velocity in NED, m/s, and is zero by default:
-        with no wind this is simply the body velocity, since the air is assumed
-        still.  A wind is turned into the body axes with the transpose of the
-        direction cosine matrix, which is the same rotation the other way round.
+        ``wind`` is the air's own velocity in NED, m/s, and is nothing by
+        default: with no wind this is simply the body velocity, since the air is
+        assumed still.  Anything else goes through :func:`as_wind`, so a
+        :class:`Vector3` is the one wind over the whole scenery and a *callable*
+        is a *field*, read at the state's own position - which is what makes an
+        aircraft at 200 m and one at 100 m in the same run two aircraft in two
+        different airs.  Either is turned into the body axes with the transpose
+        of the direction cosine matrix, which is the same rotation the other way
+        round.
+
+        The wind is read at the *state's* position and not at the aircraft's, for
+        the reason :meth:`forces` reads the density at the state's own altitude:
+        a trim solves a condition and hands trial states, so a condition at a
+        place is closed in the air at that place, wind included.  Everything that
+        flies comes through here - the frame loop, the derivatives, the trims and
+        the shaft residual - so a field has exactly one reading in the model.
         """
         if wind is None:
             return state.velocity
         matrix = transpose(direction_cosine_matrix(state.attitude.x,
                                                    state.attitude.y,
                                                    state.attitude.z))
-        return state.velocity - apply(matrix, wind)
+        return state.velocity - apply(matrix, as_wind(wind)(state.position))
 
     def angular_acceleration(self, moment, rates):
         """``(p_dot, q_dot, r_dot)``, rad/s^2, from the moment and the rates.
@@ -3499,6 +3600,42 @@ def _self_test():
     assert (warm_day.engine.max_torque(UH1_RPM, *warm_day.engine_air())
             < profiled.engine.max_torque(UH1_RPM, *profiled.engine_air()))
 
+    # A profile may be the day's own *shape* rather than an offset from the
+    # standard one, and that is the one way an inversion can be in this model: a
+    # temperature that stops lapsing, or rises, with height.  This one is the
+    # standard day below 1,000 ft with a 20 C warm layer above it, so the same
+    # airframe read at two altitudes is two different airs - which no single
+    # offset can say - and the pressure altitude stays the aircraft's own either
+    # way, because a shape moves the temperature and not the pressure.
+    def inverted_day(altitude):
+        """The free air temperature, C: standard, with a warm layer aloft."""
+        return isa_temperature_c(altitude) + (20.0 if altitude > 1000.0 * FOOT
+                                              else 0.0)
+
+    layered = Airframe(engine=Engine(), air_profile=inverted_day)
+    under_layer, in_layer = (layered.air_at(500.0 * FOOT),
+                             layered.air_at(2000.0 * FOOT))
+    assert abs(under_layer[0] - 500.0) < 1e-9
+    assert abs(in_layer[0] - 2000.0) < 1e-9
+    assert abs(under_layer[1] - isa_temperature_c(500.0 * FOOT)) < 1e-12
+    assert abs(in_layer[1] - (isa_temperature_c(2000.0 * FOOT) + 20.0)) < 1e-12
+    # A number is a different air at both heights; a shape is the same day in
+    # both, which is the whole of the difference between them.
+    offset = Airframe(engine=Engine(), air_profile=10.0)
+    assert abs(offset.air_at(500.0 * FOOT)[1] - (under_layer[1] + 10.0)) < 1e-12
+    assert abs(offset.air_at(2000.0 * FOOT)[1] - (in_layer[1] - 10.0)) < 1e-12
+    # The warm layer is thinner air at the pressure altitude it sits over and the
+    # engine's chart reads lower for it: the pair, the density and the chart all
+    # come off air_at, so a shape reaches all three.
+    warmed = layered.reset(FlightState(position=Vector3(0.0, 0.0,
+                                                        -2000.0 * FOOT)))
+    standard_up = Airframe(engine=Engine(), air_profile=0.0).reset(
+        FlightState(position=Vector3(0.0, 0.0, -2000.0 * FOOT)))
+    assert warmed.air_here == in_layer
+    assert warmed.density < standard_up.density
+    assert (warmed.engine.max_torque(UH1_RPM, *warmed.engine_air())
+            < standard_up.engine.max_torque(UH1_RPM, *standard_up.engine_air()))
+
     # 7.1-13(c): the one condition in which the chart is read at the *inlet*
     # temperature rather than at the free air temperature, and it is the flight's
     # own declaration because "prolonged" is a clock's word.  The aircraft is
@@ -3551,6 +3688,77 @@ def _self_test():
     assert fixed_aloft.state.altitude > profile_aloft.state.altitude
     assert abs(profile_aloft.density - 0.9046) < 1e-3
     assert fixed_aloft.density == RHO_SEA_LEVEL
+
+    # ---------------------------------------------------------------------
+    # The wind: one vector over the scenery, or a field read at the aircraft.
+    # ---------------------------------------------------------------------
+
+    # The two ways of saying a wind are one thing - NED m/s - and the conversion
+    # from the way a wind is *reported* round trips: 20 kt from 240 is air
+    # travelling towards 060, and reading it back gives the 20 and the 240.
+    reported = wind_from_deg(20.0, 240.0)
+    assert abs(reported.length() - 20.0 * KNOT) < 1e-12
+    assert reported.x > 0.0 and reported.y > 0.0      # north east, out of 240
+    assert reported.z == 0.0
+    speed_kt, from_deg = wind_polar(reported)
+    assert abs(speed_kt - 20.0) < 1e-9 and abs(from_deg - 240.0) < 1e-9
+    # Due north is +x in this frame, so a wind *out of* the north travels south
+    # and its vector is negative x: a bearing is where a wind blows from, which is
+    # the way the manual prints its own limits and the way a pilot says it.
+    assert wind_from_deg(30.0, 0.0).x < 0.0
+    assert wind_from_deg(30.0, 0.0).y == 0.0
+    assert abs(wind_polar(wind_from_deg(30.0, 0.0))[0] - 30.0) < 1e-9
+    assert abs(wind_polar(wind_from_deg(30.0, 0.0))[1] - 0.0) < 1e-9
+    assert abs(wind_polar(wind_from_deg(30.0, 90.0))[1] - 90.0) < 1e-9
+    # ...and a wind with nothing in the horizontal has no direction to report.
+    assert wind_polar(Vector3(0.0, 0.0, -3.0)) == (0.0, 0.0)
+
+    # A vector is handed straight through by as_wind, so a run that names one wind
+    # flies the identical arithmetic it flew before a field was possible: the
+    # assertion below is that arithmetic written out by hand.
+    level = FlightState(position=Vector3(0.0, 0.0, -200.0), velocity=Vector3(),
+                        attitude=Vector3(), rates=Vector3())
+    steady = Vector3(0.0, 4.0, 0.0)
+    matrix = transpose(direction_cosine_matrix(level.attitude.x,
+                                               level.attitude.y,
+                                               level.attitude.z))
+    assert (airframe.air_relative_velocity(level, steady)
+            == level.velocity - apply(matrix, steady))
+    assert (airframe.air_relative_velocity(level, as_wind(steady))
+            == airframe.air_relative_velocity(level, steady))
+    # ...and a *field* is read where the state is, which is the whole of what a
+    # field is.  This one is still 100 ft up and the 30 kt of a west wind at
+    # 600 ft, linear between, so two states 500 ft apart are two aircraft in two
+    # different airs - and the one under the shear is in air that is not moving.
+    def shear(position):
+        """A wind, NED m/s: still on the ground, 30 kt out of the west at 600 ft."""
+        fraction = min(1.0, max(0.0, -position.z / (600.0 * FOOT)))
+        return wind_from_deg(30.0 * fraction, 270.0)
+
+    def still_at(height_ft):
+        """A level, still state at a height above the origin, ft."""
+        return FlightState(position=Vector3(0.0, 0.0, -height_ft * FOOT),
+                           velocity=Vector3(), attitude=Vector3(),
+                           rates=Vector3())
+
+    low_air = airframe.air_relative_velocity(still_at(100.0), shear)
+    high_air = airframe.air_relative_velocity(still_at(600.0), shear)
+    # Both aircraft are still, so what they feel is the wind and nothing else: a
+    # wind out of the west travels east, +y, and the air over the aircraft comes
+    # back the other way - 5 kt of it at 100 ft and the full 30 at 600.
+    assert abs(low_air.y + 5.0 * KNOT) < 1e-9
+    assert abs(high_air.y + 30.0 * KNOT) < 1e-9
+    assert abs(low_air.x) < 1e-9 and abs(high_air.x) < 1e-9
+    assert abs(low_air.z) < 1e-9 and abs(high_air.z) < 1e-9
+    assert abs(low_air.y) < abs(high_air.y)
+    # The same field, read at the same two states, is the same two answers: a
+    # field is a function of where the aircraft is and of nothing else.
+    assert (airframe.air_relative_velocity(still_at(100.0), shear) == low_air)
+    # A field of zeros is still air, to the last bit, which is what makes a wind
+    # that varies over the scenery the only thing a field adds.
+    assert (airframe.air_relative_velocity(still_at(100.0),
+                                           wind_from_deg(0.0, 0.0))
+            == still_at(100.0).velocity)
 
     # The other kind of driven shaft: a fixed torque, which has no droop curve
     # and settles where its own number crosses the rotor's drag.  That airframe
