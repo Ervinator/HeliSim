@@ -18,21 +18,22 @@ Layered, each one importing only what sits below it:
 | `aerodynamics.py` | 1804 | quasi-steady blade element theory for one rotor - section data, flapping, hover and forward flight loads - and the standard atmosphere that turns a pressure altitude and a free air temperature into the density it flies in |
 | `rotor_control.py` | 1280 | the control path: inches of stick travel to swashplate angles, the mixing law and its rigging, the control lags |
 | `engine.py` | 1190 | the T53-L-13 on the other end of the shaft: the twist grip, the N2 governor and its droop band, the torque available read off a digitised figure 7.1-2 - each of its eight altitude curves read at every temperature the sheet prints, and the family read at the airframe's own pressure altitude and free air temperature - what EMER and bleed air cost, the ten degrees of inlet temperature that a prolonged hover in ground effect is read with (7.1-13(c)), and the gas producer's lag - 0.6 sec, which `_rt_engine.py` measures against the rotor's own clock and the band a spool draws around it |
-| `airframe.py` | 4231 | TM-73254's force and moment model - main rotor, tail rotor, fuselage, fin, stabilizer - and the six degree of freedom equations of motion, with the rotor's own speed as a state when an engine is aboard, the second root of equation 10 read off a shaft with nothing driving it, the air it flies in as a pressure altitude and a free air temperature - set on the airframe, or read off the aircraft itself as a profile - or as a density, and the ground under it as one flat plane with a level and a normal |
-| `simulation.py` | 3318 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the three trims, and what a renderer or a HUD asks for - the engine's panel among them, its maximum read in the same air the engine is governed in |
+| `airframe.py` | 4253 | TM-73254's force and moment model - main rotor, tail rotor, fuselage, fin, stabilizer - and the six degree of freedom equations of motion, with the rotor's own speed as a state when an engine is aboard, the second root of equation 10 read off a shaft with nothing driving it, the air it flies in as a pressure altitude and a free air temperature - set on the airframe, or read off the aircraft itself as a profile - or as a density, and the ground under it as one flat plane with a level and a normal, asked for the patch under the aircraft so that a landscape of them stands in for one |
+| `simulation.py` | 3336 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the three trims, and what a renderer or a HUD asks for - the engine's panel among them, its maximum read in the same air the engine is governed in |
+| `terrain.py` | 655 | the ground as a landscape: a heightfield of the model's own flat patches, sampled north and east, whose surface between those samples is flat - a ridge, a valley or a step, each table cell cut into two triangles and each triangle one `airframe.GroundPlane`, with the patch under the aircraft answering every question the frame loop asks, so that a terrain is flown by the same arithmetic a single plane always was |
 | `regression_tm73254.py` | 661 | the report's figures 2 to 9 reflown: eight step inputs from 60 kt and from the hover, laid next to its published responses |
 | `scenery.py` | 603 | the XML scenery format and its loader - no pygame, no OpenGL, and the one module whose test needs no window and no physics |
 | `controls.py` | 1105 | the device map: which physical control flies which - keyboard or joystick, per control, with deadzone, invert and calibration - read from the XML of `default_controls.xml`, and likewise stdlib only |
 | `main.py` | 4819 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, the aircraft of `simulation.py` flown from its device map - keyboard, joystick, the mouse, or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it, with the `--engine` switch that fits the T53 before the first frame, the three air switches (`--air-profile`, `--ige-hover`, `--wind`) that say what it flies in, the cursor on the cyclic and the wheel on the collective (`M`, `--mouse` and its own `--mouse-reverse`), and one line for the grip of a run that has none |
 
 Only `main.py` imports anything outside the standard library - and that is a
-claim about the nine modules above rather than about the project.  The eleven
+claim about the ten modules above rather than about the project.  The twelve
 `_rt_*.py` files in the root beside them are *the harness*: the pilots that fly
-the model and the instruments that measure it, and ten of the eleven want pygame,
-five of them by name (`_rt_pilot` for the nine scancodes its keys are, `_rt_demo`
-for the window it opens, `_rt_autoro_probe` for the grip's own two,
+the model and the instruments that measure it, and eleven of the twelve want
+pygame, five of them by name (`_rt_pilot` for the nine scancodes its keys are,
+`_rt_demo` for the window it opens, `_rt_autoro_probe` for the grip's own two,
 `_rt_autoro_entry` for the failure key's name, and `_rt_engine` for the mission's
-own autorotation it borrows) and the other five through `_rt_pilot` or `main` -
+own autorotation it borrows) and the other six through `_rt_pilot` or `main` -
 `_rt_tail.py` and `_rt_engine.py` are the two that want nothing but the model, the
 second of them for six of its seven tables.  No harness but `_rt_demo` opens a
 window and none of them needs an OpenGL context.  See *The harness* below.
@@ -374,12 +375,25 @@ Nothing here needs a window, so every test runs headless:
     python regression_tm73254.py
 
 The modules each run a demo when executed directly - `aerodynamics.py`,
-`rotor_control.py`, `airframe.py`, `simulation.py`, `regression_tm73254.py` and
-`scenery.py` - and the demos assert as they go, so a module that prints a full
-demo has passed its own numbers.  `regression_tm73254.py` is the one worth
-running after any tuning: it is the report's validation chapter, and it prints
-the eight traces in the report's own units and time base so they can be read
-against figures 2 to 9.
+`rotor_control.py`, `airframe.py`, `simulation.py`, `terrain.py`,
+`regression_tm73254.py` and `scenery.py` - and the demos assert as they go, so a
+module that prints a full demo has passed its own numbers.  `regression_tm73254.py`
+is the one worth running after any tuning: it is the report's validation chapter,
+and it prints the eight traces in the report's own units and time base so they can
+be read against figures 2 to 9.
+
+`terrain.py` is the ground as a landscape, and its own run is the whole of it:
+
+    python terrain.py
+
+It samples a 120 m ridge on a 2.4 km square, prints what the table and the patch
+under a point say about it - the samples that lie on the surface, the two faces
+either side of the crest and the seam between them - and then flies the report's
+own aircraft over it: trimmed 200 m over the crest's patch, parked in the crest's
+own cushion and lifted off it again.  Its self test asserts all of it, including
+that a table with no landscape in it answers every ground question *bit for bit*
+as `airframe.GroundPlane.level` does - which is what keeps the report's own
+figures where they were.
 
 `scenery.py` needs neither a window nor the physics:
 
@@ -422,7 +436,7 @@ any `.py` in the root with no row in a table.  It is one of the tools in
 
 ## The harness
 
-The nine modules above are the model.  The twelve `_rt_*.py` files in the root
+The ten modules above are the model.  The twelve `_rt_*.py` files in the root
 beside them are the harness: the pilots that *fly* the model, and the instruments
 that measure whether it can be flown at all.  Nothing in the model imports one,
 all twelve are tracked, and the `_rt_` prefix is the project's own word for what

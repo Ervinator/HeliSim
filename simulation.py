@@ -99,19 +99,22 @@ the skid line are this project's own, are named here, and all live in one
 function so that a real spring-damper skid model has one place to replace.
 
 **Which ground.**  There is no coordinate this module calls zero: the ground is
-:attr:`airframe.Airframe.ground`, one flat patch of it carried as a plane with a
-level and a normal (:class:`airframe.GroundPlane`), and every question here -
-how high the c.g. is, where the skids stand, what the floor levels to, what
-``Telemetry.alt_agl`` reads - is asked of that plane.  The default is level
-ground at the origin, where each of those answers is exactly the number this
-module used before the ground was a parameter, so nothing about the report's
-own flights has moved.  Lean the plane and the same code gives a slope: the
-cushion is measured perpendicular to it, an aircraft parked on it stands level
-*on it* rather than level with the world, and a landing is a descent towards the
-slope.  A caller that wants the ground to move - a deck, a ridge the aircraft is
-about to cross - replaces ``sim.airframe.ground`` between frames, which is the
-one thing a plane cannot do on its own and the seam a terrain of several patches
-would be built into.
+:attr:`airframe.Airframe.ground`, carried as one flat patch with a level and a
+normal (:class:`airframe.GroundPlane`) or as a whole landscape of them
+(:class:`terrain.Terrain`, a heightfield whose surface between its samples is
+those same flat patches), and every question here - how high the c.g. is, where
+the skids stand, what the floor levels to, what ``Telemetry.alt_agl`` reads - is
+asked of the patch the aircraft is over.  The default is level ground at the
+origin, where each of those answers is exactly the number this module used
+before the ground was a parameter, so nothing about the report's own flights has
+moved.  Lean the plane - or fly the terrain - and the same code gives a slope:
+the cushion is measured perpendicular to it, an aircraft parked on it stands
+level *on it* rather than level with the world, and a landing is a descent
+towards the slope.  A caller that wants the ground to *move* - a deck, or a
+ridge that is not a table at all - replaces ``sim.airframe.ground`` between
+frames, which is the one thing a plane cannot do on its own; a landscape of
+patches does not need that, since the terrain is asked where the aircraft is
+every frame.
 
 **The renderer's world.**  main.py's world is x east, y up, z south: the OpenGL
 camera's own frame, since a level camera there looks along -z with +y up and +x
@@ -272,8 +275,10 @@ def airframe_preset(name="simulation", engine=None, **overrides):
     through, so ``airframe_preset("flight test", ground_effect=False)`` is the
     flight test aircraft flying out of the cushion, and
     ``airframe_preset(ground=GroundPlane(Vector3(), Vector3(0.0, 0.5, -1.0)))``
-    is one whose ground leans to starboard - see :class:`airframe.GroundPlane`
-    and :attr:`Simulation.ground`.
+    is one whose ground leans to starboard, and
+    ``airframe_preset(ground=Terrain(...))`` one flying over a ridge - see
+    :class:`airframe.GroundPlane`, :class:`terrain.Terrain` and
+    :attr:`Simulation.ground`.
 
     The air is a preset's business as well, and it rides on the airframe like the
     mass does: ``airframe_preset("flight test", pressure_altitude=10000.0,
@@ -1040,14 +1045,20 @@ class Simulation:
 
     @property
     def ground(self):
-        """The ground the aircraft is over: its airframe's own plane.
+        """The ground the aircraft is over: its airframe's own.
 
         One flat patch with a level and a normal - see
-        :class:`airframe.GroundPlane` - and the one place this module asks the
-        question, so that replacing it between frames moves the floor, the skid
-        line, the rotor's cushion and ``Telemetry.alt_agl`` together rather
-        than four of them disagreeing.  Read-only: a run flying over another
-        ground says ``sim.airframe.ground = plane``.
+        :class:`airframe.GroundPlane` - or a landscape of them, and either way
+        the one place this module asks the question, so that replacing it
+        between frames moves the floor, the skid line, the rotor's cushion and
+        ``Telemetry.alt_agl`` together rather than four of them disagreeing.
+        What it must answer is the model's four questions - ``height``,
+        ``surface_point``, ``above`` and ``patch`` - which is how a
+        :class:`terrain.Terrain` stands in for a plane without this module
+        knowing there is such a thing: the ground is asked for the patch under
+        the aircraft, and the patch answers the rest.  Read-only: a run flying
+        over another ground says ``sim.airframe.ground = plane`` (or ``=
+        terrain``).
         """
         return self.airframe.ground
 
@@ -1503,9 +1514,12 @@ class Simulation:
         the clock above it.
         """
         before = self.airframe.state
-        # Down positive, along the ground's own normal, so that a descent rate
-        # at touchdown is measured towards the surface whatever its lean.
-        descent = -before.ground_velocity().dot(self.ground.normal)
+        # Down positive, along the ground's own normal *where the aircraft is*,
+        # so that a descent rate at touchdown is measured towards the surface
+        # whatever its lean: the ground is asked for the patch under it, and the
+        # patch for its own normal.
+        descent = -before.ground_velocity().dot(
+            self.ground.patch(before.position).normal)
         self.forces = self.airframe.step(dt, controls, wind=self.wind,
                                         throttle=self.pilot.throttle())
         self.steps += 1
@@ -1581,13 +1595,14 @@ class Simulation:
         aircraft rather than where the frame's own integration took it - the place
         they stand on, and, while the rotor is not lifting, the heading as well.
 
-        Every height and every place here is the ground plane's own: 1.40 m of
-        skid line is 1.40 m up its normal, so an aircraft on a slope is placed
+        Every height and every place here is the ground's own: 1.40 m of skid
+        line is 1.40 m up the patch's normal, so an aircraft on a slope is placed
         over the slope rather than over the world's zero, and "levelled" is
-        :meth:`airframe.GroundPlane.level_attitude`, which is the floor's own
-        level ground case written out to the last bit.  The skids are pinned by
-        the *point of the surface* they are standing on (:attr:`ground_position`),
-        which is what a sloping ground needs and what a level one reduces to.
+        :meth:`airframe.GroundPlane.level_attitude` on *the patch the skids are
+        standing on*, which is the floor's own level ground case written out to
+        the last bit.  The skids are pinned by the *point of the surface* they
+        are standing on (:attr:`ground_position`), which is what a sloping - or
+        a shaped - ground needs and what a level one reduces to.
         """
         ground = self.ground
         state = self.airframe.state
@@ -1643,7 +1658,7 @@ class Simulation:
             velocity = Vector3(velocity.x * fade, velocity.y * fade,
                                min(velocity.z, 0.0))
             under = state.position
-        leaning = ground.level_attitude(heading)
+        leaning = ground.patch(under).level_attitude(heading)
         self.airframe.state = FlightState(
             position=ground.above(under, UH1_CG_HEIGHT_ON_GROUND),
             velocity=apply(transpose(matrix), velocity),
@@ -1743,11 +1758,12 @@ class Simulation:
     def telemetry(self):
         """A :class:`Telemetry` for the state the last step left behind.
 
-        The two heights are the ground plane's: ``alt_agl`` is how far the c.g.
-        stands above the surface along its normal and ``height_rate`` the rate
-        that distance is changing at, so both are clearances over the ground
-        rather than coordinates of the world - which on level ground is the
-        altitude and the vertical speed they have always been, exactly.
+        The two heights are the ground's own and are measured on the patch under
+        the aircraft: ``alt_agl`` is how far the c.g. stands above the surface
+        along that patch's normal and ``height_rate`` the rate that distance is
+        changing at, so both are clearances over the ground rather than
+        coordinates of the world - which on level ground is the altitude and the
+        vertical speed they have always been, exactly.
 
         ``pressure_altitude_ft`` and ``fat_c`` are the airframe's own reading of
         the air it is in (:attr:`airframe.Airframe.air_here`), which is the pair
@@ -1766,7 +1782,7 @@ class Simulation:
         forces = self.forces
         angles = self.airframe.command_angles(self.controls)
         ground = state.ground_velocity()
-        plane = self.ground
+        plane = self.ground.patch(state.position)
         attitude = state.attitude_deg
         rates = state.rates_deg
         rotor = forces.rotor
@@ -2864,7 +2880,9 @@ def _self_test():
     assert (ramp.airframe.state.position - standing).length() < 1e-9
     assert abs(ramp.ground.height(ramp.airframe.state.position)
                - UH1_CG_HEIGHT_ON_GROUND) < 1e-9
-    standing_lean = ramp.ground.level_attitude(ramp.airframe.state.attitude.z)
+    standing_lean = ramp.ground.patch(
+        ramp.airframe.state.position).level_attitude(
+            ramp.airframe.state.attitude.z)
     assert abs(math.degrees(standing_lean.y)) > 10.0
     # Within the fifth of a degree the levelling lags the attitude a frame of
     # flight integrates in between the floor's own steps - the same lag the pad

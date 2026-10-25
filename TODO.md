@@ -72,26 +72,30 @@ has `--check` for the wiring that flying cannot test.  What follows is what
   behind a rotor taken off that trim, and why a vertical descent with the
   collective up is the frame it refuses outright.
 
-* **The ground is a plane, and the next level is a terrain.**  Everything that
-  touches the ground - equation 10a's cushion, the floor's skid line, the point
-  the skids are pinned by, the levelling, `Telemetry.alt_agl` - is measured
-  against one `airframe.GroundPlane`: a level and a normal, which a run may
-  replace between frames.  What that is not is a *landscape*: a ridge, a valley,
-  a step, a deck that pitches, or any surface whose level varies under the
-  aircraft is several planes and the seam between them, and the work left is to
-  choose where that seam lives - a terrain object that answers `height` and
-  `above` per frame by this same interface, with `GroundPlane` the single flat
-  patch it is built out of, or a plane-per-frame the way a deck would be.  Two
-  other things belong with it:
+* **The ground is a landscape now, and what is left of it is what a landscape is
+  *for*.**  Everything that touches the ground - equation 10a's cushion, the
+  floor's skid line, the point the skids are pinned by, the levelling,
+  `Telemetry.alt_agl` - is measured against one `airframe.GroundPlane`: a level
+  and a normal, which a run may replace between frames.  What that could not be
+  was a *landscape*, and where the seam of one lives was chosen and written down
+  on 2026-10-25 (see `Done`): `terrain.Terrain` is a heightfield of those same
+  planes - a table of sample heights whose surface between them is flat, each
+  cell cut into two triangles along its own diagonal and each triangle one
+  `GroundPlane` - so the ground is still asked one patch at a time and every
+  height is still computed one way.  What that bought is a landscape a run can
+  *fly*: parked on a ridge's face, sitting in the cushion at its crest and
+  lifted off it.  The two things around it are what is left, and neither of them
+  is the physics':
 
   * *the renderer is still flat.*  `main.py`'s implicit grass plane and its grid
     are horizontal at y = 0 and its scenery's hills are drawn, not flown, so a
-    leaning or a moving ground is the physics' own until a terrain is drawn and
-    the camera, the shadow and the grid read it;
+    terrain is flown and not *shown*: the grass, the grid, the camera and the
+    shadow all still read the world's zero rather than the ground under the
+    aircraft;
   * *the air over a terrain is a wind field.*  `aerodynamics.py` has the hook
     (`airflow`, a callable of position) and `simulation.Simulation.wind` is one
     steady vector, so the upwash off a ridge and the sink over a valley are the
-    same level's work as the ridge.
+    same level's work as the ridge - which now exists to have one.
 
 * **Human flyability has two phases and its next one is named here.**  The
   harness has a section in `README.md` now, and the programme's own file says
@@ -150,15 +154,19 @@ These are choices, not oversights: each is stated where it lives.
 * **The ground is a floor, not a contact model.**  `simulation.py` holds the
   c.g. on the skid line, takes the descent out of the velocity, and levels roll
   and pitch; the skids do not flex, slide or spring.
-* **The ground is one flat plane, not a terrain.**  `airframe.GroundPlane` has a
-  level and a normal and no shape, and it is what equation 10a's Z, the floor's
-  skid line, the levelling and `Telemetry.alt_agl` are all measured against.  A
-  level or a leaning ground, a ramp, a deck and a plane that moves under a
-  hovering aircraft are all in it; a ridge, a valley, a step or any surface whose
-  level varies under the aircraft is not - that is a terrain of several patches,
-  and `Next` records where the seam for one belongs.  `main.py`'s world is still
-  a horizontal plane at y = 0, so a leaning ground is the model's until a terrain
-  is drawn.
+* **The ground is flat patches, and what is drawn of it is still one.**  The
+  model's ground is `airframe.GroundPlane` - a level, a normal, and no shape - or
+  `terrain.Terrain`, a table of those planes whose surface between its own
+  samples is flat: a ridge, a valley and a step are *flown* now, and the seam
+  between the patches is a grid line or a cell's own diagonal, across which the
+  height does not jump while the lean does.  What is not in it is a hole, an
+  overhang, a vertical face or a cave, since a heightfield has one surface over
+  every place, and a ground that *moves* is a plane handed to `Airframe.ground`
+  between frames rather than a table.  `main.py`'s world is still a horizontal
+  plane at y = 0 and its scenery's hills are still drawn rather than flown, so
+  what a run flies and what a run shows are two different grounds until the
+  renderer reads one - `Next` records that, and the wind field over a ridge
+  beside it.
 * **The controls have no feel.**  `PilotInput` is rates rather than forces: full
   travels per second, so a cyclic crosses its stops in 0.6 s and the heavy
   collective takes 1.8 s over its 11 in of travel, and every axis ratchets.
@@ -528,6 +536,82 @@ These are choices, not oversights: each is stated where it lives.
 
 ## Done
 
+* 2026-10-25 - **the ground is a landscape: a heightfield of the model's own
+  planes.**  `GroundPlane` landed on 2026-10-14 as one flat patch with a level
+  and a normal, and it left the seam of a *shaped* ground open: a ridge, a
+  valley, a step or any surface whose level varies under the aircraft is several
+  planes and the seam between them, and where that seam lived was the design
+  question `Next` recorded.  It is answered now by `terrain.Terrain`, a
+  heightfield: a rectangular table of sample heights over the horizontal plane
+  whose surface between those samples is **piecewise flat** - every cell cut into
+  two triangles along its own diagonal, each triangle one `GroundPlane` through
+  its three sample positions.  A landscape is the single flat patch this project
+  already flies, many times over, so a point of the surface has one patch under
+  it and that patch answers every question the model asks of the ground - and
+  there is no second way a height is ever computed.  The seam is therefore a grid
+  line or a cell's own diagonal, and across it the surface is continuous but not
+  smooth: the patches share their edge samples, so no height jumps, while the
+  lean does - a sample of the table lies *on* the surface, and an aircraft parked
+  on a ridge's face is level on that face and on nothing else.
+
+  The interface grew the one word it needed for that: `GroundPlane.patch`, the
+  flat patch under a *position*, which a single plane answers with itself and a
+  terrain answers with the triangle under the aircraft.  The ground is asked for
+  the patch and the patch answers the rest, so a terrain has no one lean and no
+  one normal to hand back: `level_attitude` and `normal` stay the patch's own,
+  and `simulation.py`'s two positionless uses of them now go through it - the
+  descent rate a hard arrival is measured at, and the levelling the floor settles
+  an aircraft onto (which is the patch the *skids* are standing on), with the
+  telemetry's `alt_agl` and `height_rate` asked of the patch under the c.g.
+  `Terrain`'s own questions are `patch`, `height`, `surface_point` and `above`,
+  the last three delegating, so `Airframe.hub_height` and all three trims ask a
+  terrain exactly what they asked a plane.  Off the map the nearest cell's own
+  patch carries on, which is one rule with no crease in it and no special case at
+  the map's edge - the boundary cell's patch contains the boundary - so a ramp
+  goes on rising past its own table and a ridge walked off the side of one goes
+  on falling, which is what more ground is.
+
+  A table is refused when it has no cell in it, is ragged, holds a height that is
+  not a number, a spacing that is not a distance, or an origin whose z names a
+  height rather than a place; `Terrain.from_function` samples a formula over two
+  ranges at about a step and covers those ranges exactly; and an index off the
+  table is refused rather than wrapped, since a negative one would quietly mean
+  the far side of the map.  `python terrain.py` builds the ridge it flies over: a
+  120 m tent 600 m from crest to foot, sampled every 200 m over a 2.4 km square,
+  written so that the samples land on the tent *exactly*.
+
+  Verified: `python terrain.py` printing its demo and `self test passed`;
+  `aerodynamics.py`, `rotor_control.py`, `engine.py`, `airframe.py`,
+  `simulation.py`, `scenery.py`, `controls.py` and `regression_tm73254.py` all
+  printing their own `self test passed` with every figure they print unchanged;
+  `python _rt_check.py` still flying both missions at both reaction times and the
+  cruise, writing `_rt_log.txt`; and `python main.py --check` printing
+  `main.py check passed`.  New in the terrain's own self test: every sample lying
+  on the surface to 1e-9 m, and both of the tent's faces holding the crest's own
+  samples; the two cells either side of the crease leaning by mirrored 11.31 deg,
+  which is the tent's own `atan 0.2`, while a patch never has a zero up-normal
+  over the whole map; the patch under a point of a face *being* that face; a cell
+  whose four samples lie in one plane being one plane, diagonal or not, and a
+  saddle's two halves meeting along their diagonal at 1e-9 m while their normals
+  stand more than 0.1 apart; **a table with no landscape in it answering every
+  one of the four ground questions bit for bit as `GroundPlane.level` does**,
+  which is the identity that keeps every figure in TM-73254 where it was; a ramp
+  terrain being the ramp plane to 1e-9 m and to 1e-12 in the normal, and level on
+  it at 15 deg; a point off the map answered by the nearest cell's own patch; the
+  heading's business in the levelling, which down a face is pitch and no roll and
+  along the ridge the same angle of roll and no pitch, to the rounding of cos 90;
+  the refusals above, with a range narrower than a step sampled at its own two
+  ends rather than refused; and the model over all of it - trimmed 200 m over the
+  crest's own patch and holding that hover for two seconds, parked on the crest
+  for four with its pitch within a fifth of a degree of the face's own lean and
+  its hub in the same cushion a park on level ground sits in to 1e-6 (K_G to
+  1e-7), and then lifted off it with ten seconds of the lever up.
+  `README.md`'s module table carries `terrain.py` (655 lines) with the run's own
+  count read back off the file, its intro no longer claiming nine modules and
+  eleven harness files, `airframe.py`'s and `simulation.py`'s rows and this
+  file's own prose brought up to the files, and `attic/_tmp_counts.py` printing
+  51 claims with none disagreeing.
+
 * 2026-10-25 - **the harness's other two missions, flown by hand: phase 4.**  The
   last sentence of the human flyability bullet in `Next` was that the harness's
   missions were only ever flown *scripted* - `_rt_autoro_hand.py` had put a
@@ -671,8 +755,8 @@ These are choices, not oversights: each is stated where it lives.
   their own `self test passed`, `regression_tm73254.py` printed its own,
   `_rt_check.py` flew both missions and wrote `_rt_log.txt`, and `main.py --check`
   printed `main.py check passed`.  `README.md`'s module table was read back at
-  what the three files now are - `airframe.py` (4231 lines),
-  `simulation.py` (3318 lines), `main.py` (4819 lines) - its air section carries
+  what the three files now are - `airframe.py` (4253 lines),
+  `simulation.py` (3336 lines), `main.py` (4819 lines) - its air section carries
   the wind and the day's shape, and `attic/_tmp_counts.py` is at 47 claims with
   none disagreeing.
 

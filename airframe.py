@@ -84,14 +84,18 @@ handed to :class:`Airframe`, which is where the governor, the droop band and
 the wind down after a failure live.  The inertia matrix carries the UH-1H's
 2007 kg m^2 product of inertia, which is what couples roll and yaw.
 
-The ground is one flat plane, not a landscape: :class:`GroundPlane` has a level
-and a lean and no shape, so a ridge, a valley, a step or a moving deck is not
-something this module can be flown over yet - and while the *wind* can vary over
-the scenery (:func:`as_wind`, handed the aircraft's position), nothing here
-supplies one: the upwash off a ridge and the sink over a valley are the seam a
-terrain would hand in, and there is no terrain here to hand anything in.  What it
-can be flown over is level ground, a slope, a ramp or any other single flat area,
-parked on it and hovered in its cushion.
+The ground is a plane, and a landscape is a table of them: :class:`GroundPlane`
+has a level and a lean and no shape, and :mod:`terrain`'s ``Terrain`` is a
+heightfield of these planes whose surface between its own samples is flat -
+a ridge, a valley and a step are all that, and a *moving* deck is a plane handed
+to :attr:`Airframe.ground` between frames.  What both kinds answer is the same
+short interface, and the model asks nothing else of the ground.  While the
+*wind* can vary over the scenery too (:func:`as_wind`, handed the aircraft's
+position), nothing here supplies one: the upwash off a ridge and the sink over a
+valley are a field nobody has written yet, and the ground under such a field is
+now flyable.  What it can be flown over is level ground, a slope, a ramp, a
+landscape of patches and any other flat area, parked on it and hovered in its
+cushion.
 
 Standard library only, so it runs and tests headless.
 """
@@ -330,8 +334,10 @@ class GroundPlane:
     the surface, and this is what measures it - and all the ground under a skid
     can be.  Level terrain, a slope an aircraft is parked on, a ramp and a
     moving deck are all this class with different numbers in it; several
-    patches, ridges and holes are not, and want a function of position in place
-    of this one object - which is why every caller here asks the ground for a
+    patches, ridges and holes are not: they are a *shaped* ground, and the one
+    this project has is :class:`terrain.Terrain`, a heightfield of these planes
+    that answers :meth:`patch` with the triangle under the aircraft.  That is
+    why :meth:`patch` is here at all, why every caller asks the ground for a
     *height* and never reads a coordinate of its own, and why
     :attr:`Airframe.ground` is a field a run may replace between frames.
 
@@ -385,6 +391,19 @@ class GroundPlane:
         :mod:`simulation` asks.
         """
         return self.surface_point(position) + self.normal * height
+
+    def patch(self, position=None):
+        """The flat patch of the surface under *position*: this plane, itself.
+
+        The one word a *shaped* ground adds to this interface, and the seam it
+        is built on: a ground is asked for the flat patch under the aircraft and
+        the patch answers everything else.  A single plane is the same patch
+        wherever it is asked, so the position is ignored, and ``None`` is this
+        project's own way of saying that a caller flying over a landscape names
+        where it is instead - see :class:`terrain.Terrain`, whose patch is the
+        triangle of its heightfield under the position.
+        """
+        return self
 
     def level_attitude(self, yaw=0.0):
         """The ``(roll, pitch, yaw)`` of an aircraft standing level on it.
@@ -1670,9 +1689,12 @@ class Airframe:
     #: :class:`GroundPlane` and :meth:`hub_height`.  The default is the
     #: horizontal plain at sea level every figure in TM-73254 is drawn over,
     #: where it hands back exactly the ``-position.z`` this model used before
-    #: the ground was a parameter; a run flying over a slope replaces it, and
-    #: :mod:`simulation` asks it where the skids and the skid line are as well
-    #: as where the rotor's cushion is.
+    #: the ground was a parameter; a run flying over a slope, or over a
+    #: :class:`terrain.Terrain`'s ridge, replaces it - and :mod:`simulation`
+    #: asks it where the skids and the skid line are as well as where the
+    #: rotor's cushion is.  What it must answer is the model's own four
+    #: questions - ``height``, ``surface_point``, ``above`` and ``patch`` -
+    #: so it is this *interface* the field is typed by rather than one class.
     ground: GroundPlane = field(default_factory=GroundPlane)
     rotor_inertia: float = UH1_ROTOR_INERTIA
     #: Torque at the main rotor shaft, N m, for this frame: ``None`` means
