@@ -58,16 +58,15 @@ has `--check` for the wiring that flying cannot test.  What follows is what
     gust, and the manual's own words on the air are limits rather than physics,
     which nothing reads either - so see the limitations below.
 
-* **A hand has been put on the autorotation; the harness's other two missions
-  have not had one.**  `_rt_autoro_hand.py` - see `Done` - flies the
-  autorotation's own entry with a person's clock on it, so what is left of that
-  question is the rest of the harness's missions: `_rt_check.py`'s hover-turn and
-  cruise fly their climbs, and the height, speed and heading they hold, off
-  `_rt_pilot`'s own trim rows and *scripted*, and no hand has been put on either.
-  What it needs is what the autorotation's took: the instrument's own clock, the
-  phases of the mission read off the *view* rather than off the aircraft, and the
-  trims read off the model rather than written down again.  The trim a hand is
-  handed is the other half of it - the loops are `_rt_pilot.py`'s own and the lever
+* **A hand is on all three missions now; what is left of that question is the
+  trim it is handed.**  `_rt_autoro_hand.py` and `_rt_pilot_hand.py` - see `Done`
+  - are the two halves of it: the autorotation's own two switches worked on its
+  own loops, and the harness's *other* two missions - `_rt_check.py`'s hover-turn
+  and cruise - worked on *theirs*, so a person now flies every mission the
+  harness has, each on the mission's own loops, with its phases read off the
+  *view* rather than off the aircraft and its trims read off the *model* rather
+  than written down again.  What that leaves is the other half of the sentence the
+  autorotation's own hand found.  The loops are `_rt_pilot.py`'s own and the lever
   position is the handbook's, with no blade stall and no flap limit behind them -
   so see the windmill bullet under `Known limitations` for what the model has
   behind a rotor taken off that trim, and why a vertical descent with the
@@ -528,6 +527,75 @@ These are choices, not oversights: each is stated where it lives.
 
 
 ## Done
+
+* 2026-10-25 - **the harness's other two missions, flown by hand: phase 4.**  The
+  last sentence of the human flyability bullet in `Next` was that the harness's
+  missions were only ever flown *scripted* - `_rt_autoro_hand.py` had put a
+  person's hands on the autorotation's loops, and `_rt_check.py`'s hover-turn and
+  cruise were still `_rt_pilot.py`'s clock and `_rt_pilot.py`'s keys - and
+  `_rt_pilot_hand.py` (1613 lines), the twelfth harness module, closes it.
+  The instrument is unchanged: phase 2's, twenty decisions a second on the
+  flight's own clock, 0.2 s of transport delay out of a deque of remembered
+  states, 0.1 s of lag in the hand and the model's own limb rate underneath it.
+  What changed is what it *decides*:
+
+  * **each mission's own `decide`**, loop for loop and branch for branch, with
+    every reading out of the delayed *view* instead of off the aircraft, so a
+    phase is named a fifth of a second late - the hover-turn's five phases and the
+    turn's own schedule, and the cruise's climb, its speed ramp and its kilometre.
+    The phase *machine* is stepped on the flight's clock, which is phase 3's own
+    distinction: a schedule is a number the pilot is carrying and not a reading;
+  * **the trims read off the model** - `trims_for`'s rows, solved off a scratch
+    aircraft at the speeds and the height each mission class itself names, and the
+    pad's own sticks from `trim_controls` at `PAD_COLLECTIVE` - rather than
+    written down again: the sticks a mission begins and ends on are the state
+    `on_the_pad` parks the aircraft in, and both files read them off that model;
+  * **every gain the mission's own pair**, under one of `_rt_axes`' three scales,
+    with the lead of each loop kept at the mission's own ratio so a gain moved in
+    `_rt_pilot` moves this file's hand with it, and every *feed-forward* left at
+    the mission's own: the turn's 0.030 in per deg/s, the climb's 0.12 m/s per
+    metre and its three metre a second cap, the tilt a hover is held over the pad
+    with.  A pilot may grip a loop harder than the model does and may not fly a
+    different one, which is phase 2's own rule for the lever.
+
+  What is asserted before anything flies is the ruler, at six instants across the
+  two missions: at a scale of one, with no lag in the hand and the aircraft itself
+  handed to the decision instead of a memory of it, one hand decision lands on the
+  mission's own to 1e-12 of an inch on all four axes - and the one clock the two
+  *cannot* share is asserted as a refusal rather than quoted, the missions' own
+  0.25 s being longer than the delay a decision waits on.  So the person is flown
+  at 0.05 s and at the slowest hand the model has, one decision per delay.
+
+  Both missions are flown at both clocks, on the missions' own numbers: the
+  hover-turn in 61.0 and 61.2 s against the script's 61.7, holding 20.6 ft of skid
+  against its 20.5 and the turn home to -1.3 and -0.9 deg against its -1.2, and
+  the cruise 99.5 and 99.4 m up and 1006 and 1009 m out against its 99.5 and
+  1000.5, in 91.9 and 91.2 s against its 92.8.  The one claim of the missions' own
+  that a hand does not meet is the *arrival*: 2.14 and 2.15 m/s against the 1.00
+  `_rt_check.check` asks of the short mission's scripted flight, which is phase
+  3's own finding - an arrival being where a hand shows - said of a different
+  mission.
+
+  And the cyclic's margin *inside* the missions is a band and not a number, which
+  is the shape every phase of this programme ends on: x0.75 to x1.25 on the
+  hover-turn, with the model's own pilot inside it, where a half-grip runs the
+  hover's height band away to 22.3 ft and 19.8 m off the pad and a grip one and a
+  half times the model's never brings the turn home - 795 m from the pad, and the
+  lateral demand off its own stop at 12.5 in - and x0.50 to x2.00 on the cruise,
+  whose hard edge is x3.00 and whose soft end is the ladder's own.  The first is
+  *wider at the top* than phase 1's x0.75 to x1.00 for the same pair, with the
+  same soft edge; the second is phase 2's own finding - the tilt pair's bands
+  transfer out there, and *wider* - said of the mission rather than of the hover
+  it was measured on.
+
+  * *verified.*  `python _rt_pilot_hand.py` asserts its whole transcript
+    (`_rt_pilot_hand.txt`, 622 lines): the ruler at its six instants, the refusal
+    of the 0.25 s clock, every view 0.200 s old with no frame dropped, both
+    missions' own rows reproduced by `_rt_check.check` *itself* (called rather
+    than copied, so its own claims are in force), the ladder's x1.00 held to the
+    person's own row to the last bit, and both bands as the numbers above.
+    `python _rt_check.py` and `python _rt_autoro_hand.py` still print what they
+    printed, and `python attic/_tmp_counts.py` is green.
 
 * 2026-10-25 - **the air is a field: the wind can vary over the scenery and the
   day can have a shape.**  The sentence `Next` left open under the engine's own

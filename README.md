@@ -422,15 +422,16 @@ any `.py` in the root with no row in a table.  It is one of the tools in
 
 ## The harness
 
-The nine modules above are the model.  The eleven `_rt_*.py` files in the root
+The nine modules above are the model.  The twelve `_rt_*.py` files in the root
 beside them are the harness: the pilots that *fly* the model, and the instruments
 that measure whether it can be flown at all.  Nothing in the model imports one,
-all eleven are tracked, and the `_rt_` prefix is the project's own word for what
-they are - scratch.  They arrived in four groups: the four the missions are flown
+all twelve are tracked, and the `_rt_` prefix is the project's own word for what
+they are - scratch.  They arrived in five groups: the four the missions are flown
 with, in one commit on 8 October 2026; the five the autorotation and the human
-flyability programme added on 20, 21 and 22 October; and the two the model's own
+flyability programme added on 20, 21 and 22 October; the two the model's own
 unsourced constants were measured with, both on 24 October 2026 - the tail
-rotor's pair first, and the gas producer's own constant after it.
+rotor's pair first, and the gas producer's own constant after it; and the one that
+put the harness's *other* two missions into a person's hands, on 25 October 2026.
 
 | module | lines | what it is |
 | --- | --- | --- |
@@ -443,6 +444,7 @@ rotor's pair first, and the gas producer's own constant after it.
 | `_rt_autoro_probe.py` | 192 | the autorotation measured rather than guessed: its entry, its descent, and the rate its skids arrive at |
 | `_rt_autoro_entry.py` | 683 | the autorotation's *other* switch: the engine failure flown through the mission's own loops and printed against the grip's own cut, at two decision rates, on an engine of the caller's own |
 | `_rt_autoro_hand.py` | 1417 | phase 3: those two switches worked by a person's hands on the *mission's* own loops, at the instrument's clock and at the slowest one it will fly, with the mission's own row beside them and every number asserted |
+| `_rt_pilot_hand.py` | 1613 | phase 4: the harness's *other* two missions - the hover-turn and the cruise - flown by a person's hands on the missions' own loops, with the phases read off a delayed view and the trims read off the model |
 | `_rt_tail.py` | 708 | the tail rotor's two unwritten constants measured: the two rulers on one thrust in inches of pedal, the twist sweep with both pedal stops, the precone sweep and the coning the flight's own flapping wants, and the boundary that shows nothing which flies reads either of them |
 | `_rt_engine.py` | 1034 | the gas producer's own time constant measured: the rotor's clock beside the engine's, the droop band that no constant moves, the lag's own arithmetic, the spool that brackets the constant against the manual's green arc, the lever pull it is nearly invisible on, EMER's runaway, and the published autorotation catch read at three constants |
 
@@ -468,14 +470,16 @@ Each is run the way every other module here is:
     python _rt_autoro_probe.py     # the autorotation: _rt_autoro_probe.txt
     python _rt_autoro_entry.py     # both of its switches: _rt_autoro_entry.txt
     python _rt_autoro_hand.py      # both entries by hand: _rt_autoro_hand.txt
+    python _rt_pilot_hand.py       # the other two missions by hand: _rt_pilot_hand.txt
     python _rt_tail.py             # the tail rotor's own two constants: _rt_tail.txt
     python _rt_engine.py           # the gas producer's own constant: _rt_engine.txt
 
 Every transcript is written by the run itself rather than by the shell's
-redirection, and `_rt_*.txt` in `.gitignore` covers all nine of them, so what is
+redirection, and `_rt_*.txt` in `.gitignore` covers all ten of them, so what is
 committed is the code that made them.  `_rt_handling.py`, `_rt_axes.py`,
-`_rt_autoro_entry.py`, `_rt_autoro_hand.py`, `_rt_tail.py`, `_rt_engine.py` and
-`_rt_check.py` assert every number they print, so a regression is a traceback and
+`_rt_autoro_entry.py`, `_rt_autoro_hand.py`, `_rt_pilot_hand.py`,
+`_rt_tail.py`, `_rt_engine.py` and `_rt_check.py` assert every number they
+print, so a regression is a traceback and
 not a table nobody read.  `_rt_demo.py` is the only one that needs a display, and
 one thing in it is asked of a key a *watcher* would press rather than by the
 pilot: the engine, because an unattended pilot cannot press `F` and a rotor *held*
@@ -487,9 +491,9 @@ nothing but the model, and `_rt_engine.py` is the same for six of its seven
 tables - the last one flies the mission's own autorotation, and imports
 `_rt_pilot`, and pygame with it, where it is called.
 
-The last seven are the part of the harness that measures rather than flies: the
-autorotation's own three instruments, the human flyability programme - three
-phases flown, all three written up in `TODO.md` with their findings and numbers
+The last eight are the part of the harness that measures rather than flies: the
+autorotation's own three instruments, the human flyability programme - four
+phases flown, all four written up in `TODO.md` with their findings and numbers
 together - the tail rotor's own two constants, and the gas producer's own:
 
 * **phase 1**, `_rt_handling.py` (20 October).  The model's own hover closed
@@ -537,6 +541,37 @@ together - the tail rotor's own two constants, and the gas producer's own:
   the aircraft into the mission's own band at all - out of envelope 78 s into the
   climb - so that row is empty, and the mission's own climb is closed to a hand
   that slow;
+
+* **phase 4**, `_rt_pilot_hand.py` (25 October).  The same instrument again, on
+  the harness's *other* two missions' own loops: `_rt_check.py`'s hover-turn and
+  cruise, which had only ever been flown by script.  The instrument is unchanged
+  and what changed is what it *decides* - each mission's own `decide`, loop for
+  loop and branch for branch, with the phases read off the delayed *view* rather
+  than off the aircraft, so a phase is named a fifth of a second late, and the
+  baselines read off the *model* - `trims_for`'s rows, and the pad's own sticks
+  through `trim_controls` - rather than written down again.  Every gain is
+  `_rt_pilot`'s own pair under one of `_rt_axes`' three scales, and what is
+  asserted before anything is flown is the ruler: at a scale of one, with no lag
+  and the aircraft itself handed to the decision, one hand decision lands on the
+  mission's own to 1e-12 of an inch, at six instants across the two missions.
+  What the two *cannot* share is asserted too: the missions' own 0.25 s clock is
+  longer than the delay a decision waits on, the instrument's own selftest
+  refuses it, and so the person is flown at 0.05 s and at the slowest hand the
+  model has, one decision per delay.  Both missions are flown at both clocks on
+  the missions' own numbers - 61 s and 20.6 ft of skid over the pad against the
+  script's 61.7, a kilometre in 92 s against its 92.8, the turn's 360 home to
+  within a degree and a third - and the exception is the *arrival*: 2.14 and
+  2.15 m/s against the 1.00 the short mission's own rehearsal asks of itself,
+  which is phase 3's own finding, an arrival being where a hand shows, said of a
+  different mission.  And the cyclic's margin *inside* the missions is
+  x0.75 to x1.25 on the hover-turn, with the model's own pilot inside it - wider
+  at the top than phase 1's x0.75 to x1.00 and with the same soft edge, where a
+  half-grip runs the hover's height band away to 22.3 ft and nineteen metres off
+  the pad and a grip one and a half times the model's puts the turn's own end out
+  of reach, 795 m from the pad - and x0.50 to x2.00 on the cruise, whose hard edge
+  is x3.00 and whose soft edge is the ladder's own end: phase 2's "the tilt
+  pair's bands transfer, and *wider*", said of the mission rather than of the
+  hover it was measured on;
 
 The other three of the five are the autorotation's.  `_rt_autoro_probe.py` is the
 ruler `_rt_demo_autorotate` is cut with: the mission's own entry, from a settled
