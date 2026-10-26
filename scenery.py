@@ -11,7 +11,7 @@ The scenery is an ordered list of *objects*.  Every object has
 * plus optional kind specific parameters (a uniform "scale" for a tree, the
   base and height dimensions for a hill, ...).
 
-The flat ground plane, the grid drawn on it and the sky are *implicit*: they
+The ground, the grid drawn on it and the sky are *implicit*: they
 are always present and therefore deliberately **not** part of the description.
 
 XML layout (the element tag is the object kind)::
@@ -505,7 +505,7 @@ def _demo():
           % (os.path.basename(SAMPLE_SCENERY_FILE), len(sample),
              scape.version, len(scape)))
     print("in the order the file gives them - the order the renderer draws")
-    print("them in.  The ground plane and its grid are implicit, not here.")
+    print("them in.  The ground and its grid are implicit, not here.")
     print()
     print("    %-5s %7s %7s %7s  %6s %6s %6s  %s"
           % ("kind", "x", "y", "z", "rx", "ry", "rz", "what the file says"))

@@ -869,13 +869,16 @@ class ChaseCamera:
 
     ``min_height`` keeps the eye off the ground, which matters on the pad: the
     eye hangs ``height`` above the aircraft, and a parked helicopter is only
-    1.4 m up.
+    1.4 m up.  It is a clearance above the world's own zero until a caller reads
+    the ground for it, which :meth:`eye_target_up` takes as its one argument -
+    and that reading is the difference between a camera over a ridge and a
+    camera inside one.
     """
 
     distance: float = 14.0        # m behind the aircraft
     height: float = 4.5           # m above it
     look_ahead: float = 6.0       # m ahead of it that the view is aimed at
-    min_height: float = 0.6       # m, the eye never goes below this
+    min_height: float = 0.6       # m, the clearance the eye never goes below
     lag_s: float = 0.25
     position: Vector3 = field(default_factory=Vector3)   # the smoothed aircraft
     nose: Vector3 = field(default_factory=lambda: Vector3(0.0, 0.0, -1.0))
@@ -904,19 +907,29 @@ class ChaseCamera:
         self.ready = False
         return self
 
-    def eye_target_up(self):
+    def eye_target_up(self, ground_height=None):
         """``(eye, target, up)`` in the renderer's world, for ``gluLookAt``.
 
         The nose flattened onto the horizontal plane, so that a helicopter in a
         steep climb does not put the camera underneath itself.
+
+        *ground_height* is the world's own y of the ground under the aircraft,
+        m: the reading a caller that knows the ground - a renderer drawing a
+        landscape - takes for it, and with it ``min_height`` is a clearance
+        above *that* ground rather than above the world's own zero.  Left out,
+        the floor is the world's zero, which is what a caller with no ground to
+        offer gets and what a flat world is.
         """
         flat = Vector3(self.nose.x, 0.0, self.nose.z).normalized()
         if flat.length() < 1e-6:
             flat = Vector3(0.0, 0.0, -1.0)
         eye = (self.position - flat * self.distance
                + Vector3(0.0, self.height, 0.0))
-        if eye.y < self.min_height:
-            eye = Vector3(eye.x, self.min_height, eye.z)
+        floor = self.min_height
+        if ground_height is not None:
+            floor += ground_height
+        if eye.y < floor:
+            eye = Vector3(eye.x, floor, eye.z)
         return (eye, self.position + flat * self.look_ahead,
                 Vector3(0.0, 1.0, 0.0))
 
@@ -3063,6 +3076,14 @@ def _self_test():
     low = ChaseCamera(height=0.0, min_height=10.0)
     low.update(0.0, parked.render_position(), parked.render_basis())
     assert abs(low.eye_target_up()[0].y - 10.0) < 1e-12
+    # The floor is a clearance above the ground a caller reads for it - the
+    # renderer's own reading, and the whole difference between a camera over a
+    # ridge and one inside it - and above the world's own zero when it reads
+    # none.  A ground below the world's zero is read the same way round: the
+    # floor of a valley is below y = 0, which the world's zero could not say.
+    assert abs(low.eye_target_up(120.0)[0].y - 130.0) < 1e-12
+    assert abs(low.eye_target_up(-5.0)[0].y - 5.0) < 1e-12
+    assert low.eye_target_up(120.0)[2].as_tuple() == (0.0, 1.0, 0.0)
     basis = level.render_basis()
     trailing = ChaseCamera(lag_s=0.5)
     trailing.update(0.0, Vector3(0.0, 0.0, 0.0), basis)

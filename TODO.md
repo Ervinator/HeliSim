@@ -84,18 +84,18 @@ has `--check` for the wiring that flying cannot test.  What follows is what
   `GroundPlane` - so the ground is still asked one patch at a time and every
   height is still computed one way.  What that bought is a landscape a run can
   *fly*: parked on a ridge's face, sitting in the cushion at its crest and
-  lifted off it.  The two things around it are what is left, and neither of them
-  is the physics':
+  lifted off it.  Since 2026-10-26 the *renderer* reads that ground too: the
+  grass is the table's own cells, both grids are drawn on its surface, the shadow
+  lies on the ground under the aircraft and the two cameras that stand on it read
+  its own height rather than the world's zero (see `Done`), and `main.py`'s world
+  is terrain.py's own ridge set back from the pad.  So what is left of this
+  bullet is one thing, and it is not the renderer's:
 
-  * *the renderer is still flat.*  `main.py`'s implicit grass plane and its grid
-    are horizontal at y = 0 and its scenery's hills are drawn, not flown, so a
-    terrain is flown and not *shown*: the grass, the grid, the camera and the
-    shadow all still read the world's zero rather than the ground under the
-    aircraft;
   * *the air over a terrain is a wind field.*  `aerodynamics.py` has the hook
     (`airflow`, a callable of position) and `simulation.Simulation.wind` is one
     steady vector, so the upwash off a ridge and the sink over a valley are the
-    same level's work as the ridge - which now exists to have one.
+    same level's work as the ridge - which now exists to have one, in `main.py`'s
+    own world as well as in `terrain.py`'s demo.
 
 * **Human flyability has two phases and its next one is named here.**  The
   harness has a section in `README.md` now, and the programme's own file says
@@ -154,7 +154,7 @@ These are choices, not oversights: each is stated where it lives.
 * **The ground is a floor, not a contact model.**  `simulation.py` holds the
   c.g. on the skid line, takes the descent out of the velocity, and levels roll
   and pitch; the skids do not flex, slide or spring.
-* **The ground is flat patches, and what is drawn of it is still one.**  The
+* **The ground is flat patches, and the landscape is the only shape in it.**  The
   model's ground is `airframe.GroundPlane` - a level, a normal, and no shape - or
   `terrain.Terrain`, a table of those planes whose surface between its own
   samples is flat: a ridge, a valley and a step are *flown* now, and the seam
@@ -162,11 +162,13 @@ These are choices, not oversights: each is stated where it lives.
   height does not jump while the lean does.  What is not in it is a hole, an
   overhang, a vertical face or a cave, since a heightfield has one surface over
   every place, and a ground that *moves* is a plane handed to `Airframe.ground`
-  between frames rather than a table.  `main.py`'s world is still a horizontal
-  plane at y = 0 and its scenery's hills are still drawn rather than flown, so
-  what a run flies and what a run shows are two different grounds until the
-  renderer reads one - `Next` records that, and the wind field over a ridge
-  beside it.
+  between frames rather than a table.  The renderer reads that ground now - the
+  grass is the table's own cells, and the grids, the shadow and the two cameras
+  that stand on it read its own height - so what a run flies and what a run shows
+  are one ground.  What is still drawn rather than flown is the *scenery*: the
+  objects of an XML file are places with coordinates and no ground under them, so
+  a tree or a hill the file puts on a ridge stands at its own y rather than on
+  the slope.  `Next` records the wind field over a ridge beside it.
 * **The controls have no feel.**  `PilotInput` is rates rather than forces: full
   travels per second, so a cyclic crosses its stops in 0.6 s and the heavy
   collective takes 1.8 s over its 11 in of travel, and every axis ratchets.
@@ -510,7 +512,7 @@ These are choices, not oversights: each is stated where it lives.
     metres, so the psi on the caption are `telemetry.engine.torque` at that
     slope - `engine.UH1_TORQUE_NM_PER_PSI`, 621.4 N m of rotor shaft torque per
     psi - with `engine.UH1_TRANSMISSION_LIMIT_PSI` beside them as the limit the
-    reading is against.  Two imports in `main.py` (4819 lines), one format
+    reading is against.  Two imports in `main.py` (5434 lines), one format
     string, and nothing under the physics touched: which limit a reading is read
     against was always the caption's business, and the model already had both
     numbers.  A gauge shown against what the transmission will take is also the
@@ -535,6 +537,75 @@ These are choices, not oversights: each is stated where it lives.
 
 
 ## Done
+
+* 2026-10-26 - **the renderer reads the ground: `main.py`'s world is a landscape,
+  drawn as the table it is.**  `terrain.Terrain` landed on 2026-10-25 with a
+  landscape a run could *fly* and nothing that could *show* one: `main.py`'s
+  grass was a 16 km quad at the world's zero, both grids were horizontal lines
+  over it, the shadow lay on y = 0, and the two cameras that stand on the ground
+  had the world's zero as their floor - so a ridge was flown and not shown, and
+  what a run flies and what a run shows were two different grounds.
+
+  The world is now `terrain.py`'s own ridge, sampled into a table
+  (`WORLD_GROUND`), and the model is flown against *that* table: the pad and the
+  scenery's garden stand on level ground - the ridge's near foot is a sample line
+  200 m north of the pad, so the cell the aircraft is parked in is exactly level
+  and every number the run has always printed about a park is the same number to
+  the last bit - and the ridge itself stands in the clear inside the fog range,
+  which is the whole point of putting it there rather than on the horizon.
+
+  Everything drawn on the ground reads it.  The grass is the table's *own cells*,
+  each cut into its own two triangles in the module's own winding - the winding
+  that stands out of the ground, so the same GL_CULL_FACE that hides a box's back
+  face hides the underside of a hill - with a strip of quads per boundary cell
+  carrying the edge cells' own planes out to the world's edge, which is the ground
+  the model says is there and not a square of grass with a table standing on it.
+  A face is shaded by its own lean against a fixed light from the south east, the
+  way a hill's four sides and a box's six faces have always carried a shade of
+  their own, so ground level with the world's floor is drawn in exactly the
+  colour it is painted in and a ridge reads as a ridge.  Both grids are drawn
+  *through* the ground: a line is cut where the surface under it bends - at a
+  sample line the table's own lean changes across, and nowhere else, so a line
+  over level ground and a line along one of the ridge's faces each come out
+  whole - and every piece of it is the straight line the ground is under that
+  piece, lifted the two centimetres and four that keep the two scales off the
+  surface and off each other.  The shadow lies on the ground under the aircraft,
+  in the plane of the patch under it so that a slope cannot cut the disc in half,
+  and fades with the ground's own clearance rather than with a height above the
+  world's zero - which is what makes it read the same parked on a ridge as parked
+  on the grass.  And the two cameras that stand on the ground read it:
+  `ChaseCamera.eye_target_up` takes the ground's own height under the aircraft as
+  its one optional argument, so its `min_height` is a clearance above *that*
+  ground - on a ridge that is the difference between a camera ten metres over the
+  crest and one scraping it - and the fixed pad camera's eye stands on the ground
+  under its own place, which on the level pad is `PAD_EYE` to the last bit.
+
+  **The renderer reads the table, not a patch.**  `Terrain.patch` answers a
+  question about a *place*: it builds a plane, three cross products and a
+  normalized normal, which is thirty microseconds a place - and a frame asks
+  thousands of them, a near grid line being cut into a handful of pieces and
+  there being a hundred and sixty lines.  The table is the ground's own numbers
+  and its two rules are the module's own - a cell cut along its diagonal, and a
+  cell's samples standing on the surface of every patch that touches them - so a
+  height read out of the table *is* the height the patch under the place answers
+  with, and `--check` asserts exactly that, at every kind of place a table has: a
+  sample, the middle of a cell's edge, the middle of its diagonal, either half of
+  a cell, the pad, and five kilometres off the map in each direction where the
+  ground is the boundary cell carried on.  A plane's ground is read the same way
+  (its own equation solved for a height, so a ground that is not at y = 0 is
+  drawn where it is), and the two readings are one function, `surface_height`.
+
+  Verified: `python main.py --check` - which now flies the world's own ground
+  through the pad, the pickup, the camera checks and the crash and wind checks,
+  so a run's world is what is checked - plus `python terrain.py`, `python
+  simulation.py`, `python scenery.py` and the rest of the module self tests, all
+  printing their own `self test passed` and exiting 0; a live window rendered at
+  the pad, in the chase view and in the cockpit, with the ridge's silhouette,
+  its two faces (1.10 bright against 0.87 dark over ground at exactly 1.00) and
+  both grids on it read back off the framebuffer; and every `(N lines)` claim in
+  `README.md`, `TODO.md` and `attic/README.md` re-read off the files by
+  `attic/_tmp_counts.py` - 51 claims, this change's own files among them - with
+  none disagreeing.
 
 * 2026-10-25 - **the ground is a landscape: a heightfield of the model's own
   planes.**  `GroundPlane` landed on 2026-10-14 as one flat patch with a level
@@ -606,7 +677,7 @@ These are choices, not oversights: each is stated where it lives.
   for four with its pitch within a fifth of a degree of the face's own lean and
   its hub in the same cushion a park on level ground sits in to 1e-6 (K_G to
   1e-7), and then lifted off it with ten seconds of the lever up.
-  `README.md`'s module table carries `terrain.py` (655 lines) with the run's own
+  `README.md`'s module table carries `terrain.py` (659 lines) with the run's own
   count read back off the file, its intro no longer claiming nine modules and
   eleven harness files, `airframe.py`'s and `simulation.py`'s rows and this
   file's own prose brought up to the files, and `attic/_tmp_counts.py` printing
@@ -756,7 +827,7 @@ These are choices, not oversights: each is stated where it lives.
   `_rt_check.py` flew both missions and wrote `_rt_log.txt`, and `main.py --check`
   printed `main.py check passed`.  `README.md`'s module table was read back at
   what the three files now are - `airframe.py` (4253 lines),
-  `simulation.py` (3336 lines), `main.py` (4819 lines) - its air section carries
+  `simulation.py` (3357 lines), `main.py` (5434 lines) - its air section carries
   the wind and the day's shape, and `attic/_tmp_counts.py` is at 47 claims with
   none disagreeing.
 

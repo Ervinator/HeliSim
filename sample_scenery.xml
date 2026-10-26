@@ -11,7 +11,7 @@
     hill   pyramid standing on a convex quad base, optional: base_front,
            base_back, base_depth, height, apex_x, apex_z
 
-  The ground plane and its grid are implicit and must NOT be listed here.
+  The ground and its grid are implicit and must NOT be listed here.
 -->
 <scenery version="1.0">
 

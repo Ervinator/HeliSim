@@ -19,12 +19,12 @@ Layered, each one importing only what sits below it:
 | `rotor_control.py` | 1280 | the control path: inches of stick travel to swashplate angles, the mixing law and its rigging, the control lags |
 | `engine.py` | 1190 | the T53-L-13 on the other end of the shaft: the twist grip, the N2 governor and its droop band, the torque available read off a digitised figure 7.1-2 - each of its eight altitude curves read at every temperature the sheet prints, and the family read at the airframe's own pressure altitude and free air temperature - what EMER and bleed air cost, the ten degrees of inlet temperature that a prolonged hover in ground effect is read with (7.1-13(c)), and the gas producer's lag - 0.6 sec, which `_rt_engine.py` measures against the rotor's own clock and the band a spool draws around it |
 | `airframe.py` | 4253 | TM-73254's force and moment model - main rotor, tail rotor, fuselage, fin, stabilizer - and the six degree of freedom equations of motion, with the rotor's own speed as a state when an engine is aboard, the second root of equation 10 read off a shaft with nothing driving it, the air it flies in as a pressure altitude and a free air temperature - set on the airframe, or read off the aircraft itself as a profile - or as a density, and the ground under it as one flat plane with a level and a normal, asked for the patch under the aircraft so that a landscape of them stands in for one |
-| `simulation.py` | 3336 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the three trims, and what a renderer or a HUD asks for - the engine's panel among them, its maximum read in the same air the engine is governed in |
-| `terrain.py` | 655 | the ground as a landscape: a heightfield of the model's own flat patches, sampled north and east, whose surface between those samples is flat - a ridge, a valley or a step, each table cell cut into two triangles and each triangle one `airframe.GroundPlane`, with the patch under the aircraft answering every question the frame loop asks, so that a terrain is flown by the same arithmetic a single plane always was |
+| `simulation.py` | 3357 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the three trims, and what a renderer or a HUD asks for - the engine's panel among them, its maximum read in the same air the engine is governed in |
+| `terrain.py` | 659 | the ground as a landscape: a heightfield of the model's own flat patches, sampled north and east, whose surface between those samples is flat - a ridge, a valley or a step, each table cell cut into two triangles and each triangle one `airframe.GroundPlane`, with the patch under the aircraft answering every question the frame loop asks, so that a terrain is flown by the same arithmetic a single plane always was |
 | `regression_tm73254.py` | 661 | the report's figures 2 to 9 reflown: eight step inputs from 60 kt and from the hover, laid next to its published responses |
 | `scenery.py` | 603 | the XML scenery format and its loader - no pygame, no OpenGL, and the one module whose test needs no window and no physics |
 | `controls.py` | 1105 | the device map: which physical control flies which - keyboard or joystick, per control, with deadzone, invert and calibration - read from the XML of `default_controls.xml`, and likewise stdlib only |
-| `main.py` | 4819 | the OpenGL sandbox: the implicit grass plane and its two scale grid, the scenery, the aircraft of `simulation.py` flown from its device map - keyboard, joystick, the mouse, or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it, with the `--engine` switch that fits the T53 before the first frame, the three air switches (`--air-profile`, `--ige-hover`, `--wind`) that say what it flies in, the cursor on the cyclic and the wheel on the collective (`M`, `--mouse` and its own `--mouse-reverse`), and one line for the grip of a run that has none |
+| `main.py` | 5434 | the OpenGL sandbox: the ground of `terrain.py` - the table's own cells for grass, a grid at two scales drawn on its surface, and the scenery - the aircraft of `simulation.py` flown from its device map - keyboard, joystick, the mouse, or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it, with the `--engine` switch that fits the T53 before the first frame, the three air switches (`--air-profile`, `--ige-hover`, `--wind`) that say what it flies in, the cursor on the cyclic and the wheel on the collective (`M`, `--mouse` and its own `--mouse-reverse`), and one line for the grip of a run that has none |
 
 Only `main.py` imports anything outside the standard library - and that is a
 claim about the ten modules above rather than about the project.  The twelve
@@ -49,7 +49,7 @@ window and none of them needs an OpenGL context.  See *The harness* below.
 
 `sample_scenery.xml` is used when no path is given.  The scenery file lists
 trees and hills with a coordinate and an orientation; `scenery.py`'s docstring
-and the file's own header describe the format.  The ground plane and its grid
+and the file's own header describe the format.  The ground and its grid
 are implicit and are deliberately not part of the description.
 
 The aircraft is `simulation.py`'s own: the report's 6158 lb instrumented UH-1H,
@@ -290,9 +290,11 @@ is one colour and out of the way.  The reference never moves, which is what make
 a moving horizon readable, and nothing of the picture's case beyond it is drawn:
 no rim ticks and no index, since neither is readable at 132 px.
 
-The world is kilometres across because the aircraft is: a 16 km ground plane,
-10 m grid lines within 400 m of the aircraft and 250 m lines out to 8 km, and fog
-that fades the plane's edge into the sky where a horizon belongs.  Nothing
+The world is kilometres across because the aircraft is: a landscape 16 km across,
+level over the pad and over the scenery beside it and rising into `terrain.py`'s
+own ridge north of the pad, 10 m grid lines within 400 m of the aircraft and 250 m
+lines out to 8 km drawn on the ground's own surface, and fog that fades the
+ground's edge into the sky where a horizon belongs.  Nothing
 clamps the aircraft or the camera any more; the envelopes in `simulation.py` are
 the limits.
 
@@ -394,6 +396,16 @@ own cushion and lifted off it again.  Its self test asserts all of it, including
 that a table with no landscape in it answers every ground question *bit for bit*
 as `airframe.GroundPlane.level` does - which is what keeps the report's own
 figures where they were.
+
+`main.py`'s world is that landscape as well: the module's own ridge, set back
+north of the pad so that the pad and the scenery's own garden stand on level
+ground, with the grass drawn as the table's own cells, both grids drawn on its
+surface, the shadow lying on the ground under the aircraft and the two cameras
+that stand on the ground reading its own height.  Which heights, and why the
+renderer reads the table rather than asking the ground for a patch at every place
+it draws, is in the file's own *The ground's own surface* section; `python
+main.py --check` asserts that the renderer's reading and the ground's own patch
+agree at every kind of place a table has, which is what the drawing rests on.
 
 `scenery.py` needs neither a window nor the physics:
 
