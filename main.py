@@ -3,10 +3,12 @@
 
 The world is made of two parts:
 
-* the *ground*, which is :mod:`terrain`'s landscape: a table of heights the model
-  is flown against as so many flat patches, drawn here as the table's own cells
-  with a grid at two scales on it.  It is always present and
-  is deliberately not part of the scenery description, and
+* the *ground*, which is :mod:`terrain`'s own table: sample heights the model is
+  flown against as so many flat patches, drawn here as the table's own cells
+  with a grid at two scales on it.  This world's table is level - every sample in
+  it is zero, so its ground is one plane - and a landscape is that same table
+  with other numbers in it.  It is always present and is deliberately not part of
+  the scenery description, and
 * the objects listed in an XML scenery file (see scenery.py and
   sample_scenery.xml).  Every object has a coordinate and an orientation.
 
@@ -26,13 +28,11 @@ aircraft is the rotor sweeping overhead.  ``C`` then gives the chase view of
 
 **The world is kilometres across, because the aircraft is.**  A UH-1 covers a
 kilometre in twenty seconds at 60 kt and the model's hover trims sit at 200 m, so
-the ground is a landscape 16 km across - level over the pad, over the scenery
-beside it and over everything south of :mod:`terrain`'s own ridge, which stands
-set back north of the pad to fly over, to climb and to see - its grid has two
-scales - 10 m lines within 400 m of the aircraft, 250 m lines out to 8 km, both of
-them drawn on the ground's own surface - and fog fades the ground's own edge into
-the sky where a horizon would be.  Nothing clamps the aircraft or the camera: the
-envelopes of simulation.py are the limits.
+the ground is 16 km across, level from end to end and drawn as :mod:`terrain`'s
+own table - its grid has two scales - 10 m lines within 400 m of the aircraft,
+250 m lines out to 8 km, both of them drawn on the ground's own surface - and fog
+fades the ground's own edge into the sky where a horizon would be.  Nothing
+clamps the aircraft or the camera: the envelopes of simulation.py are the limits.
 
 Usage::
 
@@ -313,15 +313,15 @@ KEYLOG_RATE_HZ = 20.0
 AIRFRAME_PRESET = "flight test"
 
 # ---------------------------------------------------------------------------
-# The world's scale.  See the module docstring: the ground is terrain.py's
-# landscape, kilometres on a side, and its grid is drawn at two scales around the
+# The world's scale.  See the module docstring: the ground is terrain.py's own
+# table, kilometres on a side, and its grid is drawn at two scales around the
 # aircraft.
 # ---------------------------------------------------------------------------
 
 #: Half the width of the world's ground, m.  The model's trims sit at
 #: 200 m and a 60 kt trace covers a kilometre in twenty seconds, so the ground
 #: has to be a flying world rather than a field to walk around: 16 km across,
-#: with fog to hide where it ends.  It is the width *drawn* - the landscape's own
+#: with fog to hide where it ends.  It is the width *drawn* - the ground's own
 #: table is smaller and the ground past it is its boundary cells carried on - and
 #: nothing of the model reads it.
 GROUND_HALF_M = 8000.0
@@ -355,7 +355,7 @@ NEAR_PLANE_M = 1.0
 FAR_PLANE_M = 20000.0
 
 # ---------------------------------------------------------------------------
-# The world's own ground: the landscape of terrain.py, flown and drawn.
+# The world's own ground: a table of terrain.py, flown and drawn.
 #
 # The model asks the ground one question at a time - how far is this point above
 # the surface, and where is the surface under it - and terrain.py answers with
@@ -364,40 +364,43 @@ FAR_PLANE_M = 20000.0
 # on its surface, and the shadow and the two cameras that stand on the ground
 # read the ground itself rather than the world's zero.  What a run flies and what
 # a run shows are one ground.
+#
+# This world's table is level - every sample in it is zero - so the ground a run
+# flies over is one flat plane.  The table is here to be *read*: the grass, both
+# grids, the shadow and the two cameras ask it for a height, a bend and a lean,
+# and a landscape is that same table with other numbers in it - `terrain.py`
+# builds one from its own ridge, and the check below keeps one of its own, so the
+# arithmetic a sloping ground needs stays exercised while this world has no slope
+# in it.
 # ---------------------------------------------------------------------------
 
-#: How far north of the pad the world's ridge crests, m.  The module's ridge is
-#: a tent 120 m high and 600 m from its crest to its feet either side, so a
-#: crest here leaves the near foot 200 m north of the pad - level ground right up
-#: to it, which is where the pad, the scenery's own garden and the run's first
-#: frames stand - and puts the ridge itself inside the range the fog leaves
-#: clear, so the landscape is a landscape rather than a haze on the horizon: to
-#: fly to, to climb, and to see.
-WORLD_CREST_NORTH_M = 800.0
-
-#: The table the ridge is sampled into: ``(south, north)`` and ``(west, east)``,
-#: m.  It reaches from 1.2 km south of the pad to 600 m north of the ridge's far
-#: foot, and 1.2 km east and west along the crest, at
-#: :data:`terrain.RIDGE_STEP_M` metres - the module's own spacing, the one whose
-#: samples land on the tent's crease and on both of its feet, so the table is the
-#: tent itself and not a surface a rounding away from it.  The pad is one of its
-#: cells, and a level one, so the ground an aircraft is parked on is the table's
-#: own answer rather than an edge of it carried on.
+#: The table the ground is sampled into: ``(south, north)`` and ``(west, east)``,
+#: m.  It reaches from 1.2 km south of the pad to 2 km north of it, and 1.2 km
+#: east and west.  The pad is one of its cells, so the ground an aircraft is
+#: parked on is the table's own answer rather than an edge of it carried on.
 WORLD_TABLE_NORTH_M = (-1200.0, 2000.0)
 WORLD_TABLE_EAST_M = (-1200.0, 1200.0)
 
+#: The spacing the ground's table is sampled at, m.  Every height in it is zero,
+#: so this is not a description of the ground but of the quads it is drawn in:
+#: coarse enough that the table is a handful of cells around the aircraft and
+#: fine enough that one quad is small against a world kilometres across.
+WORLD_STEP_M = 200.0
+
 
 def world_surface(north, east):
-    """The world's landscape: the ground's height, m, at ``(north, east)`` NED m.
+    """The world's ground: the height, m, at ``(north, east)`` NED m.
 
-    ``terrain.py``'s own :func:`terrain.ridge`, set back
-    :data:`WORLD_CREST_NORTH_M` m north of the pad: a tent
-    :data:`terrain.RIDGE_HEIGHT_M` m high, crest to foot
-    :data:`terrain.RIDGE_HALF_WIDTH_M` m either side of it, and level ground away
-    from it.  The module's ridge and no second one, so a pilot flying north from
-    the pad meets the landscape ``python terrain.py`` prints.
+    Level.  A table of zero heights answers exactly as
+    :meth:`airframe.GroundPlane.level` does, to the last bit - which is the flat
+    case in ``terrain.py``'s own self test - so a run over this ground is a run
+    over the plane this model flew before there was a terrain, and every number a
+    run has ever printed about a park is the same number.
+
+    A landscape is this function with other numbers in it:
+    :func:`terrain.ridge` is one, and ``python terrain.py`` flies it.
     """
-    return terrain.ridge(north - WORLD_CREST_NORTH_M, east)
+    return 0.0
 
 
 #: The ground this file's world *is*, and the ground every run of it is flown
@@ -406,8 +409,7 @@ def world_surface(north, east):
 #: ``Telemetry.alt_agl``, the collision - come out of the same numbers the
 #: renderer draws.
 WORLD_GROUND = terrain.Terrain.from_function(
-    world_surface, WORLD_TABLE_NORTH_M, WORLD_TABLE_EAST_M,
-    terrain.RIDGE_STEP_M)
+    world_surface, WORLD_TABLE_NORTH_M, WORLD_TABLE_EAST_M, WORLD_STEP_M)
 
 # ---------------------------------------------------------------------------
 # The aircraft: body axes, +x nose, +y starboard, +z down, the c.g. at the
@@ -780,7 +782,7 @@ def draw_terrain_ground(ground):
     grass can be culled from below like every other solid here.  Then the ground
     past the table, which the model carries on as the boundary cell's own plane:
     a quad per boundary cell out to the world's own edge, with each far corner
-    read from the cell it is the plane of, so that the landscape runs to the
+    read from the cell it is the plane of, so that the ground runs to the
     horizon instead of stopping at the table's own edge, a few hundred metres
     from the pad.
 
@@ -3513,7 +3515,7 @@ def main():
     # The aircraft, before there is a window: the trim is solved here, which
     # takes a moment, and the flight it describes is worth having in writing.
     # It is flown against this file's own ground rather than against a plane at
-    # the world's zero: the landscape the renderer below draws is the ground the
+    # the world's zero: the table the renderer below draws is the ground the
     # model is flown against, cell for cell.
     sim = Simulation(airframe=airframe_preset(AIRFRAME_PRESET,
                                              ground=WORLD_GROUND,
@@ -3558,13 +3560,10 @@ def main():
     print("  parked on the pad:  %s" % (sim.telemetry(),))
     print("  R resets to the state this run began in - the pad, the lever at %d %% -"
           % (100.0 * PAD_COLLECTIVE,))
-    print("  and the world is %.0f km across, over terrain.py's own landscape:"
+    print("  and the world is %.0f km across, over terrain.py's own table:"
           % (2.0 * GROUND_HALF_M / 1000.0,))
-    print("  a ridge %g m high, its crest %g m north of the pad and %g m from its"
-          % (terrain.RIDGE_HEIGHT_M, WORLD_CREST_NORTH_M,
-             terrain.RIDGE_HALF_WIDTH_M))
-    print("  feet either side of it, so the pad, the scenery and everything south")
-    print("  of the ridge's own near foot stand on level ground")
+    print("  level ground, a table of the module's own flat patches, so what a run")
+    print("  flies and what a run draws are one ground")
     print("keys: W/S collective, arrows cyclic, A/D pedals, R reset, P park,")
     print("  Q/E the twist grip, F the engine, G the governor, X a failure,"
           " C camera, Esc quit")
@@ -3911,7 +3910,7 @@ def _self_check():
     # under this run's 9.09 in hover trim), level, with the
     # run's own trim remembered as the reference the caption's light reads and
     # that park remembered as the state this run began in - which is what R comes
-    # back to.  It is flown against this file's own ground, the landscape main()
+    # back to.  It is flown against this file's own ground, the table main()
     # flies: the pad stands on level ground, so it is the same park to the last
     # bit that a plane at the world's zero gave, and everything below is checked
     # against the world a run actually has.
@@ -4252,16 +4251,16 @@ def _self_check():
     wrapped_first = math.fmod(UH1_TAIL_MAIN_RATIO * rotor_azimuth_deg(sim), 360.0)
     assert abs(wrapped_first - 161.28) < 1e-6
 
-    # The ground, which used to be a plane at the world's zero and is now the
-    # landscape terrain.py describes: the world is a table of heights, every
-    # height the renderer draws is read out of it, and the model is flown against
-    # the same table.  The model's own answer for a place is the plane of the
-    # patch under it, built out of the table's samples; the renderer's is
-    # surface_height, read out of the same samples - so this is where the two are
-    # asserted to be one reading, at every kind of place a table has: a sample,
-    # the middle of a cell's edge, the middle of its diagonal, either half of a
-    # cell, the pad, and a long way off the map in each direction, where the
-    # ground is the boundary cell's own plane carried on.
+    # The ground, which used to be a plane at the world's zero and is now a table
+    # terrain.py describes: every height the renderer draws is read out of that
+    # table, and the model is flown against the same table.  The model's own
+    # answer for a place is the plane of the patch under it, built out of the
+    # table's samples; the renderer's is surface_height, read out of the same
+    # samples - so this is where the two are asserted to be one reading, at every
+    # kind of place a table has: a sample, the middle of a cell's edge, the middle
+    # of its diagonal, either half of a cell, the pad, and a long way off the map
+    # in each direction, where the ground is the boundary cell's own plane carried
+    # on.
     step_north, step_east = WORLD_GROUND.spacing
     south, north = WORLD_GROUND.x_range
     west, east = WORLD_GROUND.y_range
@@ -4284,6 +4283,30 @@ def _self_check():
                   Vector3(north + 3000.0, 0.0, 0.0)):
         assert on_the_ground(place.x, place.y) < 1e-9
 
+    # Every height in this world's table is zero, which is what makes its ground
+    # one level plane: the grass the renderer draws is these cells, so the flat
+    # ground a run shows is the flat ground the model flies.
+    for row in WORLD_GROUND.heights:
+        for height in row:
+            assert height == 0.0
+
+    # And it is the plane this model flew before there was a terrain, question for
+    # question: a table of zeros answers `GroundPlane.level`'s own arithmetic to
+    # the last bit - the reading of a place, the point on the surface, the point
+    # above it and the levelling - so this world is the world it always was and
+    # every figure the model's own regressions carry still stands.
+    level = GroundPlane.level(0.0)
+    for place in (Vector3(0.0, 0.0, 0.0),
+                  Vector3(37.5, -812.25, -13.75),
+                  Vector3(-0.5, 0.5, -1201.0),
+                  Vector3(4000.0, -9000.0, -300.0)):
+        assert WORLD_GROUND.height(place) == level.height(place)
+        assert WORLD_GROUND.surface_point(place) == level.surface_point(place)
+        assert (WORLD_GROUND.above(place, UH1_CG_HEIGHT_ON_GROUND)
+                == level.above(place, UH1_CG_HEIGHT_ON_GROUND))
+        assert (WORLD_GROUND.patch(place).level_attitude(37.0)
+                == level.level_attitude(37.0))
+
     # A plane's ground is read the same way - its own level rather than the
     # world's zero, and its own lean where it has one - so a run flying a plane
     # that is not at y = 0 is drawn where it is.  The flat sims this check builds
@@ -4294,23 +4317,21 @@ def _self_check():
     assert abs(surface_height(leaning, 100.0, 0.0)
                + 100.0 * math.tan(0.2)) < 1e-9
 
-    # The landscape itself: 120 m at the crest, set back north of the pad, its
-    # feet 600 m either side of it, and level ground over the pad and over the
-    # whole southern corner of the world - which is what the scenery's own garden
-    # and the run's first frames rest on, and why a park there is the park this
-    # file has always had.
-    assert abs(surface_height(WORLD_GROUND, WORLD_CREST_NORTH_M, 0.0)
-               - terrain.RIDGE_HEIGHT_M) < 1e-12
-    assert surface_height(WORLD_GROUND, WORLD_CREST_NORTH_M
-                          + terrain.RIDGE_HALF_WIDTH_M, 0.0) == 0.0
+    # And level over the pad, over the whole of the table and over the ground
+    # carried past it out to the world's own corners - which is what the scenery's
+    # own garden and the run's first frames rest on, and why a park anywhere in
+    # this world is the park this file has always had.
     assert surface_height(WORLD_GROUND, 0.0, 0.0) == 0.0
+    assert surface_height(WORLD_GROUND, south, west) == 0.0
+    assert surface_height(WORLD_GROUND, north, east) == 0.0
     assert surface_height(WORLD_GROUND, -GROUND_HALF_M, GROUND_HALF_M) == 0.0
+    assert surface_height(WORLD_GROUND, GROUND_HALF_M, -GROUND_HALF_M) == 0.0
 
-    # Which is what lets a line of the grid be cut at the table's own sample
-    # lines and nowhere else: every cell of this world's table is one plane on
-    # both sides of its diagonal, so a piece of a line across a cell lies on the
-    # ground however it is cut.  A world with a hill in it would need the
-    # diagonals cut too, as ground_cuts says.
+    # Every cell of this world's table is one plane on both sides of its diagonal
+    # - four level corners - so a piece of a line across a cell lies on the ground
+    # however it is cut, and :func:`ground_cuts` has no diagonal to cut.  It is
+    # the same property the hill below leans on: a cell whose own four samples are
+    # coplanar is one plane, diagonal or not.
     for i in range(WORLD_GROUND.nx - 1):
         for j in range(WORLD_GROUND.ny - 1):
             assert (WORLD_GROUND.heights[i][j]
@@ -4318,30 +4339,20 @@ def _self_check():
                     == (WORLD_GROUND.heights[i + 1][j]
                         + WORLD_GROUND.heights[i][j + 1]))
 
-    # The cuts a line of the grid is drawn through.  Across the ridge a line is
-    # cut where the surface bends - at each of the ridge's own feet and on its
-    # crest, and nowhere along either of its faces, which are straight - and a
-    # line over the level ground the pad stands on is not cut at all, however
-    # many of the table's own sample lines it crosses.  A line clear of the table
-    # is one piece, whichever side of it the line is on, which is what keeps the
-    # far grid's own long lines cheap where there is no landscape under them.
+    # The cuts a line of the grid is drawn through, and a level ground bends
+    # nowhere, so there are none: a line is one piece whatever it crosses and
+    # whichever way it is walked, which is what keeps the far grid's own long
+    # lines cheap over a ground with no landscape in it.
     cuts = ground_cuts(WORLD_GROUND, 0.0, 0.0, 3000.0, 0.0)
-    assert cuts == [0.0,
-                    (WORLD_CREST_NORTH_M - terrain.RIDGE_HALF_WIDTH_M) / 3000.0,
-                    WORLD_CREST_NORTH_M / 3000.0,
-                    (WORLD_CREST_NORTH_M + terrain.RIDGE_HALF_WIDTH_M) / 3000.0,
-                    1.0]
-    assert ground_cuts(WORLD_GROUND, 50.0, 0.0, 150.0, 0.0) == [0.0, 1.0]
-    assert ground_cuts(WORLD_GROUND, -400.0, 0.0, -200.0, 0.0) == [0.0, 1.0]
-    # The near grid's own window at the pad reaches the ridge's near foot, and a
-    # foot is a bend: that line is cut once, where the level ground starts to
-    # climb - so the grid is one straight line over the flat and one piece up the
-    # face, rather than a line for every row of the table it crosses.
-    foot = WORLD_CREST_NORTH_M - terrain.RIDGE_HALF_WIDTH_M
-    assert ground_cuts(WORLD_GROUND, -400.0, 0.0, 400.0, 0.0) == [
-        0.0, (foot + 400.0) / 800.0, 1.0]
-    assert ground_cuts(WORLD_GROUND, 3000.0, 0.0, 4000.0, 0.0) == [0.0, 1.0]
-    assert ground_cuts(WORLD_GROUND, -7000.0, 0.0, -6000.0, 0.0) == [0.0, 1.0]
+    assert cuts == [0.0, 1.0]
+    for line in ((50.0, 0.0, 150.0, 0.0),
+                 (-400.0, 0.0, -200.0, 0.0),
+                 (-400.0, 0.0, 400.0, 0.0),
+                 (0.0, -400.0, 0.0, 400.0),
+                 (0.0, 0.0, 0.0, 3000.0),
+                 (3000.0, 0.0, 4000.0, 0.0),
+                 (-7000.0, 0.0, -6000.0, 0.0)):
+        assert ground_cuts(WORLD_GROUND, *line) == [0.0, 1.0]
     # Walked the other way the same line is cut at the same places, and the two
     # sets of fractions add up to the whole of it.
     backwards = ground_cuts(WORLD_GROUND, 3000.0, 0.0, 0.0, 0.0)
@@ -4352,27 +4363,32 @@ def _self_check():
         assert on_the_ground(3000.0 * cut, 0.0) < 1e-9
 
     # The two cameras that stand on the ground read it rather than the world's
-    # zero, which over a ridge is the whole difference: a chase camera whose floor
-    # is a clearance above y = 0 sits on the ridge's own crest instead of the
-    # 10 m over it that its own clearance asks for, and a pad camera fixed at the
+    # zero, which is the whole difference where the ground is not flat - and this
+    # world *is* flat, so it cannot show that.  A table with a slope in it can,
+    # and the check keeps one: terrain.py's own ridge, whose crest is at the pad,
+    # so that every place of the fixture below is on the hill.  A chase camera
+    # whose floor is a clearance above y = 0 would sit on the world's zero instead
+    # of that clearance over the ground it is over, and a pad camera fixed at the
     # world's zero is one a ridge can swallow.
-    crest = to_renderer(Vector3(WORLD_CREST_NORTH_M, 0.0,
-                                -terrain.RIDGE_HEIGHT_M))
-    floor = surface_height(WORLD_GROUND, WORLD_CREST_NORTH_M, 0.0) + 10.0
-    low = ChaseCamera(height=0.0, min_height=10.0)
-    low.update(0.0, crest, sim.render_basis())
-    assert abs(low.eye_target_up(floor - 10.0)[0].y - floor) < 1e-9
-    assert low.eye_target_up()[0].y < floor
-    assert pad_camera_eye(sim).as_tuple() == PAD_EYE.as_tuple()   # the flat pad
-    # A table whose own crest is *at* the pad, so that the pad camera's place is
-    # on the hill: its eye stands on the ground it is over, the park is the
-    # model's own park on a slope, and the camera that never moves is the height
-    # of the ground under it higher than PAD_EYE.
     hill = terrain.Terrain.from_function(
         terrain.ridge,
         (-terrain.RIDGE_HALF_SPAN_M, terrain.RIDGE_HALF_SPAN_M),
         (-terrain.RIDGE_HALF_SPAN_M, terrain.RIDGE_HALF_SPAN_M),
         terrain.RIDGE_STEP_M)
+    crest = to_renderer(Vector3(0.0, 0.0, -terrain.RIDGE_HEIGHT_M))
+    floor = surface_height(hill, 0.0, 0.0) + 10.0
+    low = ChaseCamera(height=0.0, min_height=10.0)
+    low.update(0.0, crest, sim.render_basis())
+    assert abs(low.eye_target_up(floor - 10.0)[0].y - floor) < 1e-9
+    assert low.eye_target_up()[0].y < floor
+    # Over the pad of *this* world there is nothing to read: the camera stands
+    # where PAD_EYE stands, because the ground under it is the world's own zero.
+    assert pad_camera_eye(sim).as_tuple() == PAD_EYE.as_tuple()
+    assert ground_tilt(WORLD_GROUND, Vector3(0.0, 0.0, 0.0)) == (0.0, WORLD_UP)
+    # And on the hill the pad camera's place is on the slope: its eye stands on
+    # the ground it is over, the park is the model's own park on a slope, and the
+    # camera that never moves is the height of the ground under it higher than
+    # PAD_EYE.
     on_the_hill = Simulation(airframe=airframe_preset(AIRFRAME_PRESET,
                                                       ground=hill))
     on_the_hill.on_the_pad()
@@ -4386,22 +4402,55 @@ def _self_check():
                - PAD_EYE.y) < 1e-9
     assert on_the_hill.ground.height(from_renderer(hill_eye)) > 0.0
 
-    # The shadow is drawn on the ground the aircraft is over - over the ridge it
-    # is 120 m up, where a disc at the world's zero would be inside the hill - and
+    # The shadow is drawn on the ground the aircraft is over - over the hill it is
+    # 120 m up, where a disc at the world's zero would be inside the hill - and
     # over the aircraft's own column rather than off along the slope.  Its disc
-    # lies in the patch's own plane: level ground is no turn at all, and a ridge's
-    # face is turned by that face's own lean about the crest's own line.
-    shadow = ground_place(WORLD_GROUND,
-                          Vector3(WORLD_CREST_NORTH_M, 0.0,
-                                  -terrain.RIDGE_HEIGHT_M),
+    # lies in the patch's own plane: level ground is no turn at all, and the
+    # hill's face is turned by that face's own lean about the crest's own line.
+    shadow = ground_place(hill, Vector3(0.0, 0.0, -terrain.RIDGE_HEIGHT_M),
                           SHADOW_HEIGHT_M)
     assert abs(shadow.y - (terrain.RIDGE_HEIGHT_M + SHADOW_HEIGHT_M)) < 1e-9
-    assert shadow.x == 0.0 and shadow.z == -WORLD_CREST_NORTH_M
-    assert ground_tilt(WORLD_GROUND, Vector3(0.0, 0.0, 0.0)) == (0.0, WORLD_UP)
+    assert shadow.x == 0.0 and shadow.z == 0.0
     angle, axis = ground_tilt(hill, Vector3(0.0, 0.0, 0.0))
     assert abs(angle - math.degrees(math.atan(terrain.RIDGE_HEIGHT_M
                                               / terrain.RIDGE_HALF_WIDTH_M))) < 1e-9
     assert abs(axis.x) > 0.99 * axis.length()      # about the crest's own line
+
+    # And the same lines over a table that is *not* level, which this world cannot
+    # show: the fixture above is the module's own ridge, its crest at the pad with
+    # 600 m of level ground either side of it, so a line walked north over it is
+    # cut at the ridge's near foot, on its crest and at its far foot, and nowhere
+    # along either face, which is straight - while a line over the level ground
+    # outside the ridge, a line along the ridge itself and a line up one face are
+    # one piece each, however many of the table's sample lines they cross.
+    span = terrain.RIDGE_HALF_SPAN_M
+    foot = terrain.RIDGE_HALF_WIDTH_M
+    over_the_ridge = ground_cuts(hill, -span, 0.0, span, 0.0)
+    assert over_the_ridge == [0.0,
+                              (span - foot) / (2.0 * span),
+                              0.5,
+                              (span + foot) / (2.0 * span),
+                              1.0]
+    assert ground_cuts(hill, span - 500.0, 0.0, span, 0.0) == [0.0, 1.0]
+    assert ground_cuts(hill, 0.0, -span, 0.0, span) == [0.0, 1.0]
+    assert ground_cuts(hill, -foot, 0.0, 0.0, 0.0) == [0.0, 1.0]
+    # The near grid's own window reaches the ridge's foot from outside it: that
+    # line is cut once, where the level ground starts to climb - so the grid is
+    # one straight piece over the flat and one up the face rather than a piece for
+    # every row of the table it crosses.
+    assert ground_cuts(hill, -span, 0.0, -span + 800.0, 0.0) == [
+        0.0, (span - foot) / 800.0, 1.0]
+    # Walked the other way the same line is cut at the same places, and each cut
+    # is a place on the surface: the fractions are the bends of the line and
+    # nothing else.
+    backwards = ground_cuts(hill, span, 0.0, -span, 0.0)
+    for forward, back in zip(over_the_ridge, reversed(backwards)):
+        assert abs(forward + back - 1.0) < 1e-12
+    for cut in over_the_ridge:
+        north = -span + 2.0 * span * cut
+        height = surface_height(hill, north, 0.0)
+        assert abs(hill.patch(Vector3(north, 0.0, 0.0)).height(
+            Vector3(north, 0.0, -height))) < 1e-9
 
     # The world's own scale, since it is a flying world and not a field to walk
     # around: the far grid is coarser than the near one and stays on the ground,

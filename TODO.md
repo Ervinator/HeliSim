@@ -522,7 +522,7 @@ These are choices, not oversights: each is stated where it lives.
     metres, so the psi on the caption are `telemetry.engine.torque` at that
     slope - `engine.UH1_TORQUE_NM_PER_PSI`, 621.4 N m of rotor shaft torque per
     psi - with `engine.UH1_TRANSMISSION_LIMIT_PSI` beside them as the limit the
-    reading is against.  Two imports in `main.py` (5445 lines), one format
+    reading is against.  Two imports in `main.py` (5483 lines), one format
     string, and nothing under the physics touched: which limit a reading is read
     against was always the caption's business, and the model already had both
     numbers.  A gauge shown against what the transmission will take is also the
@@ -547,6 +547,40 @@ These are choices, not oversights: each is stated where it lives.
 
 
 ## Done
+
+* 2026-10-29 - **the level world lands in the file, and the lines that still
+  described the ridge are put right.**  What the 2026-10-27 entry below sets out -
+  `world_surface` returning zero, every sample of `WORLD_GROUND` zero,
+  `WORLD_CREST_NORTH_M` gone - is what the file carries now, and five sentences
+  were left describing the world it used to be: the module docstring's own ground
+  bullet, `main()`'s trim note and the check's sandbox note all called that ground
+  `terrain.py`'s *landscape*, `draw_terrain_ground` ran one to the horizon, and
+  `terrain.py` said a run can now *fly* and *show* a landscape - which it can only
+  *fly*, what a run of `main.py` draws being one plane.  A landscape is this
+  project's word for the same table with other numbers in it, which is how
+  `world_surface`'s own docstring and the section above it already used it.
+
+  The other half of it is coverage rather than wording.  `terrain.py`'s docstring
+  promises that the module's sloping arithmetic - the lean of a face, the bends of
+  a line, the turn a shadow is laid in - is exercised by `main.py --check`, and
+  the ridge's own `ground_cuts` assertions went out of that check with the ridge:
+  the hill fixture kept its two cameras, its shadow and the turn `ground_tilt`
+  lays it in, while every cut the check made was made on the *level* table, so the
+  bends of a line were asserted nowhere at all.  They are asserted again against
+  that same fixture, whose ridge has its crest at the pad: a line walked north
+  over it is cut at the ridge's near foot, on its crest and at its far foot and
+  nowhere along either face, a line over the level ground outside the ridge, a
+  line along the ridge and a line up one face are one piece each, the near grid's
+  own window is cut once where the flat starts to climb, and the fractions are
+  kept to the bends of the line and nothing else - walked both ways, and each cut
+  a place on the surface.  `main.py` (5483 lines) grew by that block, and the
+  three other claims of its count in these documents moved with it.
+
+  Verified: `python main.py --check` printed `main.py check passed` with the
+  restored assertions in it, `python terrain.py` printed `self test passed`, and
+  `attic/_tmp_counts.py` read all 55 claims back with none disagreeing - `main.py`
+  (5483 lines) and `terrain.py` (662 lines) among them.
+
 
 * 2026-10-29 - **the four loops above the attitude, and the script's own claims read
   by a hand: phase 5.**  The last sentence of the human flyability bullet in `Next`
@@ -698,7 +732,7 @@ These are choices, not oversights: each is stated where it lives.
   `python terrain.py` printed `self test passed` - its demo and self test
   unchanged over the module's own ridge, which is the point of keeping it - and
   `attic/_tmp_counts.py` read all 53 claims back with none disagreeing -
-  `main.py` (5445 lines) and `terrain.py` (662 lines) among them.
+  `main.py` (5483 lines) and `terrain.py` (662 lines) among them.
 
 
 * 2026-10-26 - **the renderer reads the ground: `main.py`'s world is a landscape,
@@ -990,7 +1024,7 @@ These are choices, not oversights: each is stated where it lives.
   `_rt_check.py` flew both missions and wrote `_rt_log.txt`, and `main.py --check`
   printed `main.py check passed`.  `README.md`'s module table was read back at
   what the three files now are - `airframe.py` (4253 lines),
-  `simulation.py` (3357 lines), `main.py` (5445 lines) - its air section carries
+  `simulation.py` (3357 lines), `main.py` (5483 lines) - its air section carries
   the wind and the day's shape, and `attic/_tmp_counts.py` is at 47 claims with
   none disagreeing.
 

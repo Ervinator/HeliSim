@@ -58,16 +58,19 @@ under the aircraft and the patch answers everything else, so a terrain, which ha
 no one lean and no one normal to hand back, has no ``level_attitude`` and no
 ``normal`` of its own.
 
-``main.py`` draws it, and draws it as this table: its world is a landscape of
-the module's own ridge, its grass is the table's own cells, its grids are drawn
-on the surface, and the shadow and the two cameras that stand on the ground read
-the ground's own height rather than the world's zero - see :func:`main.draw_ground`
-and its neighbours for what the renderer asks the table and why it reads the
-table rather than a patch at every place it draws.  Its scenery's hills are still
+``main.py`` draws it, and draws it as a table: its grass is the table's own
+cells, its grids are drawn on the surface, and the shadow and the two cameras
+that stand on the ground read the ground's own height rather than the world's
+zero - see :func:`main.draw_ground` and its neighbours for what the renderer asks
+the table and why it reads the table rather than a patch at every place it draws.
+That world's own table is level, so what it draws with this module is one plane;
+its sloping arithmetic - the lean of a face, the bends of a line, the turn a
+shadow is laid in - is exercised by ``main.py``'s own check, which builds a ridge
+from :func:`ridge` there rather than in the world.  Its scenery's hills are still
 objects drawn rather than flown, which ``TODO.md`` carries.  What a run can do
-now is *fly* and *show* a landscape, and ``python terrain.py`` flies one: it
-builds a ridge, prints what its table and its patches say about it, sits the
-report's own aircraft in the cushion at the crest and hovers it there.
+now is *fly* a landscape, and ``python terrain.py`` flies one: it builds a ridge,
+prints what its table and its patches say about it, sits the report's own
+aircraft in the cushion at the crest and hovers it there.
 
 Only the standard library is used, so this module has no pygame and no OpenGL
 dependency and can be tested headless like the model around it.
