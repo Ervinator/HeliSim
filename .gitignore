@@ -24,15 +24,16 @@ reference/fm_pages/
 keylog.txt
 
 # What the scripted pilot scribbles: the console transcripts, compile dumps,
-# probe output and main.py excerpts that accumulated in the root while the twelve
-# _rt_ modules were being worked out - _rt_log.txt, _rt_demo_log.txt,
+# probe output and main.py excerpts that accumulated in the root while the
+# thirteen _rt_ modules were being worked out - _rt_log.txt, _rt_demo_log.txt,
 # _rt_handling.txt, _rt_axes.txt, _rt_autoro_probe.txt, _rt_autoro_entry.txt,
-# _rt_autoro_hand.txt, _rt_pilot_hand.txt, _rt_tail.txt and _rt_engine.txt are
-# written by those runs themselves, and sim_demo.txt is simulation.py's own demo.  The modules
-# are NOT ignored - _rt_pilot.py, _rt_check.py, _rt_demo.py, _rt_probe.py,
-# _rt_handling.py, _rt_axes.py, _rt_autoro_probe.py, _rt_autoro_entry.py,
-# _rt_autoro_hand.py, _rt_pilot_hand.py, _rt_tail.py and _rt_engine.py are the
-# harness and are tracked; only what a run prints on its way through is not.
+# _rt_autoro_hand.txt, _rt_pilot_hand.txt, _rt_outer.txt, _rt_tail.txt and
+# _rt_engine.txt are written by those runs themselves, and sim_demo.txt is
+# simulation.py's own demo.  The modules are NOT ignored - _rt_pilot.py,
+# _rt_check.py, _rt_demo.py, _rt_probe.py, _rt_handling.py, _rt_axes.py,
+# _rt_autoro_probe.py, _rt_autoro_entry.py, _rt_autoro_hand.py,
+# _rt_pilot_hand.py, _rt_outer.py, _rt_tail.py, _rt_engine.py are the harness
+# and are tracked; only what a run prints on its way through is not.
 _m*.txt
 _rt_*.txt
 sim_demo.txt

@@ -87,31 +87,41 @@ has `--check` for the wiring that flying cannot test.  What follows is what
   lifted off it.  Since 2026-10-26 the *renderer* reads that ground too: the
   grass is the table's own cells, both grids are drawn on its surface, the shadow
   lies on the ground under the aircraft and the two cameras that stand on it read
-  its own height rather than the world's zero (see `Done`), and `main.py`'s world
-  is terrain.py's own ridge set back from the pad.  So what is left of this
-  bullet is one thing, and it is not the renderer's:
+  its own height rather than the world's zero (see `Done`), and since 2026-10-27
+  `main.py`'s own world is one of those tables as well, level from end to end, the
+  ridge it had carried having read as two grounds (see `Done`).  So what is left
+  of this bullet is one thing, and it is not the renderer's:
 
   * *the air over a terrain is a wind field.*  `aerodynamics.py` has the hook
     (`airflow`, a callable of position) and `simulation.Simulation.wind` is one
     steady vector, so the upwash off a ridge and the sink over a valley are the
-    same level's work as the ridge - which now exists to have one, in `main.py`'s
-    own world as well as in `terrain.py`'s demo.
+    same level's work as the ridge - which `terrain.py`'s own demo still builds,
+    and `main.py`'s own check keeps one of, the world a run flies having gone
+    level on 2026-10-27.
 
-* **Human flyability has two phases and its next one is named here.**  The
-  harness has a section in `README.md` now, and the programme's own file says
-  what the phase after *it* is for: `_rt_handling.py`'s docstring ends on "what
-  this file measures is the acceptance criterion for the phases after it, and a
-  criterion nobody can fail is not one".  What is left is the loops *above* the
-  attitude.  Both phases hold the height, the speed and the heading at the
-  model's own numbers on purpose - the question they ask is how hard a pilot may
-  grip the *attitude*, not how fast the outer loops may be - so nobody has yet
-  asked whether a person's clock can hold what `_rt_check.py`'s missions fly
-  *scripted*, and phase 2's own finding is why it matters: the hover's margin is
-  the cyclic's margin and nothing else, which says nothing at all about the lever
-  and the pedals once a person is closing them.  `_rt_axes.py` is the scaffolding
-  to build it on - the four axes, the scale sweep, the settle criterion and the
-  PIO detector - so the phase is closing that instrument around the outer loops
-  and pinning their bands the way phase 1 pinned the attitude's.
+* **Human flyability is flown; what its five phases leave is the track loop.**  The
+  programme is closed - five phases, from the attitude outwards, every one of them
+  written up in `Done` with its numbers - and it ends on a finding that is a piece
+  of work rather than a paragraph: **the model's own track loop does not hold the
+  line with a hand's delay on it.**  `_rt_pilot.HumanPilot`'s track is a bank
+  proportional to the distance off the line north of the pad and *nothing else* -
+  no rate term at all - so what damps the swing is the roll loop's own lag, and a
+  twenty-metre offset flown by a hand at twenty decisions a second crosses the line
+  in twenty-five seconds, leaves the band again on the far side of it and is
+  fifteen metres out when a case five times the length of the others' runs out.
+  Every grip `_rt_outer.py` flies does the same thing - the harder the grip, the
+  sooner both halves of it - so the loop has no band at all, and what it is missing
+  is a *rate*: a bank per metre a second across the line as well as per metre off
+  it, which is the shape every other loop in the model already has.  A damped track
+  loop is a change to `_rt_pilot.py`, and the two files that measure it are
+  `_rt_pilot_hand.py`, whose cruise band is pinned, and `_rt_outer.py`, whose track
+  row is.
+
+  And under that, the one thing no phase has touched: every one of these five flies
+  a *headless* model on a simulated clock, so a person's hands on a *device* -
+  `_rt_demo.py`'s window with a joystick in it, with the device's own rate and its
+  own lag - is a different instrument and would want a file of its own.
+
 
 ## Known limitations, from the modules themselves
 
@@ -512,7 +522,7 @@ These are choices, not oversights: each is stated where it lives.
     metres, so the psi on the caption are `telemetry.engine.torque` at that
     slope - `engine.UH1_TORQUE_NM_PER_PSI`, 621.4 N m of rotor shaft torque per
     psi - with `engine.UH1_TRANSMISSION_LIMIT_PSI` beside them as the limit the
-    reading is against.  Two imports in `main.py` (5434 lines), one format
+    reading is against.  Two imports in `main.py` (5445 lines), one format
     string, and nothing under the physics touched: which limit a reading is read
     against was always the caption's business, and the model already had both
     numbers.  A gauge shown against what the transmission will take is also the
@@ -537,6 +547,159 @@ These are choices, not oversights: each is stated where it lives.
 
 
 ## Done
+
+* 2026-10-29 - **the four loops above the attitude, and the script's own claims read
+  by a hand: phase 5.**  The last sentence of the human flyability bullet in `Next`
+  was that everything the four phases had measured had been measured from the stick
+  *inwards* - the loops under the attitude stayed at the model's own numbers on
+  purpose, because the question was how hard a hand may grip the attitude - so
+  nobody had asked whether a person's clock can hold the loops *above* it, or what
+  `_rt_check.py`'s missions, which are flown by script, claim of themselves when a
+  hand flies them instead.  `_rt_outer.py` (1925 lines), the thirteenth harness
+  module, answers both.  The instrument is unchanged: phase 2's, twenty decisions a
+  second on the flight's own clock, 0.2 s of transport delay out of a deque of
+  remembered states, 0.1 s of lag in the hand, and the three loops *under* these
+  still at the model's own numbers.  What is under scales is the four above them:
+
+  * **the station-keeping pair** over the pad, moved *together* -
+    `K_HOVER_POS_DEG_M` and `K_HOVER_VEL_DEG_MPS`, since a position loop closed
+    through a velocity is one loop and the ratio of its two gains is the shape of
+    it, which is phase 1's own rule for the cyclic;
+  * **the height**, `RATE_GAIN_MPS`, the only one of the four both conditions fly:
+    both of the model's own pilots hold their altitude through it;
+  * **the speed** on the nose and **the track** on a bank, `K_SPEED_DEG` and
+    `K_BANK_DEG`, which are the two loops only a *cruise* has.  So this file's
+    pilot is the model's own for the condition - `HoverTurnPilot`'s hover over the
+    pad and `HumanPilot`'s four aloft, attitude pairs and pedals included, which
+    are not the same pairs - and a *task* argument is the one thing that takes the
+    two cruise loops back out of a case, which is the pilot `_rt_axes.py` flies at
+    sixty knots.
+
+  Five cases, one per loop per condition, and what is put into each is the state a
+  pilot has to take back out of it: five metres off the pad, a metre of height -
+  phase 2's own perturbation, kept to the last decimal - three metres a second of
+  airspeed, put in by scaling the *velocity*, since the airspeed this model reports
+  is the wind in the rotor's own plane and no stick reaches it, and twenty metres
+  across the line.  So the four loops are flown in three units, against bands that
+  are a fraction of what was put in, and each case is as long as its own loop needs
+  - forty seconds for the three that are closed on the pad, the lever and the nose,
+  and two hundred for the track, whose own period is tens of seconds: a case shorter
+  than the mode it is measuring answers "has it settled?" out of the phase of that
+  mode rather than out of the loop.  The length is not a technicality either: what
+  this loop's own case reads at two hundred seconds is a tail 0.92 of its middle
+  third - the ratio that says "still dying out", and so says *held* - while the
+  error had already come out of the band again at 43.7 s and ends 15.7 m outside
+  it, which is the criterion corrected two bullets down.
+
+  * *the ruler.*  What is asserted before anything else is that this file's height
+    loop at a scale of one *is* phase 2's heave case, and it is a flight rather
+    than a sentence: the metre, the `RATE_GAIN_MPS`, the lever, the band and the
+    forty seconds are that file's own, so the settling is that file's own pinned
+    14.42 s in the hover and 20.78 s at sixty knots - and the hover's is the
+    nominal case itself, a hover having no task loops to switch off.
+  * *the bands.*  Three of the four loops have one, and their failures are the
+    aircraft's and not the pilot's - which is what this phase does *not* find.
+    The hover's station-keeping pair holds x0.10 to x1.50 with its hard edge at
+    x2.00 (the error inside the band at 8.75 s and out again at 12.75 s); the
+    height holds x0.25 to x8.00 over the pad and x0.50 to x8.00 aloft, with no hard
+    edge inside the ladder at all and the soft one where the loop simply cannot do
+    it inside forty seconds; and the speed holds x0.10 to x4.00 with its edge at
+    x6.00, where the nose overshoots.  Every one of those failures is a swing past
+    the band at a period the fifth of a second of delay cannot see, and the one
+    oscillation at a period a person's own loop lives in - the track loop's nominal
+    1.66 s ripple - is growing 1.00 a cycle against that file's own line of 1.02 for
+    what a pilot induced oscillation is: neither growing nor dying, and not a PIO.
+  * *the finding: the track loop.*  The model's own track gain does not hold the
+    line with a hand's delay on it, and neither does any grip this file flies.  The
+    bank is proportional to the distance off the line and to nothing else - no rate
+    term at all - so what damps the swing is the roll loop's own lag: a twenty-metre
+    offset crosses the line in 25 s, leaves the band again on the far side of it and
+    is 15.7 m out at the end of the case, and every grip the file flies does the
+    same thing, the stiffer the sooner - x0.75 at the soft end, where the leg stops
+    at its first failure, and x1.50 home at 19.6 s and out at 31.9 s, x4.00 at
+    11.5 s and 16.3 s, x8.00 at 8.2 s and 11.0 s.  So its band is empty, and `Next`
+    now says what the loop wants: a rate.
+  * *the criterion, corrected.*  "The error came back inside the band and stayed" is
+    what all four phases before this one say their criterion is, and what they read
+    it off is the worst error in the last third of a case against the worst in its
+    middle third.  On these four loops that ratio is wrong in both directions - a
+    loop that settles and then rides the aircraft's own slow mode inside its band
+    has a tail over one, and the track loop's x1.50 *ends 10.4 m outside its band*
+    with a tail of 0.95 - so this file reads the words: inside the band from the
+    settling to the last frame.  It agrees with the ratio on every case of the four
+    phases before it, whose failures leave the band rather than loiter in it, and
+    the ratio itself is still printed and still pinned for every nominal case.
+  * *the frozen cases.*  With nobody flying: the hover does not know where the pad
+    is and sits exactly five metres off it for the whole case; the cushion gives a
+    metre of height back in 9.52 s over the pad and does nothing at all with it at
+    sixty knots, where the metre stays; the aircraft does not hold its speed either,
+    three metres a second in and 1.57 m/s left at the end of twenty seconds; and the
+    line is a thing it does not know about at all.  Not one of the four is a place
+    this model finds by itself, so every loop's whole margin is the pilot's hands.
+  * *the second half: the script's own claims, by hand.*  `_rt_check.check`'s
+    assertions, called rather than copied so that its own claims are in force, and
+    then read one at a time against a person's flight of the same mission at the
+    instrument's own clock.  The short mission's twenty: a hand meets nineteen, and
+    the one it does not is the *arrival* - 2.14 m/s against the 1.00 the mission's
+    own rehearsal asks of itself, which is phase 4's finding read as the claim it is
+    - and the long mission's six are every one of them met, 99.5 m up and 1006 m out
+    in 91.9 s.
+  * *verified.*  `python _rt_outer.py` asserts its whole transcript
+    (`_rt_outer.txt`, 984 lines): the pilot's clock and delay measured in flight on
+    the one pilot in this programme that is not phase 1's hover pilot slowed down,
+    the ruler in both conditions, five nominal cases with their tails, five bands
+    with every held scale pinned as a *set* - a loop closed through a delay does not
+    have to fail monotonically - five frozen cases, and the misses of the claims
+    table pinned rather than loosened.  `python _rt_handling.py`, `python
+    _rt_axes.py`, `python _rt_autoro_hand.py`, `python _rt_pilot_hand.py`, `python
+    _rt_check.py`, `python main.py --check`, `python regression_tm73254.py`,
+    `python terrain.py` and `python _tmp_shadow.py _rt_outer.py` (40 module-level
+    names, none written down twice) all still print what they printed, and `python
+    attic/_tmp_counts.py` reads every count in the three documents back off the
+    files.
+
+* 2026-10-27 - **the world's ground is one level plane: the tent in it read as two
+  grounds, and what a run flies and what a run draws are the same one again.**
+  Since 2026-10-26 `main.py`'s world had been `terrain.py`'s own ridge, set back
+  800 m north of the pad so that the pad and the scenery's own garden stood on
+  level ground.  Nothing in it was out of step - `main.py --check` was green and
+  the model was flown against the very table the renderer drew - but the ridge is
+  a *tent*, and its near foot is one of the table's own sample lines, 200 m north
+  of the pad.  The surface is continuous across that line; the *shade* is not.
+  Level ground is drawn in exactly the colour it is painted in (1.000), the face
+  south of the crest at 1.101 and the face north of it at 0.866, since a face
+  carries the shade of its own lean against `GROUND_LIGHT` (`face_shade`) - so the
+  crease read as the seam between two grounds rather than as one ground rising.
+
+  The world's table is level now: `world_surface` returns zero and every sample of
+  `WORLD_GROUND` is zero.  That is the plane this model flew before there was a
+  terrain, to the last bit, and the check says so - a table of zeros answers
+  `GroundPlane.level`'s own arithmetic *exactly*, the reading of a place, the
+  point on the surface, the point above it and the levelling, at places on the
+  table and off it - so every figure the model's own regressions carry stands
+  where it did.  `WORLD_STEP_M` is the table's own spacing rather than
+  `terrain.RIDGE_STEP_M`, whose docstring is about a tent's crease and whose feet
+  land on its sample lines; `WORLD_CREST_NORTH_M` is gone, and with it the banner
+  line that named a ridge and the world's own ridge assertions.
+
+  The ridge itself stays, as `terrain.ridge`: it is what `python terrain.py`
+  builds for its own demo and self test, and `main.py --check` keeps a table of
+  its own built from it, crest at the pad - because a level world cannot exercise
+  the arithmetic a sloping one needs.  The chase camera's floor over the hill, the
+  pad camera's place on a slope, the shadow's disc in the patch's own plane and
+  the turn `ground_tilt` lays it in are asserted there, over a face at 11.31 deg;
+  the world's own answers are asserted on the world - level over the pad, the
+  table and the ground carried past it, no cut on any line of a grid
+  (`ground_cuts` everywhere `[0.0, 1.0]`, walked both ways) and no turn at all.
+  `README.md` and `terrain.py`'s own docstring say the same: the module is the
+  landscape, and the world it is drawn in is level.
+
+  Verified: `python main.py --check` printed `main.py check passed`,
+  `python terrain.py` printed `self test passed` - its demo and self test
+  unchanged over the module's own ridge, which is the point of keeping it - and
+  `attic/_tmp_counts.py` read all 53 claims back with none disagreeing -
+  `main.py` (5445 lines) and `terrain.py` (662 lines) among them.
+
 
 * 2026-10-26 - **the renderer reads the ground: `main.py`'s world is a landscape,
   drawn as the table it is.**  `terrain.Terrain` landed on 2026-10-25 with a
@@ -677,7 +840,7 @@ These are choices, not oversights: each is stated where it lives.
   for four with its pitch within a fifth of a degree of the face's own lean and
   its hub in the same cushion a park on level ground sits in to 1e-6 (K_G to
   1e-7), and then lifted off it with ten seconds of the lever up.
-  `README.md`'s module table carries `terrain.py` (659 lines) with the run's own
+  `README.md`'s module table carries `terrain.py` (662 lines) with the run's own
   count read back off the file, its intro no longer claiming nine modules and
   eleven harness files, `airframe.py`'s and `simulation.py`'s rows and this
   file's own prose brought up to the files, and `attic/_tmp_counts.py` printing
@@ -827,7 +990,7 @@ These are choices, not oversights: each is stated where it lives.
   `_rt_check.py` flew both missions and wrote `_rt_log.txt`, and `main.py --check`
   printed `main.py check passed`.  `README.md`'s module table was read back at
   what the three files now are - `airframe.py` (4253 lines),
-  `simulation.py` (3357 lines), `main.py` (5434 lines) - its air section carries
+  `simulation.py` (3357 lines), `main.py` (5445 lines) - its air section carries
   the wind and the day's shape, and `attic/_tmp_counts.py` is at 47 claims with
   none disagreeing.
 

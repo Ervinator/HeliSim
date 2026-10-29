@@ -20,11 +20,11 @@ Layered, each one importing only what sits below it:
 | `engine.py` | 1190 | the T53-L-13 on the other end of the shaft: the twist grip, the N2 governor and its droop band, the torque available read off a digitised figure 7.1-2 - each of its eight altitude curves read at every temperature the sheet prints, and the family read at the airframe's own pressure altitude and free air temperature - what EMER and bleed air cost, the ten degrees of inlet temperature that a prolonged hover in ground effect is read with (7.1-13(c)), and the gas producer's lag - 0.6 sec, which `_rt_engine.py` measures against the rotor's own clock and the band a spool draws around it |
 | `airframe.py` | 4253 | TM-73254's force and moment model - main rotor, tail rotor, fuselage, fin, stabilizer - and the six degree of freedom equations of motion, with the rotor's own speed as a state when an engine is aboard, the second root of equation 10 read off a shaft with nothing driving it, the air it flies in as a pressure altitude and a free air temperature - set on the airframe, or read off the aircraft itself as a profile - or as a density, and the ground under it as one flat plane with a level and a normal, asked for the patch under the aircraft so that a landscape of them stands in for one |
 | `simulation.py` | 3357 | the frame loop: a fixed 60 Hz clock around `airframe`, `PilotInput`, the ground under the skids, `ChaseCamera`, the three trims, and what a renderer or a HUD asks for - the engine's panel among them, its maximum read in the same air the engine is governed in |
-| `terrain.py` | 659 | the ground as a landscape: a heightfield of the model's own flat patches, sampled north and east, whose surface between those samples is flat - a ridge, a valley or a step, each table cell cut into two triangles and each triangle one `airframe.GroundPlane`, with the patch under the aircraft answering every question the frame loop asks, so that a terrain is flown by the same arithmetic a single plane always was |
+| `terrain.py` | 662 | the ground as a landscape: a heightfield of the model's own flat patches, sampled north and east, whose surface between those samples is flat - a ridge, a valley or a step, each table cell cut into two triangles and each triangle one `airframe.GroundPlane`, with the patch under the aircraft answering every question the frame loop asks, so that a terrain is flown by the same arithmetic a single plane always was |
 | `regression_tm73254.py` | 661 | the report's figures 2 to 9 reflown: eight step inputs from 60 kt and from the hover, laid next to its published responses |
 | `scenery.py` | 603 | the XML scenery format and its loader - no pygame, no OpenGL, and the one module whose test needs no window and no physics |
 | `controls.py` | 1105 | the device map: which physical control flies which - keyboard or joystick, per control, with deadzone, invert and calibration - read from the XML of `default_controls.xml`, and likewise stdlib only |
-| `main.py` | 5434 | the OpenGL sandbox: the ground of `terrain.py` - the table's own cells for grass, a grid at two scales drawn on its surface, and the scenery - the aircraft of `simulation.py` flown from its device map - keyboard, joystick, the mouse, or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it, with the `--engine` switch that fits the T53 before the first frame, the three air switches (`--air-profile`, `--ige-hover`, `--wind`) that say what it flies in, the cursor on the cyclic and the wheel on the collective (`M`, `--mouse` and its own `--mouse-reverse`), and one line for the grip of a run that has none |
+| `main.py` | 5445 | the OpenGL sandbox: a level ground of `terrain.py` - the table's own cells for grass, a grid at two scales drawn on its surface, and the scenery - the aircraft of `simulation.py` flown from its device map - keyboard, joystick, the mouse, or a mixture - drawn in its own body axes and followed by a camera, the control position panel of `attic/controls_simple.png` with the attitude indicator of `attic/attitude.png` beside it, over the world, and the run's own key log - every keystroke with the flight it was made in - beside it, with the `--engine` switch that fits the T53 before the first frame, the three air switches (`--air-profile`, `--ige-hover`, `--wind`) that say what it flies in, the cursor on the cyclic and the wheel on the collective (`M`, `--mouse` and its own `--mouse-reverse`), and one line for the grip of a run that has none |
 
 Only `main.py` imports anything outside the standard library - and that is a
 claim about the ten modules above rather than about the project.  The twelve
@@ -290,13 +290,12 @@ is one colour and out of the way.  The reference never moves, which is what make
 a moving horizon readable, and nothing of the picture's case beyond it is drawn:
 no rim ticks and no index, since neither is readable at 132 px.
 
-The world is kilometres across because the aircraft is: a landscape 16 km across,
-level over the pad and over the scenery beside it and rising into `terrain.py`'s
-own ridge north of the pad, 10 m grid lines within 400 m of the aircraft and 250 m
-lines out to 8 km drawn on the ground's own surface, and fog that fades the
-ground's edge into the sky where a horizon belongs.  Nothing
-clamps the aircraft or the camera any more; the envelopes in `simulation.py` are
-the limits.
+The world is kilometres across because the aircraft is: a level ground 16 km
+across, `terrain.py`'s own table with every sample zero, 10 m grid lines within
+400 m of the aircraft and 250 m lines out to 8 km drawn on the ground's own
+surface, and fog that fades the ground's edge into the sky where a horizon
+belongs.  Nothing clamps the aircraft or the camera any more; the envelopes in
+`simulation.py` are the limits.
 
 ## The mouse
 
@@ -397,15 +396,16 @@ that a table with no landscape in it answers every ground question *bit for bit*
 as `airframe.GroundPlane.level` does - which is what keeps the report's own
 figures where they were.
 
-`main.py`'s world is that landscape as well: the module's own ridge, set back
-north of the pad so that the pad and the scenery's own garden stand on level
-ground, with the grass drawn as the table's own cells, both grids drawn on its
-surface, the shadow lying on the ground under the aircraft and the two cameras
-that stand on the ground reading its own height.  Which heights, and why the
-renderer reads the table rather than asking the ground for a patch at every place
-it draws, is in the file's own *The ground's own surface* section; `python
+`main.py`'s world is drawn as a table of that kind as well, one of its own and
+level from end to end: the grass drawn as the table's own cells, both grids drawn
+on its surface, the shadow lying on the ground under the aircraft and the two
+cameras that stand on the ground reading its own height.  Which heights, and why
+the renderer reads the table rather than asking the ground for a patch at every
+place it draws, is in the file's own *The ground's own surface* section; `python
 main.py --check` asserts that the renderer's reading and the ground's own patch
-agree at every kind of place a table has, which is what the drawing rests on.
+agree at every kind of place a table has, and that a level table answers exactly
+as `airframe.GroundPlane.level` does - which is what keeps the model's own figures
+where they were, now that the world it flies has no landscape in it.
 
 `scenery.py` needs neither a window nor the physics:
 
@@ -448,16 +448,18 @@ any `.py` in the root with no row in a table.  It is one of the tools in
 
 ## The harness
 
-The ten modules above are the model.  The twelve `_rt_*.py` files in the root
+The ten modules above are the model.  The thirteen `_rt_*.py` files in the root
 beside them are the harness: the pilots that *fly* the model, and the instruments
 that measure whether it can be flown at all.  Nothing in the model imports one,
-all twelve are tracked, and the `_rt_` prefix is the project's own word for what
-they are - scratch.  They arrived in five groups: the four the missions are flown
+all thirteen are tracked, and the `_rt_` prefix is the project's own word for what
+they are - scratch.  They arrived in six groups: the four the missions are flown
 with, in one commit on 8 October 2026; the five the autorotation and the human
 flyability programme added on 20, 21 and 22 October; the two the model's own
 unsourced constants were measured with, both on 24 October 2026 - the tail
-rotor's pair first, and the gas producer's own constant after it; and the one that
-put the harness's *other* two missions into a person's hands, on 25 October 2026.
+rotor's pair first, and the gas producer's own constant after it; the one that put
+the harness's *other* two missions into a person's hands, on 25 October 2026; and
+the one that closed the flyability programme with the four loops *above* the
+attitude, on 29 October 2026.
 
 | module | lines | what it is |
 | --- | --- | --- |
@@ -471,6 +473,7 @@ put the harness's *other* two missions into a person's hands, on 25 October 2026
 | `_rt_autoro_entry.py` | 683 | the autorotation's *other* switch: the engine failure flown through the mission's own loops and printed against the grip's own cut, at two decision rates, on an engine of the caller's own |
 | `_rt_autoro_hand.py` | 1417 | phase 3: those two switches worked by a person's hands on the *mission's* own loops, at the instrument's clock and at the slowest one it will fly, with the mission's own row beside them and every number asserted |
 | `_rt_pilot_hand.py` | 1613 | phase 4: the harness's *other* two missions - the hover-turn and the cruise - flown by a person's hands on the missions' own loops, with the phases read off a delayed view and the trims read off the model |
+| `_rt_outer.py` | 1925 | phase 5: the four loops *above* the attitude - station-keeping, height, speed and track - under scales of their own in both conditions, with the height loop held to phase 2's own pinned case as the ruler, and `_rt_check.py`'s own twenty claims read one at a time against a person's flight of each mission |
 | `_rt_tail.py` | 708 | the tail rotor's two unwritten constants measured: the two rulers on one thrust in inches of pedal, the twist sweep with both pedal stops, the precone sweep and the coning the flight's own flapping wants, and the boundary that shows nothing which flies reads either of them |
 | `_rt_engine.py` | 1034 | the gas producer's own time constant measured: the rotor's clock beside the engine's, the droop band that no constant moves, the lag's own arithmetic, the spool that brackets the constant against the manual's green arc, the lever pull it is nearly invisible on, EMER's runaway, and the published autorotation catch read at three constants |
 
@@ -497,15 +500,16 @@ Each is run the way every other module here is:
     python _rt_autoro_entry.py     # both of its switches: _rt_autoro_entry.txt
     python _rt_autoro_hand.py      # both entries by hand: _rt_autoro_hand.txt
     python _rt_pilot_hand.py       # the other two missions by hand: _rt_pilot_hand.txt
+    python _rt_outer.py            # the four outer loops, and the script's claims: _rt_outer.txt
     python _rt_tail.py             # the tail rotor's own two constants: _rt_tail.txt
     python _rt_engine.py           # the gas producer's own constant: _rt_engine.txt
 
 Every transcript is written by the run itself rather than by the shell's
-redirection, and `_rt_*.txt` in `.gitignore` covers all ten of them, so what is
+redirection, and `_rt_*.txt` in `.gitignore` covers all eleven of them, so what is
 committed is the code that made them.  `_rt_handling.py`, `_rt_axes.py`,
 `_rt_autoro_entry.py`, `_rt_autoro_hand.py`, `_rt_pilot_hand.py`,
-`_rt_tail.py`, `_rt_engine.py` and `_rt_check.py` assert every number they
-print, so a regression is a traceback and
+`_rt_outer.py`, `_rt_tail.py`, `_rt_engine.py` and `_rt_check.py` assert every
+number they print, so a regression is a traceback and
 not a table nobody read.  `_rt_demo.py` is the only one that needs a display, and
 one thing in it is asked of a key a *watcher* would press rather than by the
 pilot: the engine, because an unattended pilot cannot press `F` and a rotor *held*
@@ -517,9 +521,9 @@ nothing but the model, and `_rt_engine.py` is the same for six of its seven
 tables - the last one flies the mission's own autorotation, and imports
 `_rt_pilot`, and pygame with it, where it is called.
 
-The last eight are the part of the harness that measures rather than flies: the
-autorotation's own three instruments, the human flyability programme - four
-phases flown, all four written up in `TODO.md` with their findings and numbers
+The last nine are the part of the harness that measures rather than flies: the
+autorotation's own three instruments, the human flyability programme - five
+phases flown, all five written up in `TODO.md` with their findings and numbers
 together - the tail rotor's own two constants, and the gas producer's own:
 
 * **phase 1**, `_rt_handling.py` (20 October).  The model's own hover closed
@@ -598,6 +602,52 @@ together - the tail rotor's own two constants, and the gas producer's own:
   is x3.00 and whose soft edge is the ladder's own end: phase 2's "the tilt
   pair's bands transfer, and *wider*", said of the mission rather than of the
   hover it was measured on;
+* **phase 5**, `_rt_outer.py` (29 October).  The instrument one level up again, on
+  the four loops *above* the attitude: the tilt a hover is held over the pad with
+  (`K_HOVER_POS_DEG_M` and `K_HOVER_VEL_DEG_MPS`, scaled *together* - a position
+  loop closed through a velocity is one loop), the height on the lever
+  (`RATE_GAIN_MPS`, the only one of the four that both conditions fly), the speed
+  on the nose (`K_SPEED_DEG`) and the line north of the pad on a bank
+  (`K_BANK_DEG`).  What is put into each is the state a pilot has to take back out
+  of it - five metres off the pad, a metre of height, three metres a second of
+  airspeed, twenty metres across the line - and the metre of height is phase 2's
+  own perturbation *and its own case*, which is what the file asserts before it
+  asserts anything else: at a scale of one the height loop settles that metre in
+  14.42 s in the hover and 20.78 s at sixty knots, which are that file's own pinned
+  numbers, with the two loops only a cruise has taken back out of the pilot.  The
+  ruler is a flight rather than a sentence, and everything after it is this file's
+  own.
+  Three of the four loops then have a band of the shape the four phases before this
+  one found: the hover's station-keeping pair holds from x0.10 to x1.50 with its
+  hard edge at x2.00, the height loop holds from x0.25 over the pad and x0.50 aloft
+  right up to x8.00 with no hard edge in the ladder at all, and the speed loop
+  holds from x0.10 to x4.00 with its edge at x6.00, where the nose overshoots the
+  band on the way home.  What is *not* there is phase 1's closing act: not one of
+  those failures is the pilot's own loop - every one is the aircraft's own swing,
+  at a period the fifth of a second of delay cannot see - and the one oscillation
+  at a period a person's loop lives in, the nominal track case's 1.66 s ripple, is
+  neither growing nor dying: 1.00 a cycle against the file's own line of 1.02 for
+  what a pilot induced oscillation is.
+  The fourth loop is the phase's finding: **the model's own track loop does not
+  hold the line with a hand's delay on it.**  Its bank is proportional to the
+  distance off the line and to *nothing else* - no rate term at all - so what damps
+  the swing is the roll loop's own lag, and a twenty-metre offset crosses the line
+  in 25 s, leaves the band again on the far side of it and is 15.7 m out at the end
+  of a case five times the length of the others'.  Every grip it flies does the same
+  thing and none of them holds - x0.75 at the soft end, where the leg stops at its
+  first failure rather than flying four more that cannot be better, and the whole
+  hard leg from x1.50 out to x8.00 - and the stiffer the grip, the sooner both
+  halves of it happen: x1.50 comes home at 19.6 s and leaves again at 31.9 s, x4.00
+  at 11.5 s and 16.3 s and x8.00 at 8.2 s and 11.0 s.  So the loop's band is empty -
+  "nothing in either leg held" is the verdict's own line - and what it is missing is
+  a *rate*: see `Next`.
+  And the file's other half is the question `Next` had left open: `_rt_check.py`'s
+  own assertions, one at a time, against a person's flight of the same mission at
+  the instrument's own clock.  The short mission's script makes twenty claims of
+  itself and a hand meets nineteen - the claim it does not is the *arrival*, 2.14
+  m/s against the 1.00 that mission's own rehearsal asks of itself, which is phase
+  4's own finding read as the claim it is - and the long mission's six claims are
+  every one of them met;
 
 The other three of the five are the autorotation's.  `_rt_autoro_probe.py` is the
 ruler `_rt_demo_autorotate` is cut with: the mission's own entry, from a settled
@@ -703,14 +753,22 @@ its numbers are in `Done` beside them: see the phase 3 bullet above.
   docstring that repeats it, now cite this run and the band it draws; the self test
   beside them holds the spool and the decay to the numbers the survey measured.
 
-Both phases hold the loops *above* the attitude at the model's own numbers on
-purpose: what they measure is the margin a hand has on the cyclic.  Whether a
-person's clock can hold the height, the speed and the heading that `_rt_check.py`'s
-missions fly *scripted* was the programme's next phase, and phase 3 answers it for
-the autorotation's own climb: the instrument's own clock and ten decisions a
-second both get the aircraft there, and a hand that decides once a delay does not
-- it is out of envelope before the cut.  The hover-turn's and the cruise's own
-climbs are still flown *scripted*, and that is what `TODO.md`'s `Next` now names.
+Four of the five phases hold the loops *above* the attitude at the model's own
+numbers on purpose: what they measure is the margin a hand has on the cyclic, or on
+a mission's own loops, and never on the loop above *them*.  The fifth is the one
+that scales them - phase 5's station-keeping tilt, height, speed and track - and it
+closes the question the other four left: what `_rt_check.py`'s missions fly
+*scripted*, flown by hand *and* read against the claims those missions make of
+themselves.  The answer is a division.  Everything the missions do, a hand at the
+instrument's own clock does too - the hover met and held, the turn home, the
+kilometre in 92 s - and where a hand differs is the *end* of a flight: the arrival,
+2.14 m/s against the 1.00 that the short mission's own rehearsal asks of itself,
+which is the same finding phases 3 and 4 each reached from a different mission.  And
+the loops above the attitude come out of phase 5 as the four they were: three with
+bands of the shape the attitude's has, and the fourth - the track - with no band at
+all, a bank proportional to the distance off the line and nothing else being a loop
+that does not hold a twenty-metre offset with a hand's delay on it.  That is what
+`TODO.md`'s `Next` now names, and the five phases are all written up in `Done`.
 
 One file beside all of these is not the harness: `_tmp_shadow.py`, which walks a
 module's syntax tree and prints every module-level name bound twice.  It is the
@@ -735,7 +793,7 @@ was worked out with - went to `attic/` on 21 October.
     |-- scenery.py
     |-- controls.py
     |-- main.py
-    |-- _rt_*.py                   the eleven of the harness: see The harness
+    |-- _rt_*.py                   the thirteen of the harness: see The harness
     |-- _tmp_shadow.py             the one scratch tool kept: names bound twice
     |-- sample_scenery.xml         the default scenery
     |-- requirements.txt           pygame and PyOpenGL: a window and scancodes

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Scratch: every line count the docs claim, read back off the files themselves.
 
-`README.md` carries the model's nine modules and the harness's ten in two
+`README.md` carries the model's ten modules and the harness's thirteen in two
 `| module | lines |` tables, and `TODO.md` and this directory's own README name a
 file's count in prose - `` `name` (N lines) ``.  Every one of those is a number a
 hand wrote down, and on 2026-10-22 one of them moved in three places at once,
